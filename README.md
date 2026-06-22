@@ -11,6 +11,7 @@ An AI agent team built with BotMux to coordinate coding agents through chat.
 - [DevOps Agent](agents/devops-agent.identity.md)
 - [Validation Agent](agents/validation-agent.identity.md)
 - [Team Operating Contract](agents/team-operating-contract.md)
+- [小说创作 Agent Team 技术方案](docs/novel-creation-agent-team-tech-plan.md)
 
 ## Collaboration Model
 
