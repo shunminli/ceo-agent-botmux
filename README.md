@@ -48,6 +48,10 @@ python3 -m botmux_novel approval-decision \
   --reviewer human \
   --notes "Approved after reviewing approval-package.md and wiki bundle."
 
+python3 -m botmux_novel approval-check \
+  --approval-package /tmp/novel-demo/runs/<bootstrap-run-id>/approval-package.json \
+  --apply-dry-run
+
 python3 -m botmux_novel approval-apply \
   --approval-package /tmp/novel-demo/runs/<bootstrap-run-id>/approval-package.json \
   --approve
@@ -114,6 +118,8 @@ python3 -m botmux_novel readiness --bootstrap-smoke --approval-apply-smoke --ser
 ```
 
 `readiness` 默认会同时执行 workflow 绑定静态校验和本地合成契约 smoke，确认两个 BotMux workflow 的 prompt 能按依赖顺序渲染，并且每个节点都能传递 `preview/handoff/data` 等统一输出字段。
+
+`approval-check` 默认只读校验 `novel-bootstrap` 审批包；它会检查审核材料、humanGate 命令、llmwiki 预览、MCP 角色策略和首章启动命令，传 `--apply-dry-run` 时额外验证审批包能被 `approval-apply` 以 dry-run 消费且不会执行 approved writes。
 
 ## Local Doubao CLI
 

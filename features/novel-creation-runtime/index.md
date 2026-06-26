@@ -33,6 +33,10 @@ python3 -m botmux_novel approval-decision \
   --reviewer human \
   --notes "Approved after reviewing approval-package.md and wiki bundle."
 
+python3 -m botmux_novel approval-check \
+  --approval-package /tmp/novel-demo/runs/<bootstrap-run-id>/approval-package.json \
+  --apply-dry-run
+
 python3 -m botmux_novel approval-apply \
   --approval-package /tmp/novel-demo/runs/<bootstrap-run-id>/approval-package.json \
   --approve
@@ -104,6 +108,7 @@ python3 -m botmux_novel readiness --bootstrap-smoke --approval-apply-smoke --ser
 - `runs/{foundation_run_id}/foundation.json`：`foundation` 子命令生成的开书设定包。
 - `runs/{bootstrap_run_id}/approval-package.md|json`：`novel-bootstrap` 子命令生成的 Story Bible/wiki/MCP 人工审批包，包含审批记录、approved apply 和首章启动命令。
 - `approval-decision` JSON：审批决策记录结果，包含 decision、reviewer、notes、decided_at 和审批包路径。
+- `approval-check` JSON：审批包机器校验结果，包含审核材料、humanGate 命令、llmwiki 预览、MCP 策略、workspace target、可选 dry-run apply 和 chapter smoke 检查。
 - `approval-apply` JSON：审批包执行结果，包含是否 approved、实际 `llmwiki-sync` 状态、warnings 和产物路径。
 - `runs/{chapter_run_id}/source-foundation.json`：`chapter` 子命令使用的 Story Bible 来源快照。
 - `runs/{chapter_run_id}/prior-context.json`：`chapter` 子命令自动汇总的前文章节归档上下文。
@@ -123,6 +128,7 @@ python3 -m botmux_novel readiness --bootstrap-smoke --approval-apply-smoke --ser
 - `foundation` 只生成开书设定资产，不写 `manuscript/draft|revised|final`。
 - `novel-bootstrap` 串联开书设定、项目内 wiki bundle、llmwiki dry-run sync plan、MCP 配置和审批包；审批包会包含 `next_actions.chapter_start_command`，用于在审批和写入后从批准的 foundation 直接启动首章；它不会执行 approved sync、覆盖外部 llmwiki workspace 或修改全局配置。
 - `approval-decision` 只把 humanGate 决策写入审批包 JSON，并在同目录 `approval-package.md` 存在时重渲染 Markdown 审批包；它不执行 llmwiki 写入，正式批准路径应先记录 `--decision approve`。
+- `approval-check` 默认只读校验审批包；`--apply-dry-run` 只验证 `approval-apply` dry-run 消费路径，不执行 approved writes；`--chapter-smoke` 会执行首章命令，应用在临时 smoke 项目，不建议在未经审批的真实项目上默认运行。
 - `approval-apply` 默认只重新生成同步计划；只有传 `--approve` 才会按审批包写入 llmwiki workspace，并默认运行 `llmwiki reindex` 与写后 lint。若审批包已记录 `request_changes` 或 `reject`，会拒绝写入；若未记录 `approve` 但命令显式 `--approve`，会保留 warning 说明这是命令级 humanGate 信号。
 - `chapter` 从本地 `foundation.json` 继续生产章节，不重新规划 Story Bible；未传 `--chapter-goal` 时自动使用 `foundation.json` 的 `chapter_goal.objective`，自动读取早于当前章节的 `runs/archive-*.json` 作为连续性上下文，并在完成后生成下一章 handoff 命令。
 - `wiki-bundle` 只读取本地 `foundation.json` 并写项目内 Markdown bundle，不调用 llmwiki。

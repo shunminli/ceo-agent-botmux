@@ -8,6 +8,12 @@ from .approval import (
     NovelApprovalDecisionRequest,
     NovelApprovalDecisionResult,
 )
+from .approval_check import (
+    ApprovalPackageCheck,
+    NovelApprovalCheckRequest,
+    NovelApprovalCheckResult,
+    NovelApprovalPackageChecker,
+)
 from .bootstrap import NovelBootstrapper, NovelBootstrapRequest, NovelBootstrapResult
 from .botmux_assets import (
     BotmuxAssetAction,
@@ -42,12 +48,16 @@ __all__ = [
     "BotmuxAssetSyncRequest",
     "BotmuxAssetSyncResult",
     "BotmuxAssetSyncer",
+    "ApprovalPackageCheck",
     "NovelApprovalApplier",
     "NovelApprovalApplyRequest",
     "NovelApprovalApplyResult",
+    "NovelApprovalCheckRequest",
+    "NovelApprovalCheckResult",
     "NovelApprovalDecider",
     "NovelApprovalDecisionRequest",
     "NovelApprovalDecisionResult",
+    "NovelApprovalPackageChecker",
     "NovelBootstrapper",
     "NovelBootstrapRequest",
     "NovelBootstrapResult",

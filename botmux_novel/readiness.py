@@ -15,6 +15,7 @@ from .approval import (
     NovelApprovalDecider,
     NovelApprovalDecisionRequest,
 )
+from .approval_check import NovelApprovalCheckRequest, NovelApprovalPackageChecker
 from .bootstrap import NovelBootstrapRequest, NovelBootstrapper
 from .botmux_assets import BotmuxAssetSyncRequest, BotmuxAssetSyncer
 from .llmwiki_sync import LlmwikiSyncRequest, LlmwikiSyncer
@@ -363,6 +364,12 @@ class NovelReadinessChecker:
                 wiki_overview = result.wiki_bundle.bundle_path / "overview.md"
                 target_overview = workspace_path / "wiki" / "novels" / project_slug / "overview.md"
                 package_payload = json.loads(result.approval_package_json_path.read_text(encoding="utf-8"))
+                approval_check = NovelApprovalPackageChecker().check(
+                    NovelApprovalCheckRequest(
+                        approval_package_path=result.approval_package_json_path,
+                        run_apply_dry_run=True,
+                    )
+                )
                 chapter_start_command = package_payload.get("next_actions", {}).get("chapter_start_command", [])
                 chapter_start_result: Dict[str, Any] = {
                     "returncode": None,
@@ -398,6 +405,7 @@ class NovelReadinessChecker:
                     and result.llmwiki_sync.plan_path.exists()
                     and result.approval_package_path.exists()
                     and result.approval_package_json_path.exists()
+                    and approval_check.status in {"ready", "ready_with_warnings"}
                     and not target_overview.exists()
                     and package_payload.get("status") == "ready_for_human_review"
                     and "chapter" in chapter_start_command
@@ -428,6 +436,8 @@ class NovelReadinessChecker:
                         "wiki_overview_exists": wiki_overview.exists(),
                         "approval_package_exists": result.approval_package_path.exists(),
                         "approval_package_json_exists": result.approval_package_json_path.exists(),
+                        "approval_check_status": approval_check.status,
+                        "approval_check_names": [check.name for check in approval_check.checks],
                         "target_overview_exists": target_overview.exists(),
                         "chapter_start_command": chapter_start_command,
                         "chapter_start_result": chapter_start_result,

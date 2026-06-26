@@ -294,6 +294,8 @@ class NovelReadinessTest(unittest.TestCase):
             self.assertEqual(checks["bootstrap_smoke"].data["llmwiki_sync_status"], "planned")
             self.assertTrue(checks["bootstrap_smoke"].data["approval_package_exists"])
             self.assertTrue(checks["bootstrap_smoke"].data["approval_package_json_exists"])
+            self.assertEqual(checks["bootstrap_smoke"].data["approval_check_status"], "ready")
+            self.assertIn("apply_dry_run", checks["bootstrap_smoke"].data["approval_check_names"])
             self.assertIn("chapter", checks["bootstrap_smoke"].data["chapter_start_command"])
             self.assertIn("--foundation-json", checks["bootstrap_smoke"].data["chapter_start_command"])
             self.assertEqual(checks["bootstrap_smoke"].data["chapter_start_result"]["status"], "completed")

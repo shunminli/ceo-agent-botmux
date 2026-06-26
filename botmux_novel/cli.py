@@ -11,6 +11,7 @@ from .approval import (
     NovelApprovalDecider,
     NovelApprovalDecisionRequest,
 )
+from .approval_check import NovelApprovalCheckRequest, NovelApprovalPackageChecker
 from .bootstrap import NovelBootstrapper, NovelBootstrapRequest
 from .botmux_assets import BotmuxAssetSyncRequest, BotmuxAssetSyncer
 from .llmwiki_sync import LlmwikiSyncRequest, LlmwikiSyncer
@@ -77,6 +78,14 @@ def build_parser() -> argparse.ArgumentParser:
     decision_parser.add_argument("--decision", choices=["approve", "request_changes", "reject"], required=True, help="Human review decision to record.")
     decision_parser.add_argument("--reviewer", default="human", help="Reviewer name or handle to store in the approval package.")
     decision_parser.add_argument("--notes", default="", help="Optional review notes to store with the decision.")
+
+    check_parser = subparsers.add_parser(
+        "approval-check",
+        help="Validate a novel-bootstrap approval package without approving or writing llmwiki by default.",
+    )
+    check_parser.add_argument("--approval-package", required=True, help="Path to runs/<bootstrap_run_id>/approval-package.json.")
+    check_parser.add_argument("--apply-dry-run", action="store_true", help="Also verify approval-apply can consume the package in dry-run mode.")
+    check_parser.add_argument("--chapter-smoke", action="store_true", help="Also execute the package chapter_start_command; use only in temp/smoke projects.")
 
     chapter_parser = subparsers.add_parser(
         "chapter",
@@ -242,6 +251,16 @@ def main(argv: Optional[list[str]] = None) -> int:
         result = NovelApprovalDecider().record(request)
         print(json.dumps(result.to_dict(), ensure_ascii=False, indent=2))
         return 0 if result.status == "recorded" else 2
+
+    if args.command == "approval-check":
+        request = NovelApprovalCheckRequest(
+            approval_package_path=Path(args.approval_package).expanduser().resolve(),
+            run_apply_dry_run=args.apply_dry_run,
+            run_chapter_smoke=args.chapter_smoke,
+        )
+        result = NovelApprovalPackageChecker().check(request)
+        print(json.dumps(result.to_dict(), ensure_ascii=False, indent=2))
+        return 0 if result.status in {"ready", "ready_with_warnings"} else 2
 
     if args.command == "chapter":
         request = NovelChapterRequest(

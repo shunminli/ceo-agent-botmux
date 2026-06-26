@@ -7,7 +7,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from botmux_novel import NovelBootstrapper, NovelBootstrapRequest
+from botmux_novel import NovelApprovalCheckRequest, NovelApprovalPackageChecker, NovelBootstrapper, NovelBootstrapRequest
 
 
 class NovelBootstrapTest(unittest.TestCase):
@@ -66,6 +66,23 @@ class NovelBootstrapTest(unittest.TestCase):
             self.assertIn("Underlying approved write command", package_markdown)
             self.assertIn("Start opening chapter command", package_markdown)
 
+            check = NovelApprovalPackageChecker().check(
+                NovelApprovalCheckRequest(
+                    approval_package_path=result.approval_package_json_path,
+                    run_apply_dry_run=True,
+                )
+            )
+            self.assertEqual(check.status, "ready")
+            checks = {item.name: item for item in check.checks}
+            self.assertEqual(checks["package_json"].status, "pass")
+            self.assertEqual(checks["review_materials"].status, "pass")
+            self.assertEqual(checks["human_gate"].status, "pass")
+            self.assertEqual(checks["llmwiki_preview"].status, "pass")
+            self.assertEqual(checks["mcp_policy"].status, "pass")
+            self.assertEqual(checks["next_actions"].status, "pass")
+            self.assertEqual(checks["workspace_target"].status, "pass")
+            self.assertEqual(checks["apply_dry_run"].status, "pass")
+
             chapter = subprocess.run(
                 package["next_actions"]["chapter_start_command"],
                 check=True,
@@ -116,6 +133,58 @@ class NovelBootstrapTest(unittest.TestCase):
             self.assertTrue(Path(payload["approval_package_json_path"]).exists())
             self.assertFalse((workspace / "wiki/novels/shadow-clock-case/overview.md").exists())
             self.assertEqual(payload["llmwiki_sync"]["status"], "planned")
+
+            check_completed = subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "botmux_novel",
+                    "approval-check",
+                    "--approval-package",
+                    payload["approval_package_json_path"],
+                    "--apply-dry-run",
+                    "--chapter-smoke",
+                ],
+                check=True,
+                text=True,
+                capture_output=True,
+            )
+            check_payload = json.loads(check_completed.stdout)
+            self.assertEqual(check_payload["status"], "ready")
+            checks = {check["name"]: check for check in check_payload["checks"]}
+            self.assertEqual(checks["apply_dry_run"]["status"], "pass")
+            self.assertEqual(checks["chapter_smoke"]["status"], "pass")
+            self.assertEqual(checks["chapter_smoke"]["data"]["chapter_status"], "completed")
+
+    def test_approval_check_blocks_missing_review_material(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            project = root / "novel-project"
+            workspace = root / "llmwiki-workspace"
+            fake_llmwiki = root / "llmwiki"
+            fake_llmwiki.write_text("#!/bin/sh\necho planned \"$@\"\n", encoding="utf-8")
+            fake_llmwiki.chmod(0o755)
+
+            result = NovelBootstrapper().bootstrap(
+                NovelBootstrapRequest(
+                    project_path=project,
+                    title="影钟旧案",
+                    inspiration="少年在旧书楼发现父亲旧案残页。",
+                    project_slug="shadow-clock-case",
+                    workspace_path=workspace,
+                    llmwiki_bin=str(fake_llmwiki),
+                )
+            )
+            package = json.loads(result.approval_package_json_path.read_text(encoding="utf-8"))
+            Path(package["review_materials"]["story_markdown"]).unlink()
+
+            check = NovelApprovalPackageChecker().check(
+                NovelApprovalCheckRequest(approval_package_path=result.approval_package_json_path)
+            )
+
+            self.assertEqual(check.status, "blocked")
+            checks = {item.name: item for item in check.checks}
+            self.assertEqual(checks["review_materials"].status, "fail")
 
 
 if __name__ == "__main__":
