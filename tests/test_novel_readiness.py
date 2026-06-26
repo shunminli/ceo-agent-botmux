@@ -147,6 +147,70 @@ class NovelReadinessTest(unittest.TestCase):
             self.assertTrue(check.data["available"])
             self.assertTrue(check.data["usable"])
 
+    def test_llmwiki_smoke_runs_approved_sync_and_reindex(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            botmux_home = root / ".botmux"
+            fake_botmux = root / "botmux"
+            fake_llmwiki = root / "llmwiki"
+            install_temp_botmux(botmux_home)
+            write_fake_botmux(fake_botmux)
+            write_fake_llmwiki(fake_llmwiki)
+
+            result = NovelReadinessChecker().check(
+                NovelReadinessRequest(
+                    repo_path=REPO_ROOT,
+                    botmux_home=botmux_home,
+                    botmux_bin=fake_botmux,
+                    llmwiki_bin=str(fake_llmwiki),
+                    run_llmwiki_smoke=True,
+                )
+            )
+
+            checks = {check.name: check for check in result.checks}
+            self.assertEqual(result.status, "ready")
+            self.assertEqual(checks["llmwiki"].status, "pass")
+            self.assertEqual(checks["llmwiki_smoke"].status, "pass")
+            self.assertEqual(checks["llmwiki_smoke"].data["sync_status"], "completed")
+            self.assertTrue(checks["llmwiki_smoke"].data["target_overview_exists"])
+            self.assertTrue(checks["llmwiki_smoke"].data["index_exists"])
+
+    def test_cli_readiness_can_run_llmwiki_smoke(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            botmux_home = root / ".botmux"
+            fake_botmux = root / "botmux"
+            fake_llmwiki = root / "llmwiki"
+            install_temp_botmux(botmux_home)
+            write_fake_botmux(fake_botmux)
+            write_fake_llmwiki(fake_llmwiki)
+
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "botmux_novel",
+                    "readiness",
+                    "--repo",
+                    str(REPO_ROOT),
+                    "--botmux-home",
+                    str(botmux_home),
+                    "--botmux-bin",
+                    str(fake_botmux),
+                    "--llmwiki-bin",
+                    str(fake_llmwiki),
+                    "--llmwiki-smoke",
+                ],
+                check=True,
+                text=True,
+                capture_output=True,
+            )
+
+            payload = json.loads(completed.stdout)
+            self.assertEqual(payload["status"], "ready")
+            checks = {check["name"]: check for check in payload["checks"]}
+            self.assertEqual(checks["llmwiki_smoke"]["status"], "pass")
+
 
 def install_temp_botmux(botmux_home: Path) -> None:
     BotmuxAssetSyncer().sync(BotmuxAssetSyncRequest(repo_path=REPO_ROOT, botmux_home=botmux_home, write=True))
@@ -171,6 +235,31 @@ def write_fake_botmux(path: Path) -> None:
         "  exit 0\n"
         "fi\n"
         "echo \"unexpected command\" >&2\n"
+        "exit 1\n",
+        encoding="utf-8",
+    )
+    path.chmod(0o755)
+
+
+def write_fake_llmwiki(path: Path) -> None:
+    path.write_text(
+        "#!/bin/sh\n"
+        "if [ \"$1\" = \"--help\" ]; then\n"
+        "  echo \"usage: llmwiki\"\n"
+        "  exit 0\n"
+        "fi\n"
+        "if [ \"$1\" = \"init\" ]; then\n"
+        "  mkdir -p \"$2/.llmwiki\" \"$2/wiki\"\n"
+        "  : > \"$2/.llmwiki/index.db\"\n"
+        "  echo \"initialized $2\"\n"
+        "  exit 0\n"
+        "fi\n"
+        "if [ \"$1\" = \"reindex\" ]; then\n"
+        "  test -f \"$2/.llmwiki/index.db\" || exit 3\n"
+        "  echo \"reindexed $2\"\n"
+        "  exit 0\n"
+        "fi\n"
+        "echo \"unexpected llmwiki command\" >&2\n"
         "exit 1\n",
         encoding="utf-8",
     )

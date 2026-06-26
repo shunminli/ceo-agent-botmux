@@ -10,6 +10,8 @@ from pathlib import Path
 from typing import Any, Dict, Iterator, List, Optional, Set, Tuple
 
 from .botmux_assets import BotmuxAssetSyncRequest, BotmuxAssetSyncer
+from .llmwiki_sync import LlmwikiSyncRequest, LlmwikiSyncer
+from .runtime import NovelFoundationRequest, NovelRuntime, NovelWikiBundleRequest
 from .series import NovelSeriesRequest, NovelSeriesRunner
 
 
@@ -35,6 +37,7 @@ class NovelReadinessRequest:
     llmwiki_bin: str = "llmwiki"
     run_series_smoke: bool = False
     smoke_chapter_count: int = 5
+    run_llmwiki_smoke: bool = False
 
 
 @dataclass(frozen=True)
@@ -82,6 +85,8 @@ class NovelReadinessChecker:
         ]
         if request.run_series_smoke:
             checks.append(self._check_series_smoke(chapter_count=request.smoke_chapter_count))
+        if request.run_llmwiki_smoke:
+            checks.append(self._check_llmwiki_smoke(llmwiki_bin=request.llmwiki_bin))
 
         status = aggregate_status(checks)
         return NovelReadinessResult(status=status, repo_path=repo_path, botmux_home=botmux_home, checks=checks)
@@ -301,6 +306,105 @@ class NovelReadinessChecker:
             data={"result_status": result.status, "metrics": metrics},
         )
 
+    def _check_llmwiki_smoke(self, *, llmwiki_bin: str) -> ReadinessCheck:
+        executable = resolve_executable(llmwiki_bin)
+        if executable is None:
+            return ReadinessCheck(
+                name="llmwiki_smoke",
+                status="fail",
+                summary=f"llmwiki smoke requires an executable but none was found: {llmwiki_bin}",
+                data={"llmwiki_bin": llmwiki_bin},
+            )
+
+        try:
+            with tempfile.TemporaryDirectory() as tmpdir:
+                root = Path(tmpdir)
+                project_path = root / "readiness-llmwiki-project"
+                workspace_path = root / "readiness-llmwiki-workspace"
+                project_slug = "shadow-clock-case"
+                runtime = NovelRuntime()
+                foundation = runtime.foundation(
+                    NovelFoundationRequest(
+                        project_path=project_path,
+                        title="影钟旧案",
+                        inspiration="退役巡夜人在旧书楼发现父亲旧案残页，必须在巡城司清查前保护妹妹身份并找出篡改真相的人。",
+                    )
+                )
+                wiki_bundle = runtime.wiki_bundle(
+                    NovelWikiBundleRequest(
+                        project_path=project_path,
+                        project_slug=project_slug,
+                        foundation_path=foundation.foundation_path,
+                    )
+                )
+                init_result = subprocess.run(
+                    [executable, "init", str(workspace_path)],
+                    text=True,
+                    capture_output=True,
+                    check=False,
+                    timeout=30,
+                )
+                if init_result.returncode != 0:
+                    return ReadinessCheck(
+                        name="llmwiki_smoke",
+                        status="fail",
+                        summary=f"llmwiki init failed with exit code {init_result.returncode}.",
+                        data={
+                            "llmwiki_bin": executable,
+                            "init": command_payload(init_result),
+                            "project_path": str(project_path),
+                            "workspace_path": str(workspace_path),
+                        },
+                    )
+
+                sync_result = LlmwikiSyncer().sync(
+                    LlmwikiSyncRequest(
+                        project_path=project_path,
+                        project_slug=project_slug,
+                        workspace_path=workspace_path,
+                        approve=True,
+                        llmwiki_bin=executable,
+                        reindex=True,
+                    )
+                )
+                target_overview = workspace_path / "wiki" / "novels" / project_slug / "overview.md"
+                index_path = workspace_path / ".llmwiki" / "index.db"
+                reindex_succeeded = any(command.status == "succeeded" for command in sync_result.commands)
+                passed = (
+                    sync_result.status == "completed"
+                    and sync_result.llmwiki_available
+                    and reindex_succeeded
+                    and target_overview.exists()
+                    and index_path.exists()
+                )
+                return ReadinessCheck(
+                    name="llmwiki_smoke",
+                    status="pass" if passed else "fail",
+                    summary=(
+                        "Approved llmwiki sync smoke copied wiki pages and reindexed a temporary workspace."
+                        if passed
+                        else "Approved llmwiki sync smoke did not meet expected write/reindex checks."
+                    ),
+                    data={
+                        "llmwiki_bin": executable,
+                        "project_path": str(project_path),
+                        "workspace_path": str(workspace_path),
+                        "bundle_path": str(wiki_bundle.bundle_path),
+                        "target_overview_exists": target_overview.exists(),
+                        "index_exists": index_path.exists(),
+                        "sync_status": sync_result.status,
+                        "commands": [command.to_dict() for command in sync_result.commands],
+                        "actions": [action.to_dict() for action in sync_result.actions],
+                    },
+                )
+        except Exception as exc:
+            return ReadinessCheck(
+                name="llmwiki_smoke",
+                status="fail",
+                summary=f"llmwiki smoke failed: {exc}",
+                data={"llmwiki_bin": executable},
+            )
+
 
 def aggregate_status(checks: List[ReadinessCheck]) -> str:
     if any(check.status == "fail" for check in checks):
@@ -315,6 +419,15 @@ def resolve_executable(command: str) -> Optional[str]:
     if expanded.parent != Path(".") and expanded.exists():
         return str(expanded.resolve())
     return shutil.which(command)
+
+
+def command_payload(completed: subprocess.CompletedProcess[str]) -> Dict[str, Any]:
+    return {
+        "args": list(completed.args) if isinstance(completed.args, list) else completed.args,
+        "returncode": completed.returncode,
+        "stdout": completed.stdout,
+        "stderr": completed.stderr,
+    }
 
 
 def validate_workflow_bindings(workflow_path: Path) -> List[Dict[str, str]]:

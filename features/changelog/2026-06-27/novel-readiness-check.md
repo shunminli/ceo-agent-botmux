@@ -14,9 +14,10 @@ python3 -m botmux_novel readiness --series-smoke
 - Workflow template bindings are checked statically so `${params.*}` and `${node.output.*}` references must resolve to declared params, upstream dependencies, and output schema fields.
 - `llmwiki` availability is reported as a warning when missing or when `llmwiki --help` cannot execute.
 - Optional `--series-smoke` runs a temporary multi-chapter series and validates key Phase 3 metrics.
+- Optional `--llmwiki-smoke` runs an approved temporary llmwiki workspace sync and reindex.
 
 ## Status
 
 - `ready`: all checks pass.
 - `ready_with_warnings`: required checks pass, optional capabilities such as llmwiki are missing.
-- `blocked`: required BotMux config, workspace sync, workflow validation, workflow binding validation, or series smoke fails.
+- `blocked`: required BotMux config, workspace sync, workflow validation, workflow binding validation, or an explicitly requested smoke fails.

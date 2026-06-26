@@ -18,6 +18,6 @@ This verifies that deterministic local chapter production can carry prior archiv
 python3 -m botmux_novel readiness --series-smoke --smoke-chapter-count 20
 ```
 
-The readiness result remains `ready_with_warnings` only because the local `llmwiki` executable is not installed; BotMux assets, bot configs, workflow validation, workflow bindings, and the 20-chapter series smoke pass.
+With the local llmwiki install in place, the readiness result for this command is `ready`; BotMux assets, bot configs, workflow validation, workflow bindings, llmwiki availability, and the 20-chapter series smoke pass.
 
 This is still a runtime stability baseline, not a real-model literary quality guarantee.

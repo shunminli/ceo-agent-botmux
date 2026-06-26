@@ -133,6 +133,7 @@ python3 -m unittest discover -s tests -v
 /Users/xiaochen/.botmux/bin/botmux workflow validate workflows/novel-chapter-production.workflow.json
 llmwiki --help
 python3 -m botmux_novel readiness --series-smoke --smoke-chapter-count 20
+python3 -m botmux_novel readiness --llmwiki-smoke
 ```
 
 再用真实小说项目执行一次：

@@ -93,6 +93,11 @@ def build_parser() -> argparse.ArgumentParser:
     readiness_parser.add_argument("--llmwiki-bin", default="llmwiki", help="llmwiki executable to check.")
     readiness_parser.add_argument("--series-smoke", action="store_true", help="Run a temporary multi-chapter series smoke.")
     readiness_parser.add_argument("--smoke-chapter-count", type=int, default=5, help="Chapter count for --series-smoke.")
+    readiness_parser.add_argument(
+        "--llmwiki-smoke",
+        action="store_true",
+        help="Run a temporary approved llmwiki workspace sync and reindex smoke.",
+    )
 
     assets_parser = subparsers.add_parser(
         "botmux-assets",
@@ -199,6 +204,7 @@ def main(argv: Optional[list[str]] = None) -> int:
             llmwiki_bin=args.llmwiki_bin,
             run_series_smoke=args.series_smoke,
             smoke_chapter_count=args.smoke_chapter_count,
+            run_llmwiki_smoke=args.llmwiki_smoke,
         )
         result = NovelReadinessChecker().check(request)
         print(json.dumps(result.to_dict(), ensure_ascii=False, indent=2))
