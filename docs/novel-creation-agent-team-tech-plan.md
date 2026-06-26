@@ -441,6 +441,8 @@ novel-project/
 7. 当前已生成 `novel-story-foundation.workflow.json` 和 `novel-chapter-production.workflow.json`，并使用本地三个小说 bot 的 `larkAppId` 通过 validate。
 8. 仓库和本机 BotMux 运行资产用 `python3 -m botmux_novel botmux-assets --write` 同步；默认不带 `--write` 时只做 dry-run。
 
+BotMux CLI 的离线 `workflow run --bot-resolver echo` 不能作为小说 workflow 的端到端测试：echo resolver 只返回 `{activityId, bot, echo}`，不会按 `outputSchema` 生成 `preview/handoff/data`，因此多节点 workflow 在第二个节点引用 `${upstream.output.handoff}` 时会出现 `InputBindingFailed`。自动验证应使用 `botmux workflow validate`、`python3 -m botmux_novel readiness` 的 workflow binding 静态校验，以及本地 `series` runtime smoke；真实 BotMux workflow run 需要真实 bot 输出，并会在 `humanGate` 等待人工审批。
+
 ## 14. 与现有 P0 运行时对齐
 
 当前 `botmux_novel` 已有能力：
