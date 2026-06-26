@@ -447,11 +447,11 @@ python3 -m botmux_novel llmwiki-mcp-config \
 3. 写 repo、写 llmwiki、发飞书消息、覆盖设定、删除页面必须加 `humanGate`。
 4. 每个节点设置 `outputSchema`，至少约束 `preview`、`handoff`、`data`、`risks`。
 5. workflow 文件写入 `$HOME/.botmux/workflows/<workflowId>.workflow.json`，写后跑 `botmux workflow validate`。
-6. 修改 workflow 后跑 `python3 -m botmux_novel readiness`，静态检查 `${params.*}` 和 `${node.output.*}` 是否指向已声明参数、上游依赖和 `outputSchema.properties` 字段。
+6. 修改 workflow 后跑 `python3 -m botmux_novel readiness`，静态检查 `${params.*}` 和 `${node.output.*}` 是否指向已声明参数、上游依赖和 `outputSchema.properties` 字段，并用合成输出渲染每个节点 prompt / humanGate prompt。
 7. 当前已生成 `novel-story-foundation.workflow.json` 和 `novel-chapter-production.workflow.json`，并使用本地三个小说 bot 的 `larkAppId` 通过 validate。
 8. 仓库和本机 BotMux 运行资产用 `python3 -m botmux_novel botmux-assets --write` 同步；默认不带 `--write` 时只做 dry-run。
 
-BotMux CLI 的离线 `workflow run --bot-resolver echo` 不能作为小说 workflow 的端到端测试：echo resolver 只返回 `{activityId, bot, echo}`，不会按 `outputSchema` 生成 `preview/handoff/data`，因此多节点 workflow 在第二个节点引用 `${upstream.output.handoff}` 时会出现 `InputBindingFailed`。自动验证应使用 `botmux workflow validate`、`python3 -m botmux_novel readiness` 的 workflow binding 静态校验，以及本地 `series` runtime smoke；真实 BotMux workflow run 需要真实 bot 输出，并会在 `humanGate` 等待人工审批。
+BotMux CLI 的离线 `workflow run --bot-resolver echo` 不能作为小说 workflow 的端到端测试：echo resolver 只返回 `{activityId, bot, echo}`，不会按 `outputSchema` 生成 `preview/handoff/data`，因此多节点 workflow 在第二个节点引用 `${upstream.output.handoff}` 时会出现 `InputBindingFailed`。自动验证应使用 `botmux workflow validate`、`python3 -m botmux_novel readiness` 的 workflow binding 静态校验、workflow 合成契约 smoke，以及本地 `series` runtime smoke；真实 BotMux workflow run 需要真实 bot 输出，并会在 `humanGate` 等待人工审批。
 
 ## 14. 与现有 P0 运行时对齐
 
@@ -460,7 +460,7 @@ BotMux CLI 的离线 `workflow run --bot-resolver echo` 不能作为小说 workf
 - `NovelRuntime.run` 串行执行 Intake、Plan、RetrieveContext、Generate、Review、Revise、Approve、Archive。
 - `NovelRuntime.chapter` 从已有 `foundation.json` 继续生产章节，避免重新规划已批准 Story Bible。
 - `NovelSeriesRunner` 可连续生成默认 5 章样例并输出 Phase 3 质量指标，当前 20 章稳定性基线已通过。
-- `NovelReadinessChecker` 可检查 BotMux 资产、三个小说 bot 配置、workflow validate、workflow 模板绑定、llmwiki 可用性、可选 bootstrap smoke、approval apply smoke、series smoke 和可选 approved llmwiki sync smoke。
+- `NovelReadinessChecker` 可检查 BotMux 资产、三个小说 bot 配置、workflow validate、workflow 模板绑定、workflow 合成契约 smoke、llmwiki 可用性、可选 bootstrap smoke、approval apply smoke、series smoke 和可选 approved llmwiki sync smoke。
 - 本地工作区输出 `project.yaml`、`story.md`、`settings/*`、`characters/*`、`outline/*`、`tracking/*`、`runs/*`。
 - `python3 -m botmux_novel botmux-assets` 同步仓库 workflow 模板和三个小说 bot workspace `AGENTS.md`。
 - 测试覆盖首章闭环、真实 CLI 入口和门禁阻断。
@@ -556,7 +556,7 @@ python3 -m botmux_novel readiness --bootstrap-smoke --approval-apply-smoke --ser
 
 - 已新增本地 `python3 -m botmux_novel series`，默认可连续生成 5 章样例项目，并已通过 20 章稳定性基线。
 - `series` 会统计 P0/P1 冲突、修订轮次、归档完整率、prior context 覆盖率和用户修改点。
-- 已新增本地 `python3 -m botmux_novel readiness --bootstrap-smoke --approval-apply-smoke --series-smoke`，用于一键验收本机 BotMux/workflow validate/workflow 绑定/llmwiki/bootstrap/approval decision/approval apply/series smoke 状态；`--llmwiki-smoke` 可额外验证底层 approved llmwiki workspace 写入、lint 和 reindex。
+- 已新增本地 `python3 -m botmux_novel readiness --bootstrap-smoke --approval-apply-smoke --series-smoke`，用于一键验收本机 BotMux/workflow validate/workflow 绑定/workflow 合成契约/llmwiki/bootstrap/approval decision/approval apply/series smoke 状态；`--llmwiki-smoke` 可额外验证底层 approved llmwiki workspace 写入、lint 和 reindex。
 - 只有当某类任务反复成为瓶颈时，才新增专职 bot。
 
 ## 16. 验收标准
@@ -578,7 +578,7 @@ python3 -m botmux_novel readiness --bootstrap-smoke --approval-apply-smoke --ser
 | 创作角色过度发散 | Director 给硬约束，Validator 做 P0/P1 阻断。 |
 | 豆包候选文本事实漂移 | 只把豆包输出当候选素材；Codex 结构化后必须过 Validator。 |
 | llmwiki 被草稿污染 | 只有 Director-Curator 能写，且必须 humanGate。 |
-| 输出格式不一致 | 统一 `novel_agent_output_v1`，workflow 中用 outputSchema 约束，并由 readiness 静态检查模板绑定。 |
+| 输出格式不一致 | 统一 `novel_agent_output_v1`，workflow 中用 outputSchema 约束，并由 readiness 静态检查模板绑定和合成契约 smoke。 |
 | 知识检索遗漏 | Director-Curator 在开书和归档时都输出 `wiki_refs` 和未覆盖区域。 |
 
 ## 18. 下一步

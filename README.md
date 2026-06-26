@@ -113,6 +113,8 @@ python3 -m botmux_novel readiness --bootstrap-smoke --approval-apply-smoke --ser
 python3 -m botmux_novel readiness --bootstrap-smoke --approval-apply-smoke --series-smoke --smoke-chapter-count 20 --llmwiki-smoke
 ```
 
+`readiness` 默认会同时执行 workflow 绑定静态校验和本地合成契约 smoke，确认两个 BotMux workflow 的 prompt 能按依赖顺序渲染，并且每个节点都能传递 `preview/handoff/data` 等统一输出字段。
+
 ## Local Doubao CLI
 
 本仓库提供一个轻量豆包包装层，用于把豆包桌面端或网页版自动化 runner 暴露成稳定 CLI。默认推荐 OpenCLI 的桌面端适配器；前置 runner 可用 `npm install -g @jackwener/opencli` 安装（需要 Node.js >= 20）：

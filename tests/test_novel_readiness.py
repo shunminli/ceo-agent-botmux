@@ -8,7 +8,7 @@ import unittest
 from pathlib import Path
 
 from botmux_novel import BotmuxAssetSyncRequest, BotmuxAssetSyncer, NovelReadinessChecker, NovelReadinessRequest
-from botmux_novel.readiness import EXPECTED_NOVEL_BOTS, validate_workflow_bindings
+from botmux_novel.readiness import EXPECTED_NOVEL_BOTS, simulate_workflow_contract, validate_workflow_bindings
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -40,6 +40,7 @@ class NovelReadinessTest(unittest.TestCase):
             self.assertEqual(checks["bot_configs"].status, "pass")
             self.assertEqual(checks["workflow_validate"].status, "pass")
             self.assertEqual(checks["workflow_bindings"].status, "pass")
+            self.assertEqual(checks["workflow_contract_smoke"].status, "pass")
             self.assertEqual(checks["llmwiki"].status, "warn")
             self.assertEqual(checks["series_smoke"].status, "pass")
             self.assertEqual(checks["series_smoke"].data["metrics"]["chapter_count"], 2)
@@ -76,7 +77,14 @@ class NovelReadinessTest(unittest.TestCase):
             self.assertEqual(payload["status"], "ready_with_warnings")
             self.assertEqual(
                 {check["name"] for check in payload["checks"]},
-                {"botmux_assets", "bot_configs", "workflow_validate", "workflow_bindings", "llmwiki"},
+                {
+                    "botmux_assets",
+                    "bot_configs",
+                    "workflow_validate",
+                    "workflow_bindings",
+                    "workflow_contract_smoke",
+                    "llmwiki",
+                },
             )
 
     def test_workflow_binding_validator_rejects_unknown_refs(self) -> None:
@@ -126,6 +134,89 @@ class NovelReadinessTest(unittest.TestCase):
             self.assertIn("Unknown workflow param: missing", messages)
             self.assertIn("Unknown upstream node: ghost", messages)
             self.assertIn("Upstream node is not in dependency closure: unrelated", messages)
+
+    def test_workflow_contract_smoke_rejects_missing_required_property_schema(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            workflow_path = Path(tmpdir) / "bad-contract.workflow.json"
+            workflow_path.write_text(
+                json.dumps(
+                    {
+                        "workflowId": "bad-contract",
+                        "params": {"projectSlug": {"type": "string", "required": True}},
+                        "nodes": {
+                            "source": {
+                                "type": "subagent",
+                                "prompt": "${params.projectSlug}",
+                                "outputSchema": {
+                                    "type": "object",
+                                    "required": ["preview", "handoff"],
+                                    "properties": {"preview": {"type": "string"}},
+                                },
+                            },
+                            "consumer": {
+                                "type": "subagent",
+                                "depends": ["source"],
+                                "prompt": "${source.output.preview}",
+                                "outputSchema": {
+                                    "type": "object",
+                                    "required": ["preview", "handoff"],
+                                    "properties": {
+                                        "preview": {"type": "string"},
+                                        "handoff": {"type": "string"},
+                                    },
+                                },
+                            },
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            result = simulate_workflow_contract(workflow_path)
+
+            messages = [error["message"] for error in result["errors"]]
+            self.assertIn("Required output field has no property schema: handoff", messages)
+            self.assertIn("Missing required synthetic output field: handoff", messages)
+
+    def test_workflow_contract_smoke_reports_dependency_cycles(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            workflow_path = Path(tmpdir) / "cycle.workflow.json"
+            workflow_path.write_text(
+                json.dumps(
+                    {
+                        "workflowId": "cycle",
+                        "params": {"projectSlug": {"type": "string", "required": True}},
+                        "nodes": {
+                            "first": {
+                                "type": "subagent",
+                                "depends": ["second"],
+                                "prompt": "${params.projectSlug}",
+                                "outputSchema": {
+                                    "type": "object",
+                                    "required": ["preview"],
+                                    "properties": {"preview": {"type": "string"}},
+                                },
+                            },
+                            "second": {
+                                "type": "subagent",
+                                "depends": ["first"],
+                                "prompt": "${params.projectSlug}",
+                                "outputSchema": {
+                                    "type": "object",
+                                    "required": ["preview"],
+                                    "properties": {"preview": {"type": "string"}},
+                                },
+                            },
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            result = simulate_workflow_contract(workflow_path)
+
+            messages = [error["message"] for error in result["errors"]]
+            self.assertIn("Workflow dependency cycle detected: first -> second -> first", messages)
 
     def test_llmwiki_check_requires_usable_help_command(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:

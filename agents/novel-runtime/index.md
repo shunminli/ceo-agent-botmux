@@ -17,7 +17,7 @@ Updated: 2026-06-27
 - 提供本地 wiki Markdown lint 入口 `python -m botmux_novel wiki-lint`，当 llmwiki CLI 没有 `lint` 子命令时作为 approved sync 的 fallback。
 - 提供项目级 MCP 配置生成入口 `python -m botmux_novel llmwiki-mcp-config`，输出 Codex TOML、标准 MCP JSON、角色绑定和 humanGate 策略，不改全局配置。
 - 提供连续章节样例入口 `python -m botmux_novel series`，默认生成 5 章并统计 Phase 3 质量指标。
-- 提供本地就绪检查入口 `python -m botmux_novel readiness`，检查 BotMux 配置、workflow validate、workflow 模板绑定、workspace 身份、llmwiki 可用性、可选 bootstrap smoke、approval apply smoke、series smoke 和 approved llmwiki sync smoke。
+- 提供本地就绪检查入口 `python -m botmux_novel readiness`，检查 BotMux 配置、workflow validate、workflow 模板绑定、workflow 合成契约、workspace 身份、llmwiki 可用性、可选 bootstrap smoke、approval apply smoke、series smoke 和 approved llmwiki sync smoke。
 - 提供 BotMux 资产同步入口 `python -m botmux_novel botmux-assets`，用于同步 workflow 模板和三个小说 bot 的 workspace `AGENTS.md`。
 - 配套版本化 BotMux workflow：`workflows/novel-story-foundation.workflow.json` 和 `workflows/novel-chapter-production.workflow.json`，用于三 bot 协作、humanGate 和归档计划。
 - 在本地小说项目目录中创建方案文档约定的文件工作区。
@@ -139,11 +139,12 @@ Updated: 2026-06-27
 2. 读取 `~/.botmux/bots.json`，确认三个小说 bot 的 appId 和工作目录存在；不会输出 app secret。
 3. 运行 `botmux workflow validate` 校验两个 workflow 模板。
 4. 静态校验 workflow 模板中的 `${params.*}` 和 `${node.output.*}` 绑定，确认参数、上游节点、依赖闭包和输出字段都存在。
-5. 检查 `llmwiki` 是否在 PATH 且 `llmwiki --help` 可执行；缺失或不可用是 warning，不阻断本地文件同步。
-6. 传 `--bootstrap-smoke` 时在临时目录跑 `novel-bootstrap`，确认 foundation、wiki 审核包、dry-run sync plan、MCP config 和 approval package 可生成，执行审批包里的 `next_actions.chapter_start_command`，并确认外部 workspace 未被写入。
-7. 传 `--approval-apply-smoke` 时在临时目录跑 `novel-bootstrap`、`approval-decision --decision approve` 和 approved `approval-apply`，确认决策记录、workspace 自动初始化、页面写入、lint 和 reindex 可用。
-8. 传 `--series-smoke` 时在临时目录跑连续章节 smoke，并检查 Phase 3 指标阈值。
-9. 传 `--llmwiki-smoke` 时在临时目录生成 wiki bundle，初始化独立 llmwiki workspace，执行 approved `llmwiki-sync --reindex --lint`，确认页面复制、lint 和索引重建可用。
+5. 运行 workflow 合成契约 smoke，用最小合成输出渲染每个节点 prompt 和 humanGate prompt，确认 `preview/handoff/data/open_questions/risks/wiki_refs/change_declarations` 能按依赖传递。
+6. 检查 `llmwiki` 是否在 PATH 且 `llmwiki --help` 可执行；缺失或不可用是 warning，不阻断本地文件同步。
+7. 传 `--bootstrap-smoke` 时在临时目录跑 `novel-bootstrap`，确认 foundation、wiki 审核包、dry-run sync plan、MCP config 和 approval package 可生成，执行审批包里的 `next_actions.chapter_start_command`，并确认外部 workspace 未被写入。
+8. 传 `--approval-apply-smoke` 时在临时目录跑 `novel-bootstrap`、`approval-decision --decision approve` 和 approved `approval-apply`，确认决策记录、workspace 自动初始化、页面写入、lint 和 reindex 可用。
+9. 传 `--series-smoke` 时在临时目录跑连续章节 smoke，并检查 Phase 3 指标阈值。
+10. 传 `--llmwiki-smoke` 时在临时目录生成 wiki bundle，初始化独立 llmwiki workspace，执行 approved `llmwiki-sync --reindex --lint`，确认页面复制、lint 和索引重建可用。
 
 ### BotMux Assets
 
@@ -172,7 +173,7 @@ Updated: 2026-06-27
 - `botmux_novel/wiki_lint.py`：本地 wiki Markdown 结构 lint，用于检查必需页面、标题、空文件、字符页目录和本地 Markdown 链接。
 - `botmux_novel/mcp_config.py`：项目级 llmwiki MCP 配置片段、Codex TOML、角色绑定和 humanGate 策略生成。
 - `botmux_novel/series.py`：连续章节样例运行和质量指标采集。
-- `botmux_novel/readiness.py`：小说生产本地就绪检查、workflow 绑定静态校验、可选 series smoke 和可选 llmwiki write/lint/reindex smoke。
+- `botmux_novel/readiness.py`：小说生产本地就绪检查、workflow 绑定静态校验、workflow 合成契约 smoke、可选 series smoke 和可选 llmwiki write/lint/reindex smoke。
 - `botmux_novel/botmux_assets.py`：BotMux workflow 和 workspace AGENTS 同步。
 - `tests/test_botmux_assets.py`：BotMux 资产 dry-run、写入、CLI 和本机 workspace 同步测试。
 - `tests/test_novel_approval.py`：审批包 dry-run、approved apply 和 CLI 入口测试。

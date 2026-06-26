@@ -90,6 +90,7 @@ class NovelReadinessChecker:
             self._check_bot_configs(botmux_home=botmux_home),
             self._check_workflows(repo_path=repo_path, botmux_bin=request.botmux_bin.expanduser()),
             self._check_workflow_bindings(repo_path=repo_path),
+            self._check_workflow_contract_smoke(repo_path=repo_path),
             self._check_llmwiki(llmwiki_bin=request.llmwiki_bin),
         ]
         if request.run_bootstrap_smoke:
@@ -232,6 +233,28 @@ class NovelReadinessChecker:
         )
         return ReadinessCheck(
             name="workflow_bindings",
+            status=status,
+            summary=summary,
+            data={"files": files, "failure_count": len(failures)},
+        )
+
+    def _check_workflow_contract_smoke(self, *, repo_path: Path) -> ReadinessCheck:
+        files = []
+        failures = []
+        for filename in WORKFLOW_FILES:
+            workflow_path = repo_path / "workflows" / filename
+            result = simulate_workflow_contract(workflow_path)
+            files.append(result)
+            failures.extend(result["errors"])
+
+        status = "pass" if not failures else "fail"
+        summary = (
+            "Novel workflow prompts render with synthetic contract outputs."
+            if status == "pass"
+            else f"Novel workflow contract smoke failed with {len(failures)} error(s)."
+        )
+        return ReadinessCheck(
+            name="workflow_contract_smoke",
             status=status,
             summary=summary,
             data={"files": files, "failure_count": len(failures)},
@@ -666,6 +689,267 @@ def command_payload(completed: subprocess.CompletedProcess[str]) -> Dict[str, An
         "stdout": completed.stdout,
         "stderr": completed.stderr,
     }
+
+
+def simulate_workflow_contract(workflow_path: Path) -> Dict[str, Any]:
+    result: Dict[str, Any] = {
+        "workflow": workflow_path.name,
+        "path": str(workflow_path),
+        "node_count": 0,
+        "rendered_nodes": [],
+        "human_gate_nodes": [],
+        "errors": [],
+    }
+    if not workflow_path.exists():
+        result["errors"].append({"node": "", "message": f"Missing workflow file: {workflow_path}"})
+        return result
+    try:
+        workflow = json.loads(workflow_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        result["errors"].append({"node": "", "message": f"Invalid workflow JSON: {exc}"})
+        return result
+
+    params = workflow.get("params", {})
+    nodes = workflow.get("nodes", {})
+    if not isinstance(params, dict):
+        result["errors"].append({"node": "", "message": "Workflow params must be an object."})
+        return result
+    if not isinstance(nodes, dict):
+        result["errors"].append({"node": "", "message": "Workflow nodes must be an object."})
+        return result
+
+    result["node_count"] = len(nodes)
+    sample_params = synthetic_params(params)
+    ordered_nodes, order_errors = workflow_order(nodes)
+    result["errors"].extend({"node": node_id, "message": message} for node_id, message in order_errors)
+
+    outputs: Dict[str, Dict[str, Any]] = {}
+    for node_id in ordered_nodes:
+        node_config = nodes.get(node_id)
+        if not isinstance(node_config, dict):
+            result["errors"].append({"node": node_id, "message": "Node config must be an object."})
+            continue
+        missing_dependencies = [dependency_id for dependency_id in workflow_depends(node_config) if dependency_id not in outputs]
+        if missing_dependencies:
+            result["errors"].append(
+                {
+                    "node": node_id,
+                    "message": f"Dependencies not rendered before node: {', '.join(missing_dependencies)}",
+                }
+            )
+            continue
+
+        node_errors: List[str] = []
+        rendered_prompt = render_template_text(
+            str(node_config.get("prompt", "")),
+            params=sample_params,
+            outputs=outputs,
+            errors=node_errors,
+        )
+        if not rendered_prompt.strip():
+            node_errors.append("Rendered prompt is empty.")
+        if "${" in rendered_prompt:
+            node_errors.append("Rendered prompt still contains template markers.")
+
+        human_gate = node_config.get("humanGate")
+        rendered_human_gate = ""
+        if isinstance(human_gate, dict):
+            rendered_human_gate = render_template_text(
+                str(human_gate.get("prompt", "")),
+                params=sample_params,
+                outputs=outputs,
+                errors=node_errors,
+            )
+            if not rendered_human_gate.strip():
+                node_errors.append("HumanGate prompt is empty.")
+            if "${" in rendered_human_gate:
+                node_errors.append("HumanGate prompt still contains template markers.")
+            result["human_gate_nodes"].append(node_id)
+
+        output = synthetic_output_for_schema(node_config.get("outputSchema", {}), node_id=node_id, errors=node_errors)
+        node_errors.extend(validate_synthetic_output(node_config.get("outputSchema", {}), output))
+        if node_errors:
+            result["errors"].extend({"node": node_id, "message": message} for message in node_errors)
+
+        outputs[node_id] = output
+        result["rendered_nodes"].append(
+            {
+                "node": node_id,
+                "prompt_length": len(rendered_prompt),
+                "human_gate_prompt_length": len(rendered_human_gate),
+                "output_fields": sorted(output.keys()),
+            }
+        )
+    return result
+
+
+def synthetic_params(params: Dict[str, Any]) -> Dict[str, Any]:
+    values: Dict[str, Any] = {}
+    defaults = {
+        "projectSlug": "shadow-clock-case",
+        "title": "影钟旧案",
+        "inspiration": "一个背负旧案污名的少年，在巡夜钟声中发现妹妹影子会说真话。",
+        "storyBible": "已批准的 Story Bible 合成输入。",
+        "chapterGoal": "用旧书楼残页引出主角秘密能力并埋下巡夜钟伏笔。",
+        "priorContext": "前文章节事实、角色状态、时间线和伏笔摘要。",
+        "genre": "悬疑奇幻",
+        "targetLength": "长篇",
+        "mode": "lean",
+    }
+    for name, config in params.items():
+        if isinstance(config, dict) and "default" in config:
+            values[name] = config["default"]
+        elif name in defaults:
+            values[name] = defaults[name]
+        elif isinstance(config, dict) and config.get("type") == "number":
+            values[name] = 1
+        elif isinstance(config, dict) and config.get("type") == "boolean":
+            values[name] = False
+        else:
+            values[name] = f"synthetic-{name}"
+    return values
+
+
+def workflow_order(nodes: Dict[str, Any]) -> Tuple[List[str], List[Tuple[str, str]]]:
+    ordered: List[str] = []
+    temporary: Set[str] = set()
+    permanent: Set[str] = set()
+    stack: List[str] = []
+    errors: List[Tuple[str, str]] = []
+
+    def visit(node_id: str) -> None:
+        if node_id in permanent:
+            return
+        if node_id in temporary:
+            cycle_start = stack.index(node_id) if node_id in stack else 0
+            cycle_path = stack[cycle_start:] + [node_id]
+            errors.append((node_id, f"Workflow dependency cycle detected: {' -> '.join(cycle_path)}"))
+            return
+        temporary.add(node_id)
+        stack.append(node_id)
+        node_config = nodes.get(node_id)
+        for dependency_id in workflow_depends(node_config):
+            if dependency_id in nodes:
+                visit(dependency_id)
+        stack.pop()
+        temporary.remove(node_id)
+        permanent.add(node_id)
+        ordered.append(node_id)
+
+    for node_id in nodes:
+        visit(str(node_id))
+    return ordered, errors
+
+
+def render_template_text(
+    text: str,
+    *,
+    params: Dict[str, Any],
+    outputs: Dict[str, Dict[str, Any]],
+    errors: List[str],
+) -> str:
+    def replace(match: re.Match[str]) -> str:
+        expression = match.group(1).strip()
+        parts = expression.split(".")
+        if len(parts) == 2 and parts[0] == "params":
+            if parts[1] not in params:
+                errors.append(f"Unknown synthetic param: {parts[1]}")
+                return match.group(0)
+            return str(params[parts[1]])
+        if len(parts) == 3 and parts[1] == "output":
+            output = outputs.get(parts[0])
+            if output is None:
+                errors.append(f"Unknown synthetic upstream output: {parts[0]}")
+                return match.group(0)
+            if parts[2] not in output:
+                errors.append(f"Unknown synthetic output field on {parts[0]}: {parts[2]}")
+                return match.group(0)
+            return stringify_template_value(output[parts[2]])
+        errors.append(f"Unsupported synthetic template expression: {expression}")
+        return match.group(0)
+
+    return TEMPLATE_REF_PATTERN.sub(replace, text)
+
+
+def stringify_template_value(value: Any) -> str:
+    if isinstance(value, str):
+        return value
+    return json.dumps(value, ensure_ascii=False, sort_keys=True)
+
+
+def synthetic_output_for_schema(schema: Any, *, node_id: str, errors: List[str]) -> Dict[str, Any]:
+    if not isinstance(schema, dict):
+        errors.append("Output schema must be an object.")
+        return {}
+    properties = schema.get("properties", {})
+    required = schema.get("required", [])
+    if not isinstance(properties, dict):
+        errors.append("Output schema properties must be an object.")
+        return {}
+    if not isinstance(required, list):
+        errors.append("Output schema required must be an array.")
+        return {}
+    output: Dict[str, Any] = {}
+    for field in required:
+        field_name = str(field)
+        field_schema = properties.get(field_name)
+        if not isinstance(field_schema, dict):
+            errors.append(f"Required output field has no property schema: {field_name}")
+            continue
+        output[field_name] = synthetic_value_for_schema(field_schema, node_id=node_id, field_name=field_name)
+    return output
+
+
+def synthetic_value_for_schema(schema: Dict[str, Any], *, node_id: str, field_name: str) -> Any:
+    field_type = schema.get("type")
+    if field_type == "string":
+        return f"{node_id}.{field_name}.synthetic"
+    if field_type == "array":
+        return []
+    if field_type == "object":
+        return {"node": node_id, "field": field_name, "synthetic": True}
+    if field_type == "number":
+        return 1
+    if field_type == "integer":
+        return 1
+    if field_type == "boolean":
+        return False
+    return f"{node_id}.{field_name}.synthetic"
+
+
+def validate_synthetic_output(schema: Any, output: Dict[str, Any]) -> List[str]:
+    if not isinstance(schema, dict):
+        return ["Output schema must be an object."]
+    properties = schema.get("properties", {})
+    required = schema.get("required", [])
+    if not isinstance(properties, dict) or not isinstance(required, list):
+        return ["Output schema properties/required are malformed."]
+    errors: List[str] = []
+    for field in required:
+        field_name = str(field)
+        if field_name not in output:
+            errors.append(f"Missing required synthetic output field: {field_name}")
+            continue
+        expected_type = properties.get(field_name, {}).get("type") if isinstance(properties.get(field_name), dict) else None
+        if expected_type and not value_matches_json_type(output[field_name], expected_type):
+            errors.append(f"Synthetic output field has wrong type: {field_name}")
+    return errors
+
+
+def value_matches_json_type(value: Any, expected_type: str) -> bool:
+    if expected_type == "string":
+        return isinstance(value, str)
+    if expected_type == "array":
+        return isinstance(value, list)
+    if expected_type == "object":
+        return isinstance(value, dict)
+    if expected_type == "number":
+        return isinstance(value, (int, float)) and not isinstance(value, bool)
+    if expected_type == "integer":
+        return isinstance(value, int) and not isinstance(value, bool)
+    if expected_type == "boolean":
+        return isinstance(value, bool)
+    return True
 
 
 def validate_workflow_bindings(workflow_path: Path) -> List[Dict[str, str]]:
