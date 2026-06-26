@@ -49,10 +49,13 @@ class NovelBootstrapTest(unittest.TestCase):
             self.assertIn("--approve", package["human_gate"]["approved_write_command"])
             self.assertIn("--llmwiki-bin", package["human_gate"]["approved_write_command"])
             self.assertIn(str(fake_llmwiki), package["human_gate"]["approved_write_command"])
+            self.assertIn("approval-apply", package["human_gate"]["approval_apply_command"])
+            self.assertIn(str(result.approval_package_json_path), package["human_gate"]["approval_apply_command"])
             self.assertEqual(package["llmwiki"]["preview"]["page_count"], 12)
             package_markdown = result.approval_package_path.read_text(encoding="utf-8")
             self.assertIn("# Novel Bootstrap Approval Package", package_markdown)
-            self.assertIn("Approved write command", package_markdown)
+            self.assertIn("Preferred approval apply command", package_markdown)
+            self.assertIn("Underlying approved write command", package_markdown)
 
     def test_cli_novel_bootstrap_uses_real_entrypoint(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:

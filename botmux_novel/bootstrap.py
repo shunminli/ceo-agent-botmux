@@ -109,6 +109,10 @@ class NovelBootstrapper:
             )
         )
 
+        run_dir = project_path / "runs" / run_id
+        run_dir.mkdir(parents=True, exist_ok=True)
+        approval_package_json_path = run_dir / "approval-package.json"
+        approval_package_path = run_dir / "approval-package.md"
         payload = approval_payload(
             request=request,
             run_id=run_id,
@@ -117,10 +121,15 @@ class NovelBootstrapper:
             llmwiki_sync=llmwiki_sync,
             mcp_config=mcp_config,
         )
-        run_dir = project_path / "runs" / run_id
-        run_dir.mkdir(parents=True, exist_ok=True)
-        approval_package_json_path = run_dir / "approval-package.json"
-        approval_package_path = run_dir / "approval-package.md"
+        payload["human_gate"]["approval_apply_command"] = [
+            "python3",
+            "-m",
+            "botmux_novel",
+            "approval-apply",
+            "--approval-package",
+            str(approval_package_json_path),
+            "--approve",
+        ]
         approval_package_json_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
         approval_package_path.write_text(render_approval_markdown(payload), encoding="utf-8")
 
@@ -233,6 +242,7 @@ def render_approval_markdown(payload: Dict[str, Any]) -> str:
     llmwiki = payload["llmwiki"]
     preview = llmwiki.get("preview", {})
     command = shlex.join(human_gate["approved_write_command"])
+    apply_command = shlex.join(human_gate.get("approval_apply_command", []))
     pages = "\n".join(f"- `{page}`" for page in preview.get("pages", [])) or "- No pages found"
     must_review = "\n".join(f"- {item}" for item in human_gate["must_review"])
     next_steps = "\n".join(f"{index}. {step}" for index, step in enumerate(payload["next_steps"], start=1))
@@ -277,7 +287,13 @@ Pages:
 
 {pages}
 
-Approved write command:
+Preferred approval apply command:
+
+```bash
+{apply_command}
+```
+
+Underlying approved write command:
 
 ```bash
 {command}

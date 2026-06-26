@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 from typing import Optional
 
+from .approval import NovelApprovalApplier, NovelApprovalApplyRequest
 from .bootstrap import NovelBootstrapper, NovelBootstrapRequest
 from .botmux_assets import BotmuxAssetSyncRequest, BotmuxAssetSyncer
 from .llmwiki_sync import LlmwikiSyncRequest, LlmwikiSyncer
@@ -50,6 +51,16 @@ def build_parser() -> argparse.ArgumentParser:
     bootstrap_parser.add_argument("--mode", choices=["full", "lean", "solo"], default="lean", help="Agent execution mode.")
     bootstrap_parser.add_argument("--word-target", type=int, default=1200, help="Target chapter length for planning.")
     bootstrap_parser.add_argument("--llmwiki-bin", default="llmwiki", help="llmwiki executable to place in generated MCP config and planned reindex command.")
+
+    approval_parser = subparsers.add_parser(
+        "approval-apply",
+        help="Apply a novel-bootstrap approval package after humanGate approval; dry-run unless --approve is passed.",
+    )
+    approval_parser.add_argument("--approval-package", required=True, help="Path to runs/<bootstrap_run_id>/approval-package.json.")
+    approval_parser.add_argument("--approve", action="store_true", help="Apply approved wiki writes. Without this flag, only writes a fresh sync plan.")
+    approval_parser.add_argument("--no-backup", action="store_true", help="Do not create .bak files before replacing target pages.")
+    approval_parser.add_argument("--llmwiki-bin", help="Optional override for the llmwiki executable recorded in the approval package.")
+    approval_parser.add_argument("--no-reindex", action="store_true", help="Do not run `llmwiki reindex <workspace>` after approved writes.")
 
     chapter_parser = subparsers.add_parser(
         "chapter",
@@ -182,6 +193,18 @@ def main(argv: Optional[list[str]] = None) -> int:
         result = NovelBootstrapper().bootstrap(request)
         print(json.dumps(result.to_dict(), ensure_ascii=False, indent=2))
         return 0 if result.status in {"ready", "ready_with_warnings"} else 2
+
+    if args.command == "approval-apply":
+        request = NovelApprovalApplyRequest(
+            approval_package_path=Path(args.approval_package).expanduser().resolve(),
+            approve=args.approve,
+            backup=not args.no_backup,
+            llmwiki_bin=args.llmwiki_bin,
+            reindex=not args.no_reindex,
+        )
+        result = NovelApprovalApplier().apply(request)
+        print(json.dumps(result.to_dict(), ensure_ascii=False, indent=2))
+        return 0 if result.status in {"planned", "completed", "completed_with_warnings"} else 2
 
     if args.command == "chapter":
         request = NovelChapterRequest(

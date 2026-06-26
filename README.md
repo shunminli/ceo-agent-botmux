@@ -40,6 +40,10 @@ python3 -m botmux_novel novel-bootstrap \
   --inspiration "一个背负旧案污名的少年，在巡夜钟声中发现妹妹影子会说真话。" \
   --project-slug shadow-clock-case
 
+python3 -m botmux_novel approval-apply \
+  --approval-package /tmp/novel-demo/runs/<bootstrap-run-id>/approval-package.json \
+  --approve
+
 python3 -m botmux_novel wiki-bundle \
   --project /tmp/novel-demo \
   --project-slug shadow-clock-case

@@ -1,5 +1,6 @@
 """Local novel creation agent runtime."""
 
+from .approval import NovelApprovalApplier, NovelApprovalApplyRequest, NovelApprovalApplyResult
 from .bootstrap import NovelBootstrapper, NovelBootstrapRequest, NovelBootstrapResult
 from .botmux_assets import (
     BotmuxAssetAction,
@@ -33,6 +34,9 @@ __all__ = [
     "BotmuxAssetSyncRequest",
     "BotmuxAssetSyncResult",
     "BotmuxAssetSyncer",
+    "NovelApprovalApplier",
+    "NovelApprovalApplyRequest",
+    "NovelApprovalApplyResult",
     "NovelBootstrapper",
     "NovelBootstrapRequest",
     "NovelBootstrapResult",

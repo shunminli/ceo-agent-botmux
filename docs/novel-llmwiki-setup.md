@@ -59,7 +59,13 @@ python3 -m botmux_novel novel-bootstrap \
   --project-slug shadow-clock-case
 ```
 
-产物在 `runs/{bootstrap_run_id}/approval-package.md` 和 `approval-package.json`，审批通过后再执行其中的 `llmwiki-sync --approve --reindex` 命令。
+产物在 `runs/{bootstrap_run_id}/approval-package.md` 和 `approval-package.json`。审批通过后优先执行其中的 `approval-apply --approve` 命令，它会读取审批包中的 project、slug、workspace 和 llmwiki 配置；底层仍调用 `llmwiki-sync --approve --reindex`。
+
+```bash
+python3 -m botmux_novel approval-apply \
+  --approval-package /path/to/novel-project/runs/<bootstrap-run-id>/approval-package.json \
+  --approve
+```
 
 手动拆步流程如下：
 
