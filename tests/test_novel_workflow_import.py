@@ -54,6 +54,12 @@ class NovelWorkflowFoundationImportTest(unittest.TestCase):
             self.assertIn("approval-apply", package["human_gate"]["approval_apply_command"])
             self.assertIn("--foundation-json", package["next_actions"]["chapter_start_command"])
             self.assertIn(str(result.foundation.foundation_path), package["next_actions"]["chapter_start_command"])
+            workflow_command = package["next_actions"]["chapter_workflow_command"]
+            self.assertIn("novel-chapter-production", workflow_command)
+            self.assertIn("projectSlug=shadow-clock-case", workflow_command)
+            self.assertIn("chapterNumber=1", workflow_command)
+            self.assertIn("priorContext=无", workflow_command)
+            self.assertTrue(any(item.startswith("storyBible=") and "保护妹妹户籍" in item for item in workflow_command))
 
             check = NovelApprovalPackageChecker().check(
                 NovelApprovalCheckRequest(

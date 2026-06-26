@@ -59,7 +59,7 @@ python3 -m botmux_novel novel-bootstrap \
   --project-slug shadow-clock-case
 ```
 
-产物在 `runs/{bootstrap_run_id}/approval-package.md` 和 `approval-package.json`，写入前会按 `approval-package.schema.json` 校验必填字段和基础类型。审批通过前先执行 `approval-check --apply-dry-run`，它会再次检查 schema，并校验审核材料、humanGate 命令、llmwiki preview、MCP 角色策略和 dry-run apply 路径。审批通过后先执行其中的 `approval-decision --decision approve` 命令，记录 reviewer、notes、timestamp 和历史；再执行 `approval-apply --approve`。`approval-decision` 和 `approval-apply` 读取审批包时都会执行同一 schema 校验。`approval-apply` 会读取审批包中的 project、slug、workspace 和 llmwiki 配置；如果目标 workspace 还没有 llmwiki index，会先初始化；底层仍调用 `llmwiki-sync --approve --reindex --lint`，CLI 不支持 lint 时会运行本地 `wiki-lint` fallback，lint 返回非 0 时写入结果为 `failed`。完成知识库写入后，可继续执行审批包里的 `next_actions.chapter_start_command`，直接从批准的 `foundation.json` 生成首章。
+产物在 `runs/{bootstrap_run_id}/approval-package.md` 和 `approval-package.json`，写入前会按 `approval-package.schema.json` 校验必填字段和基础类型。审批通过前先执行 `approval-check --apply-dry-run`，它会再次检查 schema，并校验审核材料、humanGate 命令、llmwiki preview、MCP 角色策略、真实 BotMux 首章 workflow 命令和 dry-run apply 路径。审批通过后先执行其中的 `approval-decision --decision approve` 命令，记录 reviewer、notes、timestamp 和历史；再执行 `approval-apply --approve`。`approval-decision` 和 `approval-apply` 读取审批包时都会执行同一 schema 校验。`approval-apply` 会读取审批包中的 project、slug、workspace 和 llmwiki 配置；如果目标 workspace 还没有 llmwiki index，会先初始化；底层仍调用 `llmwiki-sync --approve --reindex --lint`，CLI 不支持 lint 时会运行本地 `wiki-lint` fallback，lint 返回非 0 时写入结果为 `failed`。完成知识库写入后，可继续执行审批包里的 `next_actions.chapter_workflow_command`，用已批准的 `foundation.json` 参数启动真实三 bot 首章 workflow；如只想本地 smoke，可执行 `next_actions.chapter_start_command`。
 
 如果开书设定先由真实 BotMux `novel-story-foundation` 三 bot workflow 产出，先把 workflow 结果保存为 JSON，再导入同一套本地审批链路：
 

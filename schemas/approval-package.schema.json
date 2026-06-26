@@ -76,9 +76,10 @@
     },
     "next_actions": {
       "type": "object",
-      "required": ["chapter_start_command"],
+      "required": ["chapter_start_command", "chapter_workflow_command"],
       "properties": {
-        "chapter_start_command": {"type": "array"}
+        "chapter_start_command": {"type": "array"},
+        "chapter_workflow_command": {"type": "array"}
       }
     },
     "next_steps": {"type": "array"}

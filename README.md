@@ -28,7 +28,7 @@ An AI agent team built with BotMux to coordinate coding agents through chat.
 
 P0 已提供一个标准库 Python CLI，用于验证小说创作 Agent Team 的本地闭环：从一句灵感生成开书设定、章节章纲、上下文包、草稿、审稿、修订、定稿、关系图、场景设定、文风档案、伏笔台账、状态归档、JSON trace 和 SQLite run 记录。连续章节会读取前章 `runs/archive-*.json` 并生成 `prior-context.json`；从 foundation 或章节 workflow 导入生产的章节还会生成 `runs/{run_id}/next-chapter-command.md|json`，用于审阅并启动下一章，真实 BotMux 命令会携带前章归档 `priorContext`。
 
-真实项目优先从 `novel-bootstrap` 生成的 `approval-package.md|json` 继续；审批包会给出审批记录、approved apply 和首章启动命令，避免手工拼路径。
+真实项目优先从 `novel-bootstrap` 生成的 `approval-package.md|json` 继续；审批包会给出审批记录、approved apply、本地首章 smoke 命令和真实 BotMux 首章 workflow 命令，避免手工拼路径。
 
 ```bash
 python3 -m botmux_novel foundation \
@@ -119,7 +119,7 @@ python3 -m botmux_novel readiness --bootstrap-smoke --approval-apply-smoke --ser
 
 `readiness` 默认会同时执行 workflow 绑定静态校验和本地合成契约 smoke，确认两个 BotMux workflow 的 prompt 能按依赖顺序渲染，并且每个节点都能传递 `preview/handoff/data` 等统一输出字段。传 `--llmwiki-smoke` 时会在临时项目生成一章归档，再验证 Story Bible 页面和章节归档页都能 approved sync、lint 和 reindex。
 
-`approval-check` 默认只读校验 `novel-bootstrap` 审批包；它会检查审核材料、humanGate 命令、llmwiki 预览、MCP 角色策略和首章启动命令，传 `--apply-dry-run` 时额外验证审批包能被 `approval-apply` 以 dry-run 消费且不会执行 approved writes。
+`approval-check` 默认只读校验 `novel-bootstrap` 审批包；它会检查审核材料、humanGate 命令、llmwiki 预览、MCP 角色策略、本地首章命令和真实 BotMux 首章 workflow 命令，传 `--apply-dry-run` 时额外验证审批包能被 `approval-apply` 以 dry-run 消费且不会执行 approved writes。
 
 ## Local Doubao CLI
 

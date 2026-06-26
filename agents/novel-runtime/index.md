@@ -11,7 +11,7 @@ Updated: 2026-06-27
 - 提供真实项目启动包入口 `python -m botmux_novel novel-bootstrap`，串联 foundation、wiki bundle、llmwiki dry-run sync plan、MCP config 和 human approval package。
 - 提供 BotMux 开书 workflow 输出导入口 `python -m botmux_novel workflow-foundation-import`，把已完成的 `novel-story-foundation` 节点输出转成本地 foundation、wiki bundle、dry-run sync plan、MCP config 和 human approval package。
 - 提供审批决策记录入口 `python -m botmux_novel approval-decision`，把 humanGate 的 approve、request_changes 或 reject 写回 `approval-package.json`，记录 reviewer、notes、timestamp 和历史。
-- 提供审批包校验入口 `python -m botmux_novel approval-check`，默认只读验证审核材料、humanGate 命令、llmwiki 预览、MCP 角色策略和首章启动命令，可选 dry-run apply / chapter smoke。
+- 提供审批包校验入口 `python -m botmux_novel approval-check`，默认只读验证审核材料、humanGate 命令、llmwiki 预览、MCP 角色策略、本地首章命令和真实 BotMux 首章 workflow 命令，可选 dry-run apply / chapter smoke。
 - 提供审批包执行入口 `python -m botmux_novel approval-apply`，读取 `approval-package.json`，默认 dry-run，只有显式 `--approve` 才执行 llmwiki 文件同步、reindex 和 lint。
 - 提供章节生产入口 `python -m botmux_novel chapter`，从已有 `foundation.json` 继续生成章节，不重新规划 Story Bible。
 - 提供 BotMux 章节 workflow 输出导入口 `python -m botmux_novel chapter-workflow-import`，把已完成的 `novel-chapter-production` 节点输出写成本地草稿、修订稿、定稿、tracking 归档、run trace 和下一章 handoff。
@@ -62,7 +62,7 @@ Updated: 2026-06-27
 2. 运行 `wiki-bundle`，导出 `wiki/novels/{project_slug}/` 审核页面。
 3. 运行未审批的 `llmwiki-sync`，只生成 sync plan；即使命令中带 planned reindex/lint，也不会执行 post-write 命令或覆盖外部 workspace。
 4. 运行 `llmwiki-mcp-config`，生成项目级 MCP JSON、Codex TOML 和三角色绑定策略。
-5. 用 `approval-package.schema.json` 校验审批包必填字段和基础类型后，写入 `runs/{bootstrap_run_id}/approval-package.json` 和 `approval-package.md`，列出 humanGate 必审项、页面清单、决策记录命令、批准后写入命令和 `next_actions.chapter_start_command`。
+5. 用 `approval-package.schema.json` 校验审批包必填字段和基础类型后，写入 `runs/{bootstrap_run_id}/approval-package.json` 和 `approval-package.md`，列出 humanGate 必审项、页面清单、决策记录命令、批准后写入命令、`next_actions.chapter_start_command` 本地 smoke 命令和 `next_actions.chapter_workflow_command` 真实 BotMux 首章 workflow 命令。
 
 ### Workflow Foundation Import
 
@@ -88,7 +88,8 @@ Updated: 2026-06-27
 3. 校验 wiki bundle Markdown 页面与 sync plan preview 的 pages / page_count 一致。
 4. 校验 `human_gate` 中的 `approval-decision`、`approval-apply` 和底层 `llmwiki-sync --approve --reindex --lint` 命令都指向当前审批包和项目参数。
 5. 校验 llmwiki preview 仍是未审批的 `planned` 状态，并检查 MCP role bindings：Director 可接写工具但需 humanGate，Creative 不接 llmwiki，Validator 只读。
-6. 默认不写项目、不审批、不写 llmwiki；传 `--apply-dry-run` 时调用 `approval-apply` dry-run 并确认结果仍是 `planned`；传 `--chapter-smoke` 时会执行首章命令，只适合临时 smoke 项目。
+6. 校验 `next_actions.chapter_start_command` 指向已审核 `foundation.json`，并校验 `next_actions.chapter_workflow_command` 会运行 `novel-chapter-production`，且 `projectSlug`、`title`、`storyBible`、`chapterNumber`、`chapterGoal`、`priorContext`、`wordTarget` 和 `mode` 都来自审批包与 foundation。
+7. 默认不写项目、不审批、不写 llmwiki；传 `--apply-dry-run` 时调用 `approval-apply` dry-run 并确认结果仍是 `planned`；传 `--chapter-smoke` 时会执行本地首章命令，只适合临时 smoke 项目。
 
 ### Approval Apply
 
@@ -175,7 +176,7 @@ Updated: 2026-06-27
 4. 静态校验 workflow 模板中的 `${params.*}` 和 `${node.output.*}` 绑定，确认参数、上游节点、依赖闭包和输出字段都存在。
 5. 运行 workflow 合成契约 smoke，用最小合成输出渲染每个节点 prompt 和 humanGate prompt，确认 `preview/handoff/data/open_questions/risks/wiki_refs/change_declarations` 能按依赖传递。
 6. 检查 `llmwiki` 是否在 PATH 且 `llmwiki --help` 可执行；缺失或不可用是 warning，不阻断本地文件同步。
-7. 传 `--bootstrap-smoke` 时在临时目录跑 `novel-bootstrap`，确认 foundation、wiki 审核包、dry-run sync plan、MCP config 和 approval package 可生成，执行审批包里的 `next_actions.chapter_start_command`，并确认外部 workspace 未被写入。
+7. 传 `--bootstrap-smoke` 时在临时目录跑 `novel-bootstrap`，确认 foundation、wiki 审核包、dry-run sync plan、MCP config 和 approval package 可生成，执行审批包里的 `next_actions.chapter_start_command`，静态校验 `next_actions.chapter_workflow_command`，并确认外部 workspace 未被写入。
 8. `bootstrap_smoke` 会调用 `approval-check --apply-dry-run` 等价路径，确认审批包本身可被机器校验且 dry-run apply 不执行 approved writes。
 9. 传 `--workflow-import-smoke` 时用合成 BotMux 输出跑 `workflow-foundation-import`，再执行 `approval-check --apply-dry-run --chapter-smoke`，确认真实 workflow 结果能进入本地审批链路。
 10. 传 `--chapter-import-smoke` 时用合成章节 workflow 输出跑 `chapter-workflow-import`，确认可写本地 final、archive 和下一章 handoff。
@@ -196,7 +197,7 @@ Updated: 2026-06-27
 - `scene-setting.schema.json`：约束 `settings/scenes.json` 中的单个场景或世界规则节点。
 - `style-profile.schema.json`：约束 `settings/style-profile.json`，包含语气、规则、禁用表达和正反例。
 - `foreshadowing-ledger.schema.json`：约束 `tracking/foreshadowing.yaml` 和 `runs/archive-{chapter}.json` 中的伏笔条目。
-- `approval-package.schema.json`：约束 `novel-bootstrap` 生成的审批包，包含项目、审核材料、humanGate 命令、llmwiki preview、MCP 策略和下一步命令必填字段及基础类型。
+- `approval-package.schema.json`：约束 `novel-bootstrap` 生成的审批包，包含项目、审核材料、humanGate 命令、llmwiki preview、MCP 策略、本地首章命令和真实 BotMux 首章 workflow 命令的必填字段及基础类型。
 
 ## 代码锚点
 

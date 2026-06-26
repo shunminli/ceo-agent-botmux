@@ -118,9 +118,9 @@ python3 -m botmux_novel readiness --bootstrap-smoke --workflow-import-smoke --ch
 - `runs/{run_id}/trace.json` 和 `runs/runs.sqlite`：可观察 run 记录和可查询索引。
 - `runs/{foundation_run_id}/foundation.json`：`foundation` 子命令生成的开书设定包。
 - `runs/{workflow_foundation_run_id}/workflow-result-source.json|workflow-node-outputs.json|foundation.json`：`workflow-foundation-import` 保存的 BotMux workflow 原始结果、节点输出和规范化 Story Bible 来源。
-- `runs/{bootstrap_run_id}/approval-package.md|json`：`novel-bootstrap` 子命令生成的 Story Bible/wiki/MCP 人工审批包，包含审批记录、approved apply 和首章启动命令。
+- `runs/{bootstrap_run_id}/approval-package.md|json`：`novel-bootstrap` 子命令生成的 Story Bible/wiki/MCP 人工审批包，包含审批记录、approved apply、本地首章 smoke 命令和真实 BotMux 首章 workflow 命令。
 - `approval-decision` JSON：审批决策记录结果，包含 decision、reviewer、notes、decided_at 和审批包路径。
-- `approval-check` JSON：审批包机器校验结果，包含审核材料、humanGate 命令、llmwiki 预览、MCP 策略、workspace target、可选 dry-run apply 和 chapter smoke 检查。
+- `approval-check` JSON：审批包机器校验结果，包含审核材料、humanGate 命令、llmwiki 预览、MCP 策略、本地首章命令、真实 BotMux 首章 workflow 命令、workspace target、可选 dry-run apply 和 chapter smoke 检查。
 - `approval-apply` JSON：审批包执行结果，包含是否 approved、实际 `llmwiki-sync` 状态、warnings 和产物路径。
 - `runs/{chapter_run_id}/source-foundation.json`：`chapter` 子命令使用的 Story Bible 来源快照。
 - `runs/{chapter_run_id}/prior-context.json`：`chapter` 子命令自动汇总的前文章节归档上下文。
@@ -133,18 +133,18 @@ python3 -m botmux_novel readiness --bootstrap-smoke --workflow-import-smoke --ch
 - `runs/{series_run_id}/series-metrics.json`：`series` 子命令生成的连续章节质量指标。
 - `wiki/novels/{project_slug}/*.md`：`wiki-bundle` 子命令生成的本地 llmwiki 写入前审核包；有章节归档时还包含 `chapter-archive.md`、`timeline.md`、`character-state.md` 和 `chapters/{chapter}.md`。
 - `workflows/*.workflow.json`：版本化的 BotMux 三 bot 协作模板，测试会校验输出契约、人类门禁和本机安装副本一致性。
-- `schemas/approval-package.schema.json`：审批包必填字段和基础类型契约，覆盖项目元数据、审核材料、humanGate 命令、llmwiki preview、MCP 策略和下一步命令。
+- `schemas/approval-package.schema.json`：审批包必填字段和基础类型契约，覆盖项目元数据、审核材料、humanGate 命令、llmwiki preview、MCP 策略、本地首章命令和真实 BotMux 首章 workflow 命令。
 - `~/.botmux/workspace/{Novel-*}/AGENTS.md`：由 `botmux-assets --write` 从仓库身份文档生成的运行态 workspace 指令。
-- `readiness` JSON：本机小说生产环境的 BotMux、bot workspace 身份绑定、workflow validate、workflow 绑定、workflow 合成契约、llmwiki、可选 bootstrap smoke、workflow import smoke、chapter import smoke、approval apply smoke、series smoke 和可选 approved llmwiki sync smoke 检查结果；bootstrap smoke 和 workflow import smoke 会执行审批包里的首章启动命令。
+- `readiness` JSON：本机小说生产环境的 BotMux、bot workspace 身份绑定、workflow validate、workflow 绑定、workflow 合成契约、llmwiki、可选 bootstrap smoke、workflow import smoke、chapter import smoke、approval apply smoke、series smoke 和可选 approved llmwiki sync smoke 检查结果；bootstrap smoke 和 workflow import smoke 会执行审批包里的本地首章命令，并静态校验真实 BotMux 首章 workflow 命令。
 
 ## 规则与状态
 
 - 默认执行 `lean` 模式。
 - `foundation` 只生成开书设定资产，不写 `manuscript/draft|revised|final`。
-- `novel-bootstrap` 串联开书设定、项目内 wiki bundle、llmwiki dry-run sync plan、MCP 配置和审批包；审批包会在落盘前通过 `approval-package.schema.json` 必填字段和基础类型校验，并包含 `next_actions.chapter_start_command`，用于在审批和写入后从批准的 foundation 直接启动首章；它不会执行 approved sync、覆盖外部 llmwiki workspace 或修改全局配置。
+- `novel-bootstrap` 串联开书设定、项目内 wiki bundle、llmwiki dry-run sync plan、MCP 配置和审批包；审批包会在落盘前通过 `approval-package.schema.json` 必填字段和基础类型校验，并包含 `next_actions.chapter_start_command` 本地 smoke 命令和 `next_actions.chapter_workflow_command` 真实 BotMux 首章 workflow 命令，后者会把批准的 foundation 压缩为 `storyBible` 参数；它不会执行 approved sync、覆盖外部 llmwiki workspace 或修改全局配置。
 - `workflow-foundation-import` 读取已完成的 `novel-story-foundation` workflow JSON 结果，校验 `story_bible_package` 和 `wiki_sync_plan` 输出契约，把 Story Bible 规范化成 `foundation.json`，再复用 wiki bundle、dry-run sync、MCP config 和 approval package 链路；它不执行 approved sync。
 - `approval-decision` 只把 humanGate 决策写入审批包 JSON，并在同目录 `approval-package.md` 存在时重渲染 Markdown 审批包；它会先按 `approval-package.schema.json` 校验审批包，不执行 llmwiki 写入，正式批准路径应先记录 `--decision approve`。
-- `approval-check` 默认只读校验审批包；它会先按 `approval-package.schema.json` 递归检查必填字段和基础类型。`--apply-dry-run` 只验证 `approval-apply` dry-run 消费路径，不执行 approved writes；`--chapter-smoke` 会执行首章命令，应用在临时 smoke 项目，不建议在未经审批的真实项目上默认运行。
+- `approval-check` 默认只读校验审批包；它会先按 `approval-package.schema.json` 递归检查必填字段和基础类型，并确认真实 BotMux 首章 workflow 命令的 `projectSlug/title/storyBible/chapterNumber/chapterGoal/priorContext/wordTarget/mode` 来自审批包和 foundation。`--apply-dry-run` 只验证 `approval-apply` dry-run 消费路径，不执行 approved writes；`--chapter-smoke` 会执行本地首章命令，应用在临时 smoke 项目，不建议在未经审批的真实项目上默认运行。
 - `approval-apply` 默认只重新生成同步计划；它会先按 `approval-package.schema.json` 校验审批包，只有传 `--approve` 才会按审批包写入 llmwiki workspace，并默认运行 `llmwiki reindex` 与写后 lint。若审批包已记录 `request_changes` 或 `reject`，会拒绝写入；若未记录 `approve` 但命令显式 `--approve`，会保留 warning 说明这是命令级 humanGate 信号。
 - `chapter` 从本地 `foundation.json` 继续生产章节，不重新规划 Story Bible；未传 `--chapter-goal` 时自动使用 `foundation.json` 的 `chapter_goal.objective`，自动读取早于当前章节的 `runs/archive-*.json` 作为连续性上下文，并在完成后生成下一章 handoff 命令。
 - `chapter-workflow-import` 读取已完成的 `novel-chapter-production` workflow JSON 结果，校验七个节点输出契约，只有 Director 决策和 archive plan 均通过时才写入本地 final、tracking、archive 和下一章 handoff；`project.yaml.archived_chapters` 会从 `runs/archive-*.json` 汇总，保留多章导入历史。下一章 handoff 会把本章事实、时间线、伏笔、人物状态和连续性问题压缩进 BotMux `priorContext` 参数。被 block 的章节只写 blocked run artifacts，不写 final，不写 llmwiki。

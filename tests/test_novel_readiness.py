@@ -344,6 +344,10 @@ class NovelReadinessTest(unittest.TestCase):
             self.assertIn("apply_dry_run", checks["bootstrap_smoke"].data["approval_check_names"])
             self.assertIn("chapter", checks["bootstrap_smoke"].data["chapter_start_command"])
             self.assertIn("--foundation-json", checks["bootstrap_smoke"].data["chapter_start_command"])
+            self.assertIn("novel-chapter-production", checks["bootstrap_smoke"].data["chapter_workflow_command"])
+            self.assertTrue(
+                any(item.startswith("storyBible=") for item in checks["bootstrap_smoke"].data["chapter_workflow_command"])
+            )
             self.assertEqual(checks["bootstrap_smoke"].data["chapter_start_result"]["status"], "completed")
             self.assertTrue(checks["bootstrap_smoke"].data["chapter_start_result"]["final_path_exists"])
             self.assertFalse(checks["bootstrap_smoke"].data["target_overview_exists"])
@@ -453,6 +457,7 @@ class NovelReadinessTest(unittest.TestCase):
             self.assertEqual(payload["status"], "ready")
             checks = {check["name"]: check for check in payload["checks"]}
             self.assertEqual(checks["bootstrap_smoke"]["status"], "pass")
+            self.assertIn("novel-chapter-production", checks["bootstrap_smoke"]["data"]["chapter_workflow_command"])
             self.assertFalse(checks["bootstrap_smoke"]["data"]["target_overview_exists"])
 
     def test_cli_readiness_can_run_approval_apply_smoke(self) -> None:

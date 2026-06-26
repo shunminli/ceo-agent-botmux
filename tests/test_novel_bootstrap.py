@@ -31,6 +31,7 @@ class NovelBootstrapTest(unittest.TestCase):
         self.assertIn("human_gate.approval_apply_command", missing)
         self.assertIn("llmwiki.preview.pages", missing)
         self.assertIn("next_actions.chapter_start_command", missing)
+        self.assertIn("next_actions.chapter_workflow_command", missing)
 
     def test_approval_package_schema_reports_type_errors(self) -> None:
         errors = schema_validation_errors(
@@ -77,7 +78,7 @@ class NovelBootstrapTest(unittest.TestCase):
                     },
                     "warnings": [],
                 },
-                "next_actions": {"chapter_start_command": []},
+                "next_actions": {"chapter_start_command": [], "chapter_workflow_command": []},
                 "next_steps": [],
             },
         )
@@ -132,6 +133,18 @@ class NovelBootstrapTest(unittest.TestCase):
             self.assertIn("chapter", package["next_actions"]["chapter_start_command"])
             self.assertIn("--foundation-json", package["next_actions"]["chapter_start_command"])
             self.assertIn(str(result.foundation.foundation_path), package["next_actions"]["chapter_start_command"])
+            workflow_command = package["next_actions"]["chapter_workflow_command"]
+            self.assertIn("workflow", workflow_command)
+            self.assertIn("run", workflow_command)
+            self.assertIn("novel-chapter-production", workflow_command)
+            self.assertIn("projectSlug=shadow-clock-case", workflow_command)
+            self.assertIn("title=影钟旧案", workflow_command)
+            self.assertIn("chapterNumber=1", workflow_command)
+            self.assertIn("priorContext=无", workflow_command)
+            self.assertIn("wordTarget=1200", workflow_command)
+            self.assertIn("mode=lean", workflow_command)
+            self.assertTrue(any(item.startswith("storyBible=") and "主角发现家族旧案" in item for item in workflow_command))
+            self.assertTrue(any(item.startswith("chapterGoal=") and "旧书楼残页" in item for item in workflow_command))
             self.assertEqual(package["llmwiki"]["preview"]["page_count"], 12)
             package_markdown = result.approval_package_path.read_text(encoding="utf-8")
             self.assertIn("# Novel Bootstrap Approval Package", package_markdown)
@@ -139,6 +152,7 @@ class NovelBootstrapTest(unittest.TestCase):
             self.assertIn("Preferred approval apply command", package_markdown)
             self.assertIn("Underlying approved write command", package_markdown)
             self.assertIn("Start opening chapter command", package_markdown)
+            self.assertIn("Start opening chapter workflow command", package_markdown)
 
             check = NovelApprovalPackageChecker().check(
                 NovelApprovalCheckRequest(

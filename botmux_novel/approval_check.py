@@ -269,8 +269,17 @@ def check_mcp_policy(payload: Dict[str, Any]) -> ApprovalPackageCheck:
 
 def check_next_actions(payload: Dict[str, Any]) -> ApprovalPackageCheck:
     command = payload.get("next_actions", {}).get("chapter_start_command")
+    workflow_command = payload.get("next_actions", {}).get("chapter_workflow_command")
     materials = payload.get("review_materials", {})
     project = payload.get("project", {})
+    foundation = read_json_path(materials.get("foundation_json")) or {}
+    foundation_project = foundation.get("project", {}) if isinstance(foundation.get("project"), dict) else {}
+    foundation_goal = foundation.get("chapter_goal", {}) if isinstance(foundation.get("chapter_goal"), dict) else {}
+    expected_chapter_number = str(chapter_number_from_id(str(foundation_goal.get("chapter_id", "ch-001")), default=1))
+    expected_word_target = str(foundation_project.get("word_target", ""))
+    expected_mode = str(foundation_project.get("mode", ""))
+    expected_goal = str(foundation_goal.get("objective", ""))
+    expected_core_conflict = str((foundation.get("story_bible", {}) if isinstance(foundation.get("story_bible"), dict) else {}).get("core_conflict", ""))
     errors = []
     if not command_contains(command, "chapter"):
         errors.append("chapter_start_command must call chapter.")
@@ -280,16 +289,43 @@ def check_next_actions(payload: Dict[str, Any]) -> ApprovalPackageCheck:
         errors.append("chapter_start_command must include --chapter-number.")
     if command_option(command, "--foundation-json") != materials.get("foundation_json"):
         errors.append("chapter_start_command must use the reviewed foundation JSON.")
+    if not command_contains(workflow_command, "workflow") or not command_contains(workflow_command, "run"):
+        errors.append("chapter_workflow_command must call botmux workflow run.")
+    if not command_contains(workflow_command, "novel-chapter-production"):
+        errors.append("chapter_workflow_command must run novel-chapter-production.")
+    if command_param(workflow_command, "projectSlug") != project.get("project_slug"):
+        errors.append("chapter_workflow_command must target the approval package project slug.")
+    if command_param(workflow_command, "title") != project.get("title"):
+        errors.append("chapter_workflow_command must use the approved project title.")
+    if command_param(workflow_command, "chapterNumber") != expected_chapter_number:
+        errors.append("chapter_workflow_command must use the approved opening chapter number.")
+    if command_param(workflow_command, "chapterGoal") != expected_goal:
+        errors.append("chapter_workflow_command must use the reviewed foundation chapter goal.")
+    if command_param(workflow_command, "priorContext") != "无":
+        errors.append("chapter_workflow_command for the opening chapter must use priorContext=无.")
+    if command_param(workflow_command, "wordTarget") != expected_word_target:
+        errors.append("chapter_workflow_command must use the reviewed word target.")
+    if command_param(workflow_command, "mode") != expected_mode:
+        errors.append("chapter_workflow_command must use the reviewed mode.")
+    story_bible = command_param(workflow_command, "storyBible")
+    if not story_bible:
+        errors.append("chapter_workflow_command must include storyBible.")
+    elif expected_core_conflict and expected_core_conflict not in story_bible:
+        errors.append("chapter_workflow_command storyBible must be derived from the reviewed foundation.")
     status = "pass" if not errors else "fail"
     return ApprovalPackageCheck(
         name="next_actions",
         status=status,
         summary=(
-            "Next chapter start command is present and uses the reviewed foundation."
+            "Next chapter start commands are present and use the reviewed foundation."
             if status == "pass"
-            else "Next chapter start command is incomplete."
+            else "Next chapter start commands are incomplete."
         ),
-        data={"errors": errors, "chapter_start_command": command if isinstance(command, list) else []},
+        data={
+            "errors": errors,
+            "chapter_start_command": command if isinstance(command, list) else [],
+            "chapter_workflow_command": workflow_command if isinstance(workflow_command, list) else [],
+        },
     )
 
 
@@ -467,3 +503,23 @@ def command_option(command: Any, option: str) -> Optional[str]:
         if value == option:
             return values[index + 1]
     return None
+
+
+def command_param(command: Any, key: str) -> Optional[str]:
+    if not isinstance(command, list):
+        return None
+    values = [str(item) for item in command]
+    prefix = f"{key}="
+    for index, value in enumerate(values[:-1]):
+        if value == "--param" and values[index + 1].startswith(prefix):
+            return values[index + 1][len(prefix):]
+    return None
+
+
+def chapter_number_from_id(chapter_id: str, *, default: int) -> int:
+    prefix = "ch-"
+    if chapter_id.startswith(prefix):
+        suffix = chapter_id[len(prefix):]
+        if suffix.isdigit():
+            return int(suffix)
+    return default

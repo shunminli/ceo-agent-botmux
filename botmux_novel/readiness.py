@@ -399,6 +399,7 @@ class NovelReadinessChecker:
                     )
                 )
                 chapter_start_command = package_payload.get("next_actions", {}).get("chapter_start_command", [])
+                chapter_workflow_command = package_payload.get("next_actions", {}).get("chapter_workflow_command", [])
                 chapter_start_result: Dict[str, Any] = {
                     "returncode": None,
                     "status": None,
@@ -438,6 +439,9 @@ class NovelReadinessChecker:
                     and package_payload.get("status") == "ready_for_human_review"
                     and "chapter" in chapter_start_command
                     and "--foundation-json" in chapter_start_command
+                    and "novel-chapter-production" in chapter_workflow_command
+                    and any(str(item).startswith("storyBible=") for item in chapter_workflow_command)
+                    and any(str(item).startswith("chapterGoal=") for item in chapter_workflow_command)
                     and chapter_start_result["returncode"] == 0
                     and chapter_start_result["status"] == "completed"
                     and chapter_start_result["final_path_exists"]
@@ -452,7 +456,7 @@ class NovelReadinessChecker:
                     name="bootstrap_smoke",
                     status=status,
                     summary=(
-                        "Novel bootstrap smoke generated the approval package and verified its opening chapter command."
+                        "Novel bootstrap smoke generated the approval package and verified its opening chapter commands."
                         if passed
                         else "Novel bootstrap smoke did not meet readiness checks."
                     ),
@@ -468,6 +472,7 @@ class NovelReadinessChecker:
                         "approval_check_names": [check.name for check in approval_check.checks],
                         "target_overview_exists": target_overview.exists(),
                         "chapter_start_command": chapter_start_command,
+                        "chapter_workflow_command": chapter_workflow_command,
                         "chapter_start_result": chapter_start_result,
                         "llmwiki_sync_status": result.llmwiki_sync.status,
                         "mcp_config_status": result.mcp_config.status,

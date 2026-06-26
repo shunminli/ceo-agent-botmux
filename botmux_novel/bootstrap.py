@@ -212,6 +212,11 @@ def write_approval_package(
         "--foundation-json",
         str(foundation.foundation_path),
     ]
+    payload["next_actions"]["chapter_workflow_command"] = build_chapter_workflow_command(
+        request=request,
+        foundation=foundation,
+        project_slug=wiki_bundle.project_slug,
+    )
     if extra_warnings:
         payload["llmwiki"]["warnings"].extend(extra_warnings)
     if extra_payload:
@@ -290,9 +295,100 @@ def approval_payload(
             "If approved, run approval_decision_command to record reviewer, decision, timestamp, and notes.",
             "Run approval_apply_command or let Director execute an equivalent humanGate-approved write.",
             "After llmwiki sync, configure the generated MCP server for Director and Validator only.",
-            "Run chapter_start_command to produce the opening chapter from the approved foundation JSON.",
+            "Run chapter_workflow_command to start the real three-bot opening chapter workflow, or chapter_start_command for local runtime smoke.",
         ],
     }
+
+
+def build_chapter_workflow_command(
+    *,
+    request: NovelBootstrapRequest,
+    foundation: NovelFoundationResult,
+    project_slug: str,
+) -> List[str]:
+    foundation_payload = json.loads(foundation.foundation_path.read_text(encoding="utf-8"))
+    chapter_goal = foundation_payload.get("chapter_goal", {})
+    project = foundation_payload.get("project", {})
+    chapter_id = str(chapter_goal.get("chapter_id", f"ch-{request.chapter_number:03d}"))
+    chapter_number = chapter_number_from_id(chapter_id, default=request.chapter_number)
+    word_target = int(project.get("word_target", request.word_target))
+    mode = str(project.get("mode", request.mode))
+    return [
+        "botmux",
+        "workflow",
+        "run",
+        "novel-chapter-production",
+        "--param",
+        f"projectSlug={project_slug}",
+        "--param",
+        f"title={request.title}",
+        "--param",
+        f"storyBible={story_bible_workflow_param(foundation_payload)}",
+        "--param",
+        f"chapterNumber={chapter_number}",
+        "--param",
+        f"chapterGoal={chapter_goal.get('objective', '')}",
+        "--param",
+        "priorContext=无",
+        "--param",
+        f"wordTarget={word_target}",
+        "--param",
+        f"mode={mode}",
+    ]
+
+
+def chapter_number_from_id(chapter_id: str, *, default: int) -> int:
+    prefix = "ch-"
+    if chapter_id.startswith(prefix):
+        suffix = chapter_id[len(prefix):]
+        if suffix.isdigit():
+            return int(suffix)
+    return default
+
+
+def story_bible_workflow_param(foundation_payload: Dict[str, Any]) -> str:
+    project = foundation_payload.get("project", {})
+    story = foundation_payload.get("story_bible", {})
+    genre = foundation_payload.get("genre", {})
+    world = foundation_payload.get("world", {})
+    volume = foundation_payload.get("volume_outline", {})
+    chapter_goal = foundation_payload.get("chapter_goal", {})
+    characters = foundation_payload.get("characters", [])
+    relationships = foundation_payload.get("relationships", {}).get("edges", [])
+    scenes = foundation_payload.get("scene_settings", [])
+
+    character_lines = [
+        f"- {item.get('name', item.get('id', 'unknown'))}: {item.get('role', '')}; motivation={item.get('motivation', '')}; state={item.get('current_state', '')}"
+        for item in characters
+        if isinstance(item, dict)
+    ]
+    relationship_lines = [
+        f"- {item.get('source', '')}->{item.get('target', '')}: {item.get('type', '')}; pressure={item.get('pressure', '')}"
+        for item in relationships
+        if isinstance(item, dict)
+    ]
+    scene_lines = [
+        f"- {item.get('name', item.get('id', 'unknown'))}: {item.get('function', '')}"
+        for item in scenes
+        if isinstance(item, dict)
+    ]
+    sections = [
+        f"Title: {project.get('title', '')}",
+        f"Genre: {genre.get('primary', '')}",
+        f"Theme: {story.get('theme', '')}",
+        f"Inspiration: {story.get('inspiration', '')}",
+        f"Core conflict: {story.get('core_conflict', '')}",
+        f"Ending constraint: {story.get('ending_constraint', '')}",
+        "World rules:\n" + "\n".join(f"- {item}" for item in world.get("rules", []) if item),
+        "Forbidden:\n" + "\n".join(f"- {item}" for item in world.get("forbidden", []) if item),
+        "Characters:\n" + "\n".join(character_lines),
+        "Relationships:\n" + "\n".join(relationship_lines),
+        f"Volume goal: {volume.get('goal', '')}",
+        "Turning points:\n" + "\n".join(f"- {item}" for item in volume.get("turning_points", []) if item),
+        "Scene settings:\n" + "\n".join(scene_lines),
+        f"Opening chapter goal: {chapter_goal.get('objective', '')}",
+    ]
+    return "\n\n".join(section for section in sections if section.strip())
 
 
 def sync_plan_preview(plan_path: Path) -> Dict[str, Any]:
@@ -317,6 +413,7 @@ def render_approval_markdown(payload: Dict[str, Any]) -> str:
     decision_command = shlex.join(human_gate.get("approval_decision_command", []))
     apply_command = shlex.join(human_gate.get("approval_apply_command", []))
     chapter_start_command = shlex.join(payload.get("next_actions", {}).get("chapter_start_command", []))
+    chapter_workflow_command = shlex.join(payload.get("next_actions", {}).get("chapter_workflow_command", []))
     pages = "\n".join(f"- `{page}`" for page in preview.get("pages", [])) or "- No pages found"
     must_review = "\n".join(f"- {item}" for item in human_gate["must_review"])
     next_steps = "\n".join(f"{index}. {step}" for index, step in enumerate(payload["next_steps"], start=1))
@@ -383,6 +480,12 @@ Start opening chapter command:
 
 ```bash
 {chapter_start_command}
+```
+
+Start opening chapter workflow command:
+
+```bash
+{chapter_workflow_command}
 ```
 
 ## Next Steps
