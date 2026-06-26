@@ -25,7 +25,7 @@ Updated: 2026-06-26
 2. `DoubaoRuntime` 根据 provider 选择 runner：`opencli-app`、`opencli-web` 或 `doubao-cli`。
 3. `ask` 在需要时先调用 runner 的新建会话命令，再调用实际提问命令。
 4. `status` 检查 runner 是否存在，并对桌面端模式补充 Doubao App、CDP endpoint 等诊断。
-5. `launch` 生成或执行豆包桌面端 CDP 启动命令，供 OpenCLI `doubao-app` 使用。
+5. `launch` 生成或执行豆包桌面端 CDP 启动命令，供 OpenCLI `doubao-app` 使用；`--relaunch` 会显式退出已有 Doubao 再重启。
 
 ## 代码锚点
 
