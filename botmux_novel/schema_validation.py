@@ -33,7 +33,7 @@ def validate_schema(name: str, payload: Dict[str, Any]) -> None:
 
 def schema_validation_errors(name: str, payload: Dict[str, Any]) -> List[str]:
     schema = load_schema(name)
-    return collect_schema_errors(schema=schema, value=payload, path="")
+    return unique_errors(collect_schema_errors(schema=schema, value=payload, path=""))
 
 
 def missing_required_fields(name: str, payload: Dict[str, Any]) -> List[str]:
@@ -42,9 +42,16 @@ def missing_required_fields(name: str, payload: Dict[str, Any]) -> List[str]:
 
 
 def collect_missing_required(*, schema: Dict[str, Any], value: Any, path: str) -> List[str]:
-    if not isinstance(value, dict):
-        return []
     missing: List[str] = []
+    if isinstance(value, list):
+        item_schema = schema.get("items")
+        if isinstance(item_schema, dict):
+            for index, item in enumerate(value):
+                item_path = f"{path}[{index}]" if path else f"$[{index}]"
+                missing.extend(collect_missing_required(schema=item_schema, value=item, path=item_path))
+        return missing
+    if not isinstance(value, dict):
+        return missing
     required = schema.get("required", [])
     properties = schema.get("properties", {})
     if not isinstance(required, list) or not isinstance(properties, dict):
@@ -113,3 +120,14 @@ def format_expected_type(expected_type: Any) -> str:
     if isinstance(expected_type, list):
         return "|".join(str(item) for item in expected_type)
     return str(expected_type)
+
+
+def unique_errors(errors: List[str]) -> List[str]:
+    seen = set()
+    unique: List[str] = []
+    for error in errors:
+        if error in seen:
+            continue
+        seen.add(error)
+        unique.append(error)
+    return unique

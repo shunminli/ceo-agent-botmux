@@ -134,7 +134,7 @@ python3 -m botmux_novel readiness --bootstrap-smoke --workflow-import-smoke --ch
 - `wiki/novels/{project_slug}/*.md`：`wiki-bundle` 子命令生成的本地 llmwiki 写入前审核包；有章节归档时还包含 `chapter-archive.md`、`timeline.md`、`character-state.md` 和 `chapters/{chapter}.md`。
 - `workflows/*.workflow.json`：版本化的 BotMux 三 bot 协作模板，测试会校验输出契约、人类门禁和本机安装副本一致性。
 - `schemas/approval-package.schema.json`：审批包必填字段和基础类型契约，覆盖项目元数据、审核材料、humanGate 命令、llmwiki preview、MCP 策略、本地首章命令和真实 BotMux 首章 workflow 命令。
-- `schemas/next-chapter-command.schema.json`：章节后 handoff 必填字段和基础类型契约，覆盖下一章目标、真实 BotMux workflow 命令、知识回写命令、prior context 和 source refs；本地 schema validator 会校验命令数组和引用数组的字符串元素类型。
+- `schemas/next-chapter-command.schema.json`：章节后 handoff 必填字段和基础类型契约，覆盖下一章目标、真实 BotMux workflow 命令、知识回写命令、prior context 和 source refs；本地 schema validator 会校验数组 `items` 的元素类型和对象 required 字段。
 - `~/.botmux/workspace/{Novel-*}/AGENTS.md`：由 `botmux-assets --write` 从仓库身份文档生成的运行态 workspace 指令。
 - `readiness` JSON：本机小说生产环境的 BotMux、bot workspace 身份绑定、workflow validate、workflow 绑定、workflow 合成契约、llmwiki、可选 bootstrap smoke、workflow import smoke、chapter import smoke、approval apply smoke、series smoke 和可选 approved llmwiki sync smoke 检查结果；bootstrap smoke 和 workflow import smoke 会执行审批包里的本地首章命令，并静态校验真实 BotMux 首章 workflow 命令。
 

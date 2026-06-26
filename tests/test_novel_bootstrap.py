@@ -138,6 +138,26 @@ class NovelBootstrapTest(unittest.TestCase):
         self.assertIn("workflow_command[1] expected string", errors)
         self.assertIn("source_refs[1] expected string", errors)
 
+    def test_schema_required_checks_array_item_required_fields(self) -> None:
+        payload = {
+            "project_title": "影钟旧案",
+            "edges": [
+                {
+                    "source": "林烬",
+                    "type": "protects",
+                }
+            ],
+        }
+
+        missing = missing_required_fields("relationship-map", payload)
+        errors = schema_validation_errors("relationship-map", payload)
+
+        self.assertIn("edges[0].target", missing)
+        self.assertIn("edges[0].pressure", missing)
+        self.assertIn("Missing required field: edges[0].target", errors)
+        self.assertIn("Missing required field: edges[0].pressure", errors)
+        self.assertEqual(errors.count("Missing required field: edges[0].target"), 1)
+
     def test_bootstrap_creates_approval_package_without_llmwiki_writes(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)
