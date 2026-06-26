@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.local/ceo-agent-botmux/story-bible.schema.json",
+  "title": "StoryBible",
+  "type": "object",
+  "required": ["theme", "inspiration", "core_conflict", "ending_constraint"],
+  "properties": {
+    "theme": {"type": "string"},
+    "inspiration": {"type": "string"},
+    "core_conflict": {"type": "string"},
+    "ending_constraint": {"type": "string"}
+  }
+}

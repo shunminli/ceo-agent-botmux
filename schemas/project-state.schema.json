@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.local/ceo-agent-botmux/project-state.schema.json",
+  "title": "ProjectState",
+  "type": "object",
+  "required": ["title", "mode", "stage", "current_chapter", "word_target", "quality_thresholds"],
+  "properties": {
+    "title": {"type": "string"},
+    "mode": {"type": "string", "enum": ["full", "lean", "solo"]},
+    "stage": {"type": "string"},
+    "current_chapter": {"type": "string"},
+    "word_target": {"type": "integer", "minimum": 300},
+    "quality_thresholds": {"type": "object"},
+    "latest_run_id": {"type": "string"},
+    "archived_chapters": {"type": "array", "items": {"type": "string"}}
+  }
+}

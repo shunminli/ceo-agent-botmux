@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.local/ceo-agent-botmux/character-state.schema.json",
+  "title": "CharacterState",
+  "type": "object",
+  "required": ["id", "name", "state", "known_information"],
+  "properties": {
+    "id": {"type": "string"},
+    "name": {"type": "string"},
+    "state": {"type": "string"},
+    "known_information": {"type": "array", "items": {"type": "string"}}
+  }
+}

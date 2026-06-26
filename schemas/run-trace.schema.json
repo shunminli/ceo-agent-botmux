@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.local/ceo-agent-botmux/run-trace.schema.json",
+  "title": "RunTrace",
+  "type": "object",
+  "required": ["run_id", "started_at", "ended_at", "status", "request", "steps", "artifacts"],
+  "properties": {
+    "run_id": {"type": "string"},
+    "started_at": {"type": "string"},
+    "ended_at": {"type": ["string", "null"]},
+    "status": {"type": "string", "enum": ["running", "completed", "blocked"]},
+    "request": {"type": "object"},
+    "steps": {"type": "array"},
+    "artifacts": {"type": "array", "items": {"type": "string"}}
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.local/ceo-agent-botmux/fact-snapshot.schema.json",
+  "title": "FactSnapshot",
+  "type": "object",
+  "required": ["chapter_id", "fact", "source"],
+  "properties": {
+    "chapter_id": {"type": "string"},
+    "fact": {"type": "string"},
+    "source": {"type": "string"}
+  }
+}

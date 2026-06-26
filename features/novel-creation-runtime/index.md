@@ -1,0 +1,42 @@
+Commit: 8595e9722336d27913d3139befa1914d8db316a3
+
+# Novel Creation Runtime
+
+## 能力
+
+用户可以通过 CLI 输入小说标题和一句灵感，系统会在本地项目目录中生成首章创作工作区，并完成章纲、上下文包、草稿、审稿、修订、定稿、状态归档和运行记录。
+
+## 触发方式
+
+```bash
+python3 -m botmux_novel run \
+  --project /tmp/novel-demo \
+  --title 影钟旧案 \
+  --inspiration "一个背负旧案污名的少年，在巡夜钟声中发现妹妹影子会说真话。"
+```
+
+## 主要产物
+
+- `project.yaml`：项目状态、模式、当前章节和质量阈值。
+- `story.md`、`settings/*`、`characters/*`、`outline/*`：开书资产和章节蓝图。
+- `manuscript/draft|revised|final/ch-001.md`：首章草稿、修订稿和定稿。
+- `tracking/facts.yaml`、`timeline.yaml`、`foreshadowing.yaml`、`character-state.yaml`、`continuity-issues.yaml`：章节归档状态。
+- `runs/{run_id}/trace.json` 和 `runs/runs.sqlite`：可观察 run 记录和可查询索引。
+
+## 规则与状态
+
+- 默认执行 `lean` 模式。
+- 质量门禁区分 `pass`、`revise` 和 `block`。
+- P0/P1 硬约束或上下文缺失会阻断定稿。
+- P2 文风问题会触发编辑 Agent 修订，并由一致性 Agent 复核。
+- 归档通过后才写入最终事实、时间线、伏笔和角色状态。
+
+## 限制
+
+- 当前 Agent 是确定性本地实现，不代表真实模型质量。
+- 当前只验证首章闭环，不验证连续 20 章稳定性。
+- 当前 YAML 写入用于本地可读产物，复杂读写和 schema migration 仍需后续迭代。
+
+## 相关逻辑文档
+
+- [Novel Runtime](../../agents/novel-runtime/index.md)

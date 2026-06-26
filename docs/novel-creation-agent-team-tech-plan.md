@@ -446,14 +446,25 @@ stateDiagram-v2
 
 ### 10.4 首期任务拆解
 
-- [ ] 定义项目目录和核心 JSON Schema：`ProjectState`、`StoryBible`、`CharacterState`、`FactSnapshot`、`ChapterBlueprint`、`RunTrace`。
-- [ ] 实现总导演 Agent 的状态机：`Intake`、`Plan`、`RetrieveContext`、`Generate`、`Review`、`Revise`、`Approve`、`Archive`。
-- [ ] 实现 6 个 MVP Agent：总导演、章纲、正文写手、编辑、一致性检查、归档记忆。
-- [ ] 实现文件工作区和 SQLite run 记录，支持每次任务回放。
-- [ ] 实现章节上下文包构建：最近章节、角色状态、伏笔、世界观、文风和禁区。
-- [ ] 实现 Gate 0-5 的基础检查，并区分 P0-P3 风险。
+- [x] 定义项目目录和核心 JSON Schema：`ProjectState`、`StoryBible`、`CharacterState`、`FactSnapshot`、`ChapterBlueprint`、`RunTrace`。
+- [x] 实现总导演 Agent 的状态机：`Intake`、`Plan`、`RetrieveContext`、`Generate`、`Review`、`Revise`、`Approve`、`Archive`。
+- [x] 实现 6 个 MVP Agent：总导演、章纲、正文写手、编辑、一致性检查、归档记忆。
+- [x] 实现文件工作区和 SQLite run 记录，支持每次任务回放。
+- [x] 实现章节上下文包构建：最近章节、角色状态、伏笔、世界观、文风和禁区。
+- [x] 实现 Gate 0-5 的基础检查，并区分 P0-P3 风险。
 - [ ] 构建一个样例小说项目，连续生成并归档 5 章作为 MVP 演示。
 - [ ] 补充导出能力：Markdown 合集、单章文本、Docx 或 PDF。
+
+当前已落地的 P0 入口：
+
+```bash
+python3 -m botmux_novel run \
+  --project /tmp/novel-demo \
+  --title 影钟旧案 \
+  --inspiration "一个背负旧案污名的少年，在巡夜钟声中发现妹妹影子会说真话。"
+```
+
+该入口使用本地确定性 Agent 跑通首章闭环，产物包括 `project.yaml`、`story.md`、`settings/*`、`characters/*`、`outline/chapter-blueprints/*`、`manuscript/draft|revised|final/*`、`tracking/*`、`runs/{run_id}/trace.json` 和 `runs/runs.sqlite`。它用于验证工作区协议、状态机、门禁、归档和 run trace；真实 LLM provider、连续 5 章样例、连续 20 章稳定性和导出服务仍在后续迭代范围。
 
 ### 10.5 推荐落地顺序
 

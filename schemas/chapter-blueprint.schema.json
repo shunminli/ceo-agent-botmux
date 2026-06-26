@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.local/ceo-agent-botmux/chapter-blueprint.schema.json",
+  "title": "ChapterBlueprint",
+  "type": "object",
+  "required": ["chapter_id", "title", "objective", "scenes", "emotion_curve", "must_include", "forbidden"],
+  "properties": {
+    "chapter_id": {"type": "string"},
+    "title": {"type": "string"},
+    "objective": {"type": "string"},
+    "scenes": {"type": "array"},
+    "emotion_curve": {"type": "array", "items": {"type": "string"}},
+    "must_include": {"type": "array", "items": {"type": "string"}},
+    "forbidden": {"type": "array", "items": {"type": "string"}}
+  }
+}
