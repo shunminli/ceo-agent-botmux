@@ -16,6 +16,7 @@ An AI agent team built with BotMux to coordinate coding agents through chat.
 - [Novel Continuity Validator](agents/novel-continuity-validator.identity.md)
 - [Team Operating Contract](agents/team-operating-contract.md)
 - [小说生产 Agent Team 技术方案](docs/novel-creation-agent-team-tech-plan.md)
+- [小说 llmwiki 接入 Runbook](docs/novel-llmwiki-setup.md)
 - [Novel Runtime 逻辑记忆](agents/novel-runtime/index.md)
 - [Doubao CLI 逻辑记忆](agents/doubao-cli/index.md)
 - [Novel Creation Runtime 功能记忆](features/novel-creation-runtime/index.md)

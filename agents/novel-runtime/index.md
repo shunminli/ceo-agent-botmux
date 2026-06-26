@@ -68,6 +68,7 @@ Updated: 2026-06-26
 - `botmux_novel/cli.py`：命令行入口。
 - `tests/test_novel_runtime.py`：端到端验证和门禁阻断测试。
 - `tests/test_novel_workflows.py`：workflow 模板、bot id、humanGate 和本机安装副本一致性测试。
+- `docs/novel-llmwiki-setup.md`：llmwiki 本地 workspace、MCP 权限和 humanGate 接入 runbook。
 
 ## BotMux Workflow
 

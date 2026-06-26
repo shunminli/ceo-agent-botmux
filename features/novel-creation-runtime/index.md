@@ -72,3 +72,4 @@ python3 -m botmux_novel run \
 ## 相关逻辑文档
 
 - [Novel Runtime](../../agents/novel-runtime/index.md)
+- [Novel llmwiki Setup Runbook](../../docs/novel-llmwiki-setup.md)
