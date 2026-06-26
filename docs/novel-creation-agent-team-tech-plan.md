@@ -520,7 +520,7 @@ python3 -m botmux_novel readiness --bootstrap-smoke --approval-apply-smoke --ser
 | 开书设定 workflow | 已落地为仓库 workflow 模板和本机 BotMux 全局 workflow，并提供本地 `foundation` 与 `novel-bootstrap` 子命令 | BotMux 用于多 bot 协作和 humanGate，本地 CLI 用于无外部依赖的开书资产 smoke 和真实项目审批包。 |
 | 人物关系 / 场景 / 伏笔 / 文风 schema | 已落地为独立 schema，并由本地 runtime 写出结构化产物 | 后续接入真实模型时保持字段契约稳定。 |
 | llmwiki sync | 已有本地 `wiki-bundle` 导出、[llmwiki 接入 runbook](novel-llmwiki-setup.md)、`approval-decision`、`approval-apply` 和 `llmwiki-sync` gated 本地 workspace 同步 | 先人工审核审批包和 Markdown bundle，再用 `approval-decision --decision approve` 记录人审，最后用 `approval-apply --approve` 写入 llmwiki source-of-truth 文件树并默认执行 reindex/lint；MCP `create/edit/append` 仍只由 Director humanGate 后使用。 |
-| BotMux 资产同步 | 已落地 `python3 -m botmux_novel botmux-assets`，可同步 workflow 模板和三个小说 bot 的 workspace `AGENTS.md` | 后续改身份文档或 workflow 后先 dry-run，再 `--write` 更新本机 BotMux 环境。 |
+| BotMux 资产同步 | 已落地 `python3 -m botmux_novel botmux-assets`，可同步 workflow 模板和三个小说 bot 的 workspace `AGENTS.md`；`readiness` 会校验 bots.json workingDir 是否绑定到预期 workspace 身份目录 | 后续改身份文档或 workflow 后先 dry-run，再 `--write` 更新本机 BotMux 环境。 |
 
 ## 15. 实施路线图
 
@@ -531,7 +531,7 @@ python3 -m botmux_novel readiness --bootstrap-smoke --approval-apply-smoke --ser
 - 已提供 `python3 -m botmux_novel llmwiki-mcp-config` 和 `novel-bootstrap`，真实小说 workspace 路径确定后给 `Novel-Director-Curator` 配项目级 llmwiki MCP。
 - `Novel-Continuity-Validator` 使用同一项目级 MCP server，但身份文档约束为只读能力。
 - 已提供 `botmux_doubao` 本地包装层，可作为 `Novel-Creative-Architect` 的可选 Creative Assist Tool；真实调用仍依赖用户本机已安装并登录 OpenCLI / doubao-cli runner，Codex 仍需能独立完成创作节点。
-- 已把输出契约写入每个 bot 的身份提示词，并同步到本仓库 `agents/*.identity.md`；本机 BotMux workspace `AGENTS.md` 可由 `botmux-assets --write` 重新生成。
+- 已把输出契约写入每个 bot 的身份提示词，并同步到本仓库 `agents/*.identity.md`；本机 BotMux workspace `AGENTS.md` 可由 `botmux-assets --write` 重新生成，`readiness` 会阻断 workingDir 指向错误 workspace 或缺少身份文件的配置。
 - 小说项目 llmwiki workspace 和 `/wiki/novels/` 页面结构由 `novel-bootstrap` / `wiki-bundle` 在真实项目目录中生成。
 
 ### Phase 1：开书设定 workflow
@@ -564,7 +564,7 @@ python3 -m botmux_novel readiness --bootstrap-smoke --approval-apply-smoke --ser
 
 - 已新增本地 `python3 -m botmux_novel series`，默认可连续生成 5 章样例项目，并已通过 20 章稳定性基线。
 - `series` 会统计 P0/P1 冲突、修订轮次、归档完整率、prior context 覆盖率和用户修改点。
-- 已新增本地 `python3 -m botmux_novel readiness --bootstrap-smoke --approval-apply-smoke --series-smoke`，用于一键验收本机 BotMux/workflow validate/workflow 绑定/workflow 合成契约/llmwiki/bootstrap/approval decision/approval apply/series smoke 状态；`--llmwiki-smoke` 可额外验证底层 approved llmwiki workspace 写入、lint 和 reindex。
+- 已新增本地 `python3 -m botmux_novel readiness --bootstrap-smoke --approval-apply-smoke --series-smoke`，用于一键验收本机 BotMux/bot workspace 身份绑定/workflow validate/workflow 绑定/workflow 合成契约/llmwiki/bootstrap/approval decision/approval apply/series smoke 状态；`--llmwiki-smoke` 可额外验证底层 approved llmwiki workspace 写入、lint 和 reindex。
 - 只有当某类任务反复成为瓶颈时，才新增专职 bot。
 
 ## 16. 验收标准

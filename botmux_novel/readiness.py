@@ -154,22 +154,42 @@ class NovelReadinessChecker:
             if config is None:
                 missing.append(role_name)
                 continue
-            working_dir = Path(str(config.get("workingDir", ""))).expanduser()
+            raw_working_dir = str(config.get("workingDir") or "")
+            working_dir = Path(raw_working_dir).expanduser() if raw_working_dir else Path()
+            working_dir_resolved = working_dir.resolve() if raw_working_dir else working_dir
+            expected_working_dir = (botmux_home / "workspace" / role_name).resolve()
+            agents_path = working_dir_resolved / "AGENTS.md" if raw_working_dir else Path("AGENTS.md")
             matched[role_name] = {
                 "larkAppId": app_id,
                 "cliId": config.get("cliId"),
-                "workingDir": str(working_dir),
-                "workingDirExists": working_dir.exists(),
+                "workingDir": str(working_dir_resolved) if raw_working_dir else "",
+                "expectedWorkingDir": str(expected_working_dir),
+                "workingDirExists": bool(raw_working_dir) and working_dir.exists(),
+                "workingDirMatchesExpected": bool(raw_working_dir) and working_dir_resolved == expected_working_dir,
+                "agentsPath": str(agents_path),
+                "agentsExists": bool(raw_working_dir) and agents_path.exists(),
             }
 
         missing_dirs = [role for role, data in matched.items() if not data["workingDirExists"]]
-        status = "pass" if not missing and not missing_dirs else "fail"
-        summary = "Novel bot configs are present and workspace directories exist." if status == "pass" else "Novel bot configs are incomplete."
+        mismatched_dirs = [role for role, data in matched.items() if not data["workingDirMatchesExpected"]]
+        missing_agents = [role for role, data in matched.items() if not data["agentsExists"]]
+        status = "pass" if not missing and not missing_dirs and not mismatched_dirs and not missing_agents else "fail"
+        summary = (
+            "Novel bot configs are present and bound to expected workspace identities."
+            if status == "pass"
+            else "Novel bot configs are incomplete or not bound to expected workspace identities."
+        )
         return ReadinessCheck(
             name="bot_configs",
             status=status,
             summary=summary,
-            data={"matched": matched, "missing": missing, "missing_working_dirs": missing_dirs},
+            data={
+                "matched": matched,
+                "missing": missing,
+                "missing_working_dirs": missing_dirs,
+                "mismatched_working_dirs": mismatched_dirs,
+                "missing_workspace_agents": missing_agents,
+            },
         )
 
     def _check_workflows(self, *, repo_path: Path, botmux_bin: Path) -> ReadinessCheck:

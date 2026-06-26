@@ -87,6 +87,49 @@ class NovelReadinessTest(unittest.TestCase):
                 },
             )
 
+    def test_bot_config_check_rejects_unexpected_working_dir(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            botmux_home = root / ".botmux"
+            install_temp_botmux(botmux_home)
+
+            wrong_dir = root / "wrong-director-workspace"
+            wrong_dir.mkdir()
+            (wrong_dir / "AGENTS.md").write_text("# Wrong Workspace\n", encoding="utf-8")
+            bots_path = botmux_home / "bots.json"
+            bots = json.loads(bots_path.read_text(encoding="utf-8"))
+            director_app_id = EXPECTED_NOVEL_BOTS["Novel-Director-Curator"]
+            for bot in bots:
+                if bot.get("larkAppId") == director_app_id:
+                    bot["workingDir"] = str(wrong_dir)
+            bots_path.write_text(json.dumps(bots, ensure_ascii=False, indent=2), encoding="utf-8")
+
+            check = NovelReadinessChecker()._check_bot_configs(botmux_home=botmux_home)
+
+            self.assertEqual(check.status, "fail")
+            self.assertIn("Novel-Director-Curator", check.data["mismatched_working_dirs"])
+            director = check.data["matched"]["Novel-Director-Curator"]
+            self.assertFalse(director["workingDirMatchesExpected"])
+            self.assertTrue(director["workingDirExists"])
+            self.assertTrue(director["agentsExists"])
+
+    def test_bot_config_check_rejects_missing_workspace_agents(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            botmux_home = root / ".botmux"
+            install_temp_botmux(botmux_home)
+            agents_path = botmux_home / "workspace" / "Novel-Continuity-Validator" / "AGENTS.md"
+            agents_path.unlink()
+
+            check = NovelReadinessChecker()._check_bot_configs(botmux_home=botmux_home)
+
+            self.assertEqual(check.status, "fail")
+            self.assertIn("Novel-Continuity-Validator", check.data["missing_workspace_agents"])
+            validator = check.data["matched"]["Novel-Continuity-Validator"]
+            self.assertTrue(validator["workingDirMatchesExpected"])
+            self.assertTrue(validator["workingDirExists"])
+            self.assertFalse(validator["agentsExists"])
+
     def test_workflow_binding_validator_rejects_unknown_refs(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             workflow_path = Path(tmpdir) / "bad.workflow.json"

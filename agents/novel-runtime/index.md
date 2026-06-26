@@ -146,7 +146,7 @@ Updated: 2026-06-27
 ### Readiness
 
 1. `NovelReadinessChecker` 用 `botmux-assets` dry-run 确认本机 workflow 和三个小说 bot workspace `AGENTS.md` 未漂移。
-2. 读取 `~/.botmux/bots.json`，确认三个小说 bot 的 appId 和工作目录存在；不会输出 app secret。
+2. 读取 `~/.botmux/bots.json`，确认三个小说 bot 的 appId、工作目录、预期 `~/.botmux/workspace/{role}` 绑定和 workspace `AGENTS.md` 都存在；不会输出 app secret。
 3. 运行 `botmux workflow validate` 校验两个 workflow 模板。
 4. 静态校验 workflow 模板中的 `${params.*}` 和 `${node.output.*}` 绑定，确认参数、上游节点、依赖闭包和输出字段都存在。
 5. 运行 workflow 合成契约 smoke，用最小合成输出渲染每个节点 prompt 和 humanGate prompt，确认 `preview/handoff/data/open_questions/risks/wiki_refs/change_declarations` 能按依赖传递。
@@ -187,7 +187,7 @@ Updated: 2026-06-27
 - `botmux_novel/wiki_lint.py`：本地 wiki Markdown 结构 lint，用于检查必需页面、标题、空文件、字符页目录和本地 Markdown 链接。
 - `botmux_novel/mcp_config.py`：项目级 llmwiki MCP 配置片段、Codex TOML、角色绑定和 humanGate 策略生成。
 - `botmux_novel/series.py`：连续章节样例运行和质量指标采集。
-- `botmux_novel/readiness.py`：小说生产本地就绪检查、workflow 绑定静态校验、workflow 合成契约 smoke、可选 series smoke 和可选 llmwiki write/lint/reindex smoke。
+- `botmux_novel/readiness.py`：小说生产本地就绪检查、BotMux bot workspace 身份绑定校验、workflow 绑定静态校验、workflow 合成契约 smoke、可选 series smoke 和可选 llmwiki write/lint/reindex smoke。
 - `botmux_novel/botmux_assets.py`：BotMux workflow 和 workspace AGENTS 同步。
 - `tests/test_botmux_assets.py`：BotMux 资产 dry-run、写入、CLI 和本机 workspace 同步测试。
 - `tests/test_novel_approval.py`：审批包 dry-run、approved apply 和 CLI 入口测试。
