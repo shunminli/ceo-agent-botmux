@@ -124,7 +124,7 @@ python3 -m botmux_novel readiness --bootstrap-smoke --workflow-import-smoke --ch
 - `approval-apply` JSON：审批包执行结果，包含是否 approved、实际 `llmwiki-sync` 状态、warnings 和产物路径。
 - `runs/{chapter_run_id}/source-foundation.json`：`chapter` 子命令使用的 Story Bible 来源快照。
 - `runs/{chapter_run_id}/prior-context.json`：`chapter` 子命令自动汇总的前文章节归档上下文。
-- `runs/{chapter_run_id}/next-chapter-command.md|json`：从 foundation 生产的章节完成后生成的下一章 handoff，包含建议目标、来源引用和可审阅执行的命令。
+- `runs/{chapter_run_id}/next-chapter-command.md|json`：从 foundation 生产的章节完成后生成的下一章 handoff，包含建议目标、来源引用、本地 runtime 命令和携带 archive `priorContext` 的真实 BotMux workflow 命令。
 - `runs/{workflow_chapter_run_id}/workflow-result-source.json|workflow-node-outputs.json|summary.md|next-chapter-command.md|json`：`chapter-workflow-import` 保存的章节 workflow 原始结果、节点输出、导入摘要和下一章 handoff；下一章 BotMux 命令包含归档摘要 `priorContext`、章节目标、目标字数和模式。
 - `runs/archive-{chapter}.json`：本地章节归档快照；可由 deterministic `chapter` 或通过 humanGate 的章节 workflow 导入生成。
 - `runs/llmwiki-sync-{project_slug}-{timestamp}.json`：`llmwiki-sync` 子命令生成的写入门禁计划、影响面、回滚计划和命令结果。
@@ -146,7 +146,7 @@ python3 -m botmux_novel readiness --bootstrap-smoke --workflow-import-smoke --ch
 - `approval-decision` 只把 humanGate 决策写入审批包 JSON，并在同目录 `approval-package.md` 存在时重渲染 Markdown 审批包；它会先按 `approval-package.schema.json` 校验审批包，不执行 llmwiki 写入，正式批准路径应先记录 `--decision approve`。
 - `approval-check` 默认只读校验审批包；它会先按 `approval-package.schema.json` 递归检查必填字段和基础类型，并确认真实 BotMux 首章 workflow 命令的 `projectSlug/title/storyBible/chapterNumber/chapterGoal/priorContext/wordTarget/mode` 来自审批包和 foundation。`--apply-dry-run` 只验证 `approval-apply` dry-run 消费路径，不执行 approved writes；`--chapter-smoke` 会执行本地首章命令，应用在临时 smoke 项目，不建议在未经审批的真实项目上默认运行。
 - `approval-apply` 默认只重新生成同步计划；它会先按 `approval-package.schema.json` 校验审批包，只有传 `--approve` 才会按审批包写入 llmwiki workspace，并默认运行 `llmwiki reindex` 与写后 lint。若审批包已记录 `request_changes` 或 `reject`，会拒绝写入；若未记录 `approve` 但命令显式 `--approve`，会保留 warning 说明这是命令级 humanGate 信号。
-- `chapter` 从本地 `foundation.json` 继续生产章节，不重新规划 Story Bible；未传 `--chapter-goal` 时自动使用 `foundation.json` 的 `chapter_goal.objective`，自动读取早于当前章节的 `runs/archive-*.json` 作为连续性上下文，并在完成后生成下一章 handoff 命令。
+- `chapter` 从本地 `foundation.json` 继续生产章节，不重新规划 Story Bible；未传 `--chapter-goal` 时自动使用 `foundation.json` 的 `chapter_goal.objective`，自动读取早于当前章节的 `runs/archive-*.json` 作为连续性上下文，并在完成后生成下一章本地 runtime handoff 和真实 BotMux workflow handoff，后者会携带本章 archive `priorContext`。
 - `chapter-workflow-import` 读取已完成的 `novel-chapter-production` workflow JSON 结果，校验七个节点输出契约，只有 Director 决策和 archive plan 均通过时才写入本地 final、tracking、archive 和下一章 handoff；`project.yaml.archived_chapters` 会从 `runs/archive-*.json` 汇总，保留多章导入历史。下一章 handoff 会把本章事实、时间线、伏笔、人物状态和连续性问题压缩进 BotMux `priorContext` 参数。被 block 的章节只写 blocked run artifacts，不写 final，不写 llmwiki。
 - `wiki-bundle` 读取本地 `foundation.json` 并写项目内 Markdown bundle；若存在 `runs/archive-*.json`，会把章节定稿、事实、时间线、伏笔和人物状态纳入章节归档页与聚合页。该命令不调用 llmwiki。
 - `llmwiki-sync` 默认只生成计划；只有传 `--approve` 才把审核包复制到 llmwiki workspace。传 `--lint` 后优先运行 `llmwiki lint <workspace>`；若当前 llmwiki CLI 不支持 `lint` 子命令，则自动运行本地 `wiki-lint` fallback；若 lint 检查失败则同步结果为 `failed`。它不安装 llmwiki，不调用 MCP 写工具。

@@ -21,6 +21,7 @@ from .agents import (
 from .chapter_goals import chapter_goal_for
 from .schema_validation import validate_required
 from .workspace import NovelWorkspace, markdown_list, utc_now
+from .workflow_commands import build_chapter_workflow_command
 
 
 @dataclass(frozen=True)
@@ -1197,16 +1198,33 @@ Objective: {blueprint['objective']}
         source_foundation = plan["project"].get("source_foundation")
         if source_foundation:
             command.extend(["--foundation-json", str(source_foundation)])
+        project_slug = self._resolve_project_slug_for_handoff(workspace, plan)
+        prior_context = self._workflow_prior_context(blueprint["chapter_id"], archive)
+        workflow_command = build_chapter_workflow_command(
+            project_slug=project_slug,
+            title=plan["project"]["title"],
+            foundation_payload=plan,
+            default_chapter_number=current_number,
+            chapter_number=next_number,
+            chapter_goal=next_goal,
+            prior_context=prior_context,
+            word_target=int(plan["project"].get("word_target", 1200)),
+            mode=str(plan["project"].get("mode", "lean")),
+        )
 
         return {
             "status": "suggested",
             "project_path": str(workspace.root),
+            "project_slug": project_slug,
             "current_chapter_id": blueprint["chapter_id"],
             "next_chapter_id": make_chapter_id(next_number),
             "next_chapter_number": next_number,
             "chapter_goal": next_goal,
             "command": command,
             "command_text": shlex.join(command),
+            "workflow_command": workflow_command,
+            "workflow_command_text": shlex.join(workflow_command),
+            "prior_context": prior_context,
             "source_foundation": source_foundation,
             "source_refs": [
                 f"runs/{run_id}/summary.md",
@@ -1230,16 +1248,91 @@ Objective: {blueprint['objective']}
 - Current chapter: `{handoff["current_chapter_id"]}`
 - Next chapter: `{handoff["next_chapter_id"]}`
 - Suggested goal: {handoff["chapter_goal"]}
+- Project slug: `{handoff["project_slug"]}`
 - Source foundation: `{handoff.get("source_foundation")}`
+
+## Local Runtime
 
 ```bash
 {handoff["command_text"]}
 ```
 
+## BotMux Workflow
+
+```bash
+{handoff["workflow_command_text"]}
+```
+
+## Prior Context
+
+{handoff["prior_context"]}
+
 ## Handoff
 
 {handoff["handoff"]}
 """
+
+    def _resolve_project_slug_for_handoff(self, workspace: NovelWorkspace, plan: Dict[str, Any]) -> str:
+        project_slug = plan.get("project", {}).get("project_slug")
+        if isinstance(project_slug, str) and project_slug.strip():
+            return project_slug.strip()
+        wiki_root = workspace.root / "wiki" / "novels"
+        if wiki_root.is_dir():
+            candidates = sorted(path.name for path in wiki_root.iterdir() if path.is_dir())
+            if len(candidates) == 1:
+                return candidates[0]
+        return "project-slug"
+
+    def _workflow_prior_context(self, current_chapter: str, archive: Dict[str, Any]) -> str:
+        sections = [
+            f"Source chapter: {current_chapter}",
+            self._workflow_archive_items("Facts", archive.get("facts", []), ["fact", "summary", "value"]),
+            self._workflow_archive_items("Timeline", archive.get("timeline", []), ["event", "summary", "value"]),
+            self._workflow_archive_items("Foreshadowing", archive.get("foreshadowing", []), ["item", "clue", "description", "id"]),
+            self._workflow_archive_items(
+                "Character state",
+                archive.get("character_state", []),
+                ["state", "current_state", "summary", "value"],
+                label_keys=["name", "id", "character_id"],
+            ),
+            self._workflow_archive_items("Continuity issues", archive.get("continuity_issues", []), ["issue", "summary", "value"]),
+        ]
+        return "\n".join(section for section in sections if section.strip())
+
+    def _workflow_archive_items(
+        self,
+        title: str,
+        items: Any,
+        preferred_keys: List[str],
+        *,
+        label_keys: Optional[List[str]] = None,
+    ) -> str:
+        if not isinstance(items, list) or not items:
+            return f"{title}: none"
+        lines = [f"{title}:"]
+        for item in items:
+            if isinstance(item, dict):
+                value = self._first_present_text(item, preferred_keys)
+                if not value:
+                    value = json.dumps(item, ensure_ascii=False, sort_keys=True)
+                label = self._first_present_text(item, label_keys or [])
+                detail_parts = []
+                for key in ["status", "risk", "risk_level", "planned_payoff", "payoff_plan"]:
+                    if item.get(key) not in (None, ""):
+                        detail_parts.append(f"{key}={item.get(key)}")
+                detail = f" ({'; '.join(detail_parts)})" if detail_parts else ""
+                prefix = f"{label}: " if label else ""
+                lines.append(f"- {prefix}{value}{detail}")
+            else:
+                lines.append(f"- {item}")
+        return "\n".join(lines)
+
+    def _first_present_text(self, item: Dict[str, Any], keys: List[str]) -> str:
+        for key in keys:
+            value = item.get(key)
+            if value not in (None, ""):
+                return str(value)
+        return ""
 
     def _validate_request(self, request: NovelRunRequest) -> None:
         if not request.title.strip():

@@ -357,6 +357,13 @@ class NovelRuntimeTest(unittest.TestCase):
                     inspiration="一个背负旧案污名的少年，在巡夜钟声中发现妹妹影子会说真话。",
                 )
             )
+            runtime.wiki_bundle(
+                NovelWikiBundleRequest(
+                    project_path=project,
+                    project_slug="shadow-clock-case",
+                    foundation_path=foundation.foundation_path,
+                )
+            )
             first_chapter = runtime.chapter(
                 NovelChapterRequest(
                     project_path=project,
@@ -371,6 +378,13 @@ class NovelRuntimeTest(unittest.TestCase):
             next_command = json.loads(next_command_path.read_text(encoding="utf-8"))
             self.assertEqual(next_command["next_chapter_id"], "ch-002")
             self.assertIn("--foundation-json", next_command["command"])
+            self.assertIn("novel-chapter-production", next_command["workflow_command"])
+            self.assertIn("projectSlug=shadow-clock-case", next_command["workflow_command"])
+            self.assertIn("chapterNumber=2", next_command["workflow_command"])
+            self.assertTrue(any(item.startswith("storyBible=") and "主角发现家族旧案" in item for item in next_command["workflow_command"]))
+            self.assertTrue(any(item.startswith("chapterGoal=") and "半张残页" in item for item in next_command["workflow_command"]))
+            self.assertIn("Source chapter: ch-001", next_command["prior_context"])
+            self.assertTrue(any(item.startswith("priorContext=") and "Source chapter: ch-001" in item for item in next_command["workflow_command"]))
 
             completed = subprocess.run(
                 next_command["command"],

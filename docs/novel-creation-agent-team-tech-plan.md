@@ -559,7 +559,7 @@ python3 -m botmux_novel readiness --bootstrap-smoke --approval-apply-smoke --ser
 - 章节生产继续使用同一 3 bot 组织，并在 `director_approval_package` 前 humanGate。
 - workflow 只输出章节定稿候选包和 `archive_plan`，不直接写项目文件或 llmwiki；写入动作后续必须单独 gated。
 - 已新增本地 `python3 -m botmux_novel chapter`，可用已批准/已生成的 `foundation.json` 继续生产章节，用于无 BotMux 依赖的 Phase 2 smoke。
-- `chapter` 会自动读取早于当前章节的 `runs/archive-*.json`，生成 `runs/{chapter_run_id}/prior-context.json` 并注入上下文包，避免第二章以后丢失前文事实、伏笔和角色状态。
+- `chapter` 会自动读取早于当前章节的 `runs/archive-*.json`，生成 `runs/{chapter_run_id}/prior-context.json` 并注入上下文包，避免第二章以后丢失前文事实、伏笔和角色状态；章节完成后的 `next-chapter-command` 同时包含本地 runtime 命令和真实 `novel-chapter-production` BotMux workflow 命令，便于从本地 smoke 切回三 bot 协作。
 - 已新增本地 `python3 -m botmux_novel chapter-workflow-import`，把真实 `novel-chapter-production` workflow 输出导入为本地 draft/revised/final、tracking 归档、SQLite run 记录和下一章 handoff；只有 Director 决策和 `archive_plan` 均通过时才写 final，被 block 的章节只写 blocked run artifacts。成功导入后会从 `runs/archive-*.json` 汇总 `project.yaml.archived_chapters`，并在下一章 BotMux 命令中携带本章归档摘要作为 `priorContext`，同时带上下一章目标、`wordTarget` 和 `mode`。
 - `wiki-bundle` 会读取已有 `runs/archive-*.json`，把章节归档、定稿正文、聚合时间线和人物状态加入本地 llmwiki 审核包；章节知识库写入仍必须通过 `llmwiki-sync --approve` 或同等 humanGate。
 
