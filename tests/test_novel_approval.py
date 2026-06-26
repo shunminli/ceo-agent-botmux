@@ -160,6 +160,41 @@ class NovelApprovalApplyTest(unittest.TestCase):
                 )
             self.assertFalse((workspace / "wiki/novels/shadow-clock-case/overview.md").exists())
 
+    def test_approval_consumers_reject_missing_required_package_fields(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            project = root / "novel-project"
+            workspace = root / "llmwiki-workspace"
+            fake_llmwiki = write_fake_llmwiki(root / "llmwiki")
+            bootstrap = NovelBootstrapper().bootstrap(
+                NovelBootstrapRequest(
+                    project_path=project,
+                    title="影钟旧案",
+                    inspiration="少年在旧书楼发现父亲旧案残页。",
+                    project_slug="shadow-clock-case",
+                    workspace_path=workspace,
+                    llmwiki_bin=str(fake_llmwiki),
+                )
+            )
+            package = json.loads(bootstrap.approval_package_json_path.read_text(encoding="utf-8"))
+            del package["human_gate"]["approval_apply_command"]
+            bootstrap.approval_package_json_path.write_text(
+                json.dumps(package, ensure_ascii=False, indent=2) + "\n",
+                encoding="utf-8",
+            )
+
+            with self.assertRaisesRegex(ValueError, "human_gate.approval_apply_command"):
+                NovelApprovalDecider().record(
+                    NovelApprovalDecisionRequest(
+                        approval_package_path=bootstrap.approval_package_json_path,
+                        decision="approve",
+                    )
+                )
+            with self.assertRaisesRegex(ValueError, "human_gate.approval_apply_command"):
+                NovelApprovalApplier().apply(
+                    NovelApprovalApplyRequest(approval_package_path=bootstrap.approval_package_json_path)
+                )
+
     def test_cli_approval_apply_uses_real_entrypoint(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)

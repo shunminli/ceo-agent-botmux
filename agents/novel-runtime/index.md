@@ -58,11 +58,11 @@ Updated: 2026-06-27
 2. 运行 `wiki-bundle`，导出 `wiki/novels/{project_slug}/` 审核页面。
 3. 运行未审批的 `llmwiki-sync`，只生成 sync plan；即使命令中带 planned reindex/lint，也不会执行 post-write 命令或覆盖外部 workspace。
 4. 运行 `llmwiki-mcp-config`，生成项目级 MCP JSON、Codex TOML 和三角色绑定策略。
-5. 写入 `runs/{bootstrap_run_id}/approval-package.json` 和 `approval-package.md`，列出 humanGate 必审项、页面清单、决策记录命令、批准后写入命令和 `next_actions.chapter_start_command`。
+5. 用 `approval-package.schema.json` 校验审批包必填字段后，写入 `runs/{bootstrap_run_id}/approval-package.json` 和 `approval-package.md`，列出 humanGate 必审项、页面清单、决策记录命令、批准后写入命令和 `next_actions.chapter_start_command`。
 
 ### Approval Decision
 
-1. `NovelApprovalDecider` 读取 `approval-package.json`，校验状态是 `ready_for_human_review`。
+1. `NovelApprovalDecider` 读取 `approval-package.json`，先按 `approval-package.schema.json` 校验必填字段，再校验状态是 `ready_for_human_review`。
 2. 只接受 `approve`、`request_changes`、`reject` 三种决策。
 3. 把 `decision`、`reviewer`、`notes`、`decided_at` 写入 `human_gate`，并追加 `decision_history`。
 4. 若同目录 `approval-package.md` 存在，会用更新后的 JSON 重渲染 Markdown 审批包，避免人类回看时仍看到占位决策。
@@ -79,7 +79,7 @@ Updated: 2026-06-27
 
 ### Approval Apply
 
-1. `NovelApprovalApplier` 读取 `approval-package.json`，校验状态是 `ready_for_human_review`。
+1. `NovelApprovalApplier` 读取 `approval-package.json`，先按 `approval-package.schema.json` 校验必填字段，再校验状态是 `ready_for_human_review`。
 2. 从审批包提取项目路径、project slug、llmwiki workspace 和 `--llmwiki-bin`。
 3. 默认 `approve=False` 时调用 `llmwiki-sync` 生成新计划，不复制页面。
 4. 传 `--approve` 后，如果审批包决策是 `request_changes` 或 `reject`，拒绝 approved sync。
