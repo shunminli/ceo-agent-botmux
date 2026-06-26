@@ -15,7 +15,8 @@ Updated: 2026-06-26
 
 - 本模块不调用豆包非公开 API，不保存账号、Cookie 或会话凭证。
 - 真实登录、会话和 UI 自动化由外部 runner 负责。
-- 当前默认推荐 OpenCLI 桌面端适配器；Web adapter 和第三方 `doubao-cli` 作为兼容入口。
+- 当前默认推荐 OpenCLI 桌面端适配器；桌面端必须以 remote debugging 端口启动，已有无 CDP 实例时需要先退出再重启。
+- OpenCLI Web adapter 需要 Browser Bridge extension 已连接；第三方 `doubao-cli` 作为兼容入口。
 - 豆包输出不能直接写入项目事实、记忆或最终稿，必须由 Codex / Agent 链再整理和验证。
 
 ## 主流程
@@ -30,4 +31,5 @@ Updated: 2026-06-26
 
 - `botmux_doubao/runtime.py`：provider 选择、runner 命令拼装、执行和诊断。
 - `botmux_doubao/cli.py`：命令行解析、prompt 读取和输出格式控制。
+- `pyproject.toml`：包安装配置和 `botmux-doubao` console script。
 - `tests/test_doubao_cli.py`：真实 Python 模块入口、fake runner、缺依赖和 launch dry-run 验证。

@@ -38,6 +38,8 @@ botmux-doubao ask --purpose dialogue "生成兄妹在旧书楼重逢的对白候
 ## 限制
 
 - 需要用户自行安装并登录 OpenCLI / `doubao-cli` 对应 runner。
+- 桌面端模式需要豆包以 remote debugging 端口启动；如果已有豆包实例没有 CDP，需要退出后重启。
+- Web 模式需要 OpenCLI Browser Bridge extension 处于已连接状态。
 - 当前仓库测试使用 fake runner 验证包装层，不验证真实豆包账号、登录态或 UI 选择器稳定性。
 - 豆包候选内容可能事实漂移，进入小说项目事实、记忆或定稿前必须经过 Codex 整理和一致性验证。
 
