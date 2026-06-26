@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from .chapter_goals import chapter_goal_for
+from .foundation_paths import resolve_optional_foundation_path
 from .handoff_commands import build_chapter_knowledge_handoff
 from .schema_validation import validate_required
 from .workspace import NovelWorkspace, markdown_list, utc_now
@@ -531,6 +532,7 @@ def next_chapter_handoff(
     word_target = int_or_default(params.get("wordTarget"), request.word_target)
     mode = first_text(params.get("mode"), request.mode, default=request.mode)
     project_slug = first_text(params.get("projectSlug"), default="project-slug")
+    foundation_path = resolve_optional_foundation_path(project_path, request.foundation_path)
     command = [
         "botmux",
         "workflow",
@@ -554,7 +556,7 @@ def next_chapter_handoff(
         f"mode={mode}",
     ]
     local_command: List[str] = []
-    if request.foundation_path is not None:
+    if foundation_path is not None:
         local_command = [
             "python3",
             "-m",
@@ -567,16 +569,12 @@ def next_chapter_handoff(
             "--chapter-goal",
             next_goal,
             "--foundation-json",
-            str(request.foundation_path.expanduser().resolve()),
+            str(foundation_path),
         ]
     knowledge_handoff = build_chapter_knowledge_handoff(
         project_path=project_path,
         project_slug=project_slug,
-        foundation_path=(
-            request.foundation_path.expanduser().resolve()
-            if request.foundation_path is not None
-            else None
-        ),
+        foundation_path=foundation_path,
     )
     return {
         "status": "suggested",

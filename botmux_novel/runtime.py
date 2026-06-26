@@ -19,6 +19,7 @@ from .agents import (
     chapter_id as make_chapter_id,
 )
 from .chapter_goals import chapter_goal_for
+from .foundation_paths import resolve_foundation_path
 from .handoff_commands import build_chapter_knowledge_handoff
 from .schema_validation import validate_required
 from .workspace import NovelWorkspace, markdown_list, utc_now
@@ -678,15 +679,7 @@ class NovelRuntime:
         return int(match.group(1))
 
     def _resolve_foundation_path(self, workspace: NovelWorkspace, explicit_path: Optional[Path]) -> Path:
-        if explicit_path is not None:
-            path = explicit_path.expanduser().resolve()
-            if not path.exists():
-                raise ValueError(f"foundation file does not exist: {path}")
-            return path
-        candidates = sorted(workspace.root.glob("runs/foundation-*/foundation.json"), key=lambda path: path.stat().st_mtime)
-        if not candidates:
-            raise ValueError("no foundation.json found; run `python -m botmux_novel foundation` first or pass --foundation-json")
-        return candidates[-1]
+        return resolve_foundation_path(workspace.root, explicit_path)
 
     def _validate_project_slug(self, project_slug: str) -> str:
         slug = project_slug.strip()

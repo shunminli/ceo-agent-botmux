@@ -123,6 +123,30 @@ class NovelChapterWorkflowImportTest(unittest.TestCase):
             self.assertIn("- \"ch-001\"", project_yaml)
             self.assertIn("- \"ch-002\"", project_yaml)
 
+    def test_chapter_workflow_import_discovers_project_foundation_for_handoff(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            workflow_result = root / "chapter-workflow-result.json"
+            project = root / "chapter-project-with-foundation"
+            foundation = project / "runs" / "workflow-foundation-20260627" / "foundation.json"
+            foundation.parent.mkdir(parents=True)
+            foundation.write_text("{}", encoding="utf-8")
+            workflow_result.write_text(json.dumps(sample_chapter_workflow_result(), ensure_ascii=False, indent=2), encoding="utf-8")
+
+            result = NovelChapterWorkflowImporter().import_chapter(
+                NovelChapterWorkflowImportRequest(
+                    workflow_result_path=workflow_result,
+                    project_path=project,
+                )
+            )
+
+            next_command = json.loads((project / f"runs/{result.run_id}/next-chapter-command.json").read_text(encoding="utf-8"))
+            self.assertIn("--foundation-json", next_command["local_command"])
+            self.assertIn(str(foundation.resolve()), next_command["local_command"])
+            knowledge_handoff = next_command["knowledge_handoff"]
+            self.assertIn("--foundation-json", knowledge_handoff["wiki_bundle_command"])
+            self.assertIn(str(foundation.resolve()), knowledge_handoff["wiki_bundle_command"])
+
     def test_chapter_workflow_import_blocks_without_final_write(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)

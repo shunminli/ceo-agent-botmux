@@ -139,6 +139,25 @@ class NovelWorkflowFoundationImportTest(unittest.TestCase):
             check_payload = json.loads(check_completed.stdout)
             self.assertEqual(check_payload["status"], "ready")
 
+            chapter_completed = subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "botmux_novel",
+                    "chapter",
+                    "--project",
+                    str(project),
+                    "--chapter-number",
+                    "1",
+                ],
+                check=True,
+                text=True,
+                capture_output=True,
+            )
+            chapter_payload = json.loads(chapter_completed.stdout)
+            self.assertEqual(chapter_payload["status"], "completed")
+            self.assertEqual(chapter_payload["chapter_id"], "ch-001")
+
     def test_workflow_foundation_import_rejects_missing_required_node(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)

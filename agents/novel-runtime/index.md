@@ -116,7 +116,7 @@ Updated: 2026-06-27
 
 ### Chapter From Foundation
 
-1. `NovelRuntime.chapter` 读取显式 `foundation.json`，或使用项目中最新的 `runs/foundation-*/foundation.json`。
+1. `NovelRuntime.chapter` 读取显式 `foundation.json`，或使用项目中最新的 `runs/foundation-*/foundation.json` / `runs/workflow-foundation-*/foundation.json`。
 2. 用请求中的 `chapter_number` 和 `chapter_goal` 更新当前章节目标；若请求未提供 `chapter_goal`，自动使用 `foundation.json` 的 `chapter_goal.objective`。
 3. 首章从批准后的 foundation 起步时可省略 `--chapter-goal`；第二章以后通常应显式传入新的章节目标，避免继续复用首章目标。
 4. 读取早于当前章节的 `runs/archive-{chapter}.json`，汇总事实、时间线、伏笔、角色状态和连续性问题为 `prior_context`。
@@ -138,7 +138,7 @@ Updated: 2026-06-27
 
 ### Wiki Bundle
 
-1. `NovelRuntime.wiki_bundle` 读取显式 `foundation.json`，或使用项目中最新的 `runs/foundation-*/foundation.json`。
+1. `NovelRuntime.wiki_bundle` 读取显式 `foundation.json`，或使用项目中最新的 `runs/foundation-*/foundation.json` / `runs/workflow-foundation-*/foundation.json`。
 2. 运行 schema 必填字段校验。
 3. 写入本地 `wiki/novels/{project_slug}/` Markdown 页面包。
 4. 当项目存在 `runs/archive-*.json` 时，额外输出 `chapter-archive.md`、`timeline.md`、`character-state.md` 和 `chapters/{chapter}.md`，章节页包含归档事实、时间线、伏笔、人物状态、连续性问题和本地定稿正文。
@@ -206,6 +206,7 @@ Updated: 2026-06-27
 - `botmux_novel/approval.py`：记录 humanGate 审批决策，并在批准后读取审批包执行 gated llmwiki sync。
 - `botmux_novel/approval_check.py`：只读校验审批包、审核材料、humanGate 命令、MCP 策略和可选 dry-run / chapter smoke。
 - `botmux_novel/bootstrap.py`：真实项目启动包、审批包、wiki dry-run sync plan 和 MCP 配置串联。
+- `botmux_novel/foundation_paths.py`：本地 foundation 和 workflow foundation 导入产物的统一发现与解析。
 - `botmux_novel/handoff_commands.py`：章节 handoff 中本地 wiki bundle、llmwiki sync plan 和 approved sync 命令生成。
 - `botmux_novel/workflow_import.py`：真实 BotMux 开书 workflow 输出导入、本地 foundation 规范化和审批包桥接。
 - `botmux_novel/workflow_commands.py`：Story Bible 压缩和 `novel-chapter-production` BotMux 命令生成。

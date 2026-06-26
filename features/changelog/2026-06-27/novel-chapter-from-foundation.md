@@ -19,7 +19,7 @@ python3 -m botmux_novel chapter \
 
 ## Coverage
 
-- Reads an explicit `foundation.json`, or the latest `runs/foundation-*/foundation.json`.
+- Reads an explicit `foundation.json`, or the latest local `runs/foundation-*/foundation.json` / imported `runs/workflow-foundation-*/foundation.json`.
 - Updates the current chapter id and approved chapter objective without replanning the Story Bible.
 - Defaults `chapter_goal` from `foundation.json` `chapter_goal.objective` when the request omits `--chapter-goal`, so an approved opening foundation can drive the first chapter without manual copy/paste.
 - Reuses the existing chapter state machine for blueprint, context pack, draft, review, revision, final, archive, trace, and SQLite run records.
