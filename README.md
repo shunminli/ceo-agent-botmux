@@ -65,6 +65,10 @@ python3 -m botmux_novel llmwiki-mcp-config \
 
 python3 -m botmux_novel chapter \
   --project /tmp/novel-demo \
+  --chapter-number 1
+
+python3 -m botmux_novel chapter \
+  --project /tmp/novel-demo \
   --chapter-number 2 \
   --chapter-goal "让林烬用半张残页验证巡夜钟异常，并把妹妹影子证词转成下一章追查目标。"
 

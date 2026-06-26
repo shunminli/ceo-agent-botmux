@@ -82,7 +82,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     chapter_parser.add_argument("--project", required=True, help="Target novel project directory.")
     chapter_parser.add_argument("--chapter-number", type=int, required=True, help="Chapter number to produce.")
-    chapter_parser.add_argument("--chapter-goal", required=True, help="Approved chapter objective and reader promise.")
+    chapter_parser.add_argument("--chapter-goal", help="Approved chapter objective and reader promise. Defaults to foundation.json chapter_goal.objective.")
     chapter_parser.add_argument("--foundation-json", help="Optional explicit foundation.json path.")
     chapter_parser.add_argument("--mode", choices=["full", "lean", "solo"], help="Optional mode override; defaults to foundation mode.")
     chapter_parser.add_argument("--word-target", type=int, help="Optional target chapter length override.")

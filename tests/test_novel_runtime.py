@@ -192,6 +192,35 @@ class NovelRuntimeTest(unittest.TestCase):
             self.assertIn("foundation_path", trace["request"])
             self.assertEqual(trace["request"]["chapter_goal"], "让林烬用半张残页验证巡夜钟异常，并把妹妹影子证词转成下一章追查目标。")
 
+    def test_chapter_defaults_goal_from_foundation(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            project = Path(tmpdir) / "chapter-goal-from-foundation"
+            foundation = NovelRuntime().foundation(
+                NovelFoundationRequest(
+                    project_path=project,
+                    title="影钟旧案",
+                    inspiration="一个背负旧案污名的少年，在巡夜钟声中发现妹妹影子会说真话。",
+                )
+            )
+            foundation_payload = json.loads(foundation.foundation_path.read_text(encoding="utf-8"))
+            expected_goal = foundation_payload["chapter_goal"]["objective"]
+
+            result = NovelRuntime().chapter(
+                NovelChapterRequest(
+                    project_path=project,
+                    chapter_number=1,
+                    foundation_path=foundation.foundation_path,
+                )
+            )
+
+            self.assertEqual(result.status, "completed")
+            self.assertEqual(result.chapter_id, "ch-001")
+            trace = json.loads(result.trace_path.read_text(encoding="utf-8"))
+            self.assertEqual(trace["request"]["chapter_goal"], expected_goal)
+            self.assertIn("objective", trace["steps"][0]["output_keys"])
+            source_foundation = json.loads((project / f"runs/{result.run_id}/source-foundation.json").read_text(encoding="utf-8"))
+            self.assertEqual(source_foundation["chapter_goal"]["objective"], expected_goal)
+
     def test_chapter_loads_prior_archive_context_for_next_chapter(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             project = Path(tmpdir) / "chapter-continuity"
@@ -335,6 +364,50 @@ class NovelRuntimeTest(unittest.TestCase):
             self.assertEqual(payload["status"], "completed")
             self.assertEqual(payload["chapter_id"], "ch-002")
             self.assertTrue(Path(payload["final_path"]).exists())
+
+    def test_cli_chapter_defaults_goal_from_foundation(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            project = Path(tmpdir) / "cli-chapter-default-goal"
+            foundation = subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "botmux_novel",
+                    "foundation",
+                    "--project",
+                    str(project),
+                    "--title",
+                    "影钟旧案",
+                    "--inspiration",
+                    "少年在旧书楼发现父亲旧案残页。",
+                ],
+                check=True,
+                text=True,
+                capture_output=True,
+            )
+            foundation_payload = json.loads(foundation.stdout)
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "botmux_novel",
+                    "chapter",
+                    "--project",
+                    str(project),
+                    "--chapter-number",
+                    "1",
+                    "--foundation-json",
+                    foundation_payload["foundation_path"],
+                ],
+                check=True,
+                text=True,
+                capture_output=True,
+            )
+            payload = json.loads(completed.stdout)
+            self.assertEqual(payload["status"], "completed")
+            self.assertEqual(payload["chapter_id"], "ch-001")
+            trace = json.loads(Path(payload["trace_path"]).read_text(encoding="utf-8"))
+            self.assertIn("chapter_goal", trace["request"])
 
     def test_cli_wiki_bundle_uses_real_entrypoint(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:

@@ -45,7 +45,7 @@ class NovelFoundationRequest:
 class NovelChapterRequest:
     project_path: Path
     chapter_number: int
-    chapter_goal: str
+    chapter_goal: Optional[str] = None
     foundation_path: Optional[Path] = None
     mode: Optional[str] = None
     word_target: Optional[int] = None
@@ -274,6 +274,15 @@ class NovelRuntime:
         self._validate_plan(plan)
 
         chapter = make_chapter_id(request.chapter_number)
+        resolved_chapter_goal = self._resolve_chapter_goal(plan, request.chapter_goal)
+        effective_request = NovelChapterRequest(
+            project_path=request.project_path,
+            chapter_number=request.chapter_number,
+            chapter_goal=resolved_chapter_goal,
+            foundation_path=request.foundation_path,
+            mode=request.mode,
+            word_target=request.word_target,
+        )
         mode = request.mode or plan["project"].get("mode", "lean")
         word_target = request.word_target or int(plan["project"].get("word_target", 1200))
         plan["project"].update(
@@ -289,7 +298,7 @@ class NovelRuntime:
         chapter_goal.update(
             {
                 "chapter_id": chapter,
-                "objective": request.chapter_goal.strip(),
+                "objective": resolved_chapter_goal,
             }
         )
         plan["chapter_goal"] = chapter_goal
@@ -298,14 +307,14 @@ class NovelRuntime:
 
         started_at = utc_now()
         run_id = f"chapter-{started_at.replace(':', '').replace('-', '')}-{uuid.uuid4().hex[:8]}"
-        trace = RunTrace(run_id=run_id, request=request, started_at=started_at)
+        trace = RunTrace(run_id=run_id, request=effective_request, started_at=started_at)
         artifacts: List[Path] = []
         trace.add_step(
             "LoadFoundation",
             "director",
             "pass",
             "读取已批准的开书设定包，准备章节生产。",
-            {"source_path": str(source_path), "chapter_id": chapter, "objective": request.chapter_goal.strip()},
+            {"source_path": str(source_path), "chapter_id": chapter, "objective": resolved_chapter_goal},
         )
         trace.add_step(
             "LoadPriorContext",
@@ -329,7 +338,7 @@ class NovelRuntime:
 
         return self._execute_chapter_pipeline(
             workspace=workspace,
-            request=request,
+            request=effective_request,
             run_id=run_id,
             trace=trace,
             artifacts=artifacts,
@@ -928,9 +937,15 @@ Objective: {blueprint['objective']}
     def _validate_chapter_request(self, request: NovelChapterRequest) -> None:
         if request.chapter_number < 1:
             raise ValueError("chapter_number must be >= 1")
-        if not request.chapter_goal.strip():
-            raise ValueError("chapter_goal is required")
         if request.mode is not None and request.mode not in {"full", "lean", "solo"}:
             raise ValueError("mode must be one of: full, lean, solo")
         if request.word_target is not None and request.word_target < 300:
             raise ValueError("word_target must be >= 300")
+
+    def _resolve_chapter_goal(self, plan: Dict[str, Any], requested_goal: Optional[str]) -> str:
+        if requested_goal is not None and requested_goal.strip():
+            return requested_goal.strip()
+        foundation_goal = plan.get("chapter_goal", {}).get("objective")
+        if isinstance(foundation_goal, str) and foundation_goal.strip():
+            return foundation_goal.strip()
+        raise ValueError("chapter_goal is required when foundation has no chapter_goal.objective")

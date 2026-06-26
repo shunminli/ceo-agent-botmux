@@ -92,12 +92,13 @@ Updated: 2026-06-27
 ### Chapter From Foundation
 
 1. `NovelRuntime.chapter` 读取显式 `foundation.json`，或使用项目中最新的 `runs/foundation-*/foundation.json`。
-2. 用请求中的 `chapter_number` 和 `chapter_goal` 更新当前章节目标。
-3. 读取早于当前章节的 `runs/archive-{chapter}.json`，汇总事实、时间线、伏笔、角色状态和连续性问题为 `prior_context`。
-4. 写入当前 Story Bible / characters / settings / outline 资产快照，并在 `runs/{run_id}/source-foundation.json` 记录本次来源。
-5. 写入 `runs/{run_id}/prior-context.json`，并把前章归档注入 `context-pack.json` 的 `prior_context`、`facts`、`character_states`、`foreshadowing` 和 `source_refs`。
-6. 复用章节状态机完成蓝图、上下文包、草稿、审稿、修订、定稿、归档、trace 和 SQLite run 记录。
-7. 不重新调用 `DirectorAgent.plan_project`，避免批准后的 Story Bible 被灵感重规划覆盖。
+2. 用请求中的 `chapter_number` 和 `chapter_goal` 更新当前章节目标；若请求未提供 `chapter_goal`，自动使用 `foundation.json` 的 `chapter_goal.objective`。
+3. 首章从批准后的 foundation 起步时可省略 `--chapter-goal`；第二章以后通常应显式传入新的章节目标，避免继续复用首章目标。
+4. 读取早于当前章节的 `runs/archive-{chapter}.json`，汇总事实、时间线、伏笔、角色状态和连续性问题为 `prior_context`。
+5. 写入当前 Story Bible / characters / settings / outline 资产快照，并在 `runs/{run_id}/source-foundation.json` 记录本次来源。
+6. 写入 `runs/{run_id}/prior-context.json`，并把前章归档注入 `context-pack.json` 的 `prior_context`、`facts`、`character_states`、`foreshadowing` 和 `source_refs`。
+7. 复用章节状态机完成蓝图、上下文包、草稿、审稿、修订、定稿、归档、trace 和 SQLite run 记录。
+8. 不重新调用 `DirectorAgent.plan_project`，避免批准后的 Story Bible 被灵感重规划覆盖。
 
 ### Wiki Bundle
 
