@@ -2,7 +2,7 @@
 
 ## 组织模型
 
-这是一套“一人公司”的多 Agent 协作模型。人类负责人拥有最终决策权；CEO Agent 负责把人的目标转成可执行任务；Tech Design、DevOps、Validation 三个 Agent 以专业角色交付中间结果和质量证据。
+这是一套“一人公司”的多 Agent 协作模型。人类负责人拥有最终决策权；CEO Agent 负责把人的目标转成可执行任务；Tech Design、DevOps、Validation 和 Rental Agent 以专业角色交付中间结果和质量证据。
 
 ## 角色边界
 
@@ -10,6 +10,7 @@
 - `tech-design-agent`：Tech Design Agent，负责技术方案、架构建议和设计风险。
 - `devops-agent`：DevOps Agent，负责需求研发、工程质量、构建发布、运行维护和长期可维护性。
 - `validation-agent`：Validation Agent，负责方案、代码和最终交付结果的独立验证、测试验收和质量门禁。
+- `rental-agent`：寻址中介 Agent，负责企业厂房、仓库、办公室和生产办公一体空间的选址需求澄清、候选地址筛选、核验组织、评分排序和 Top 3 决策报告。
 
 ## 默认工作流
 
@@ -17,8 +18,9 @@
 2. CEO Agent 将需求拆成目标、范围、验收标准、依赖和交付顺序。
 3. 涉及架构、平台、数据流、安全、成本、维护性的任务先交给 Tech Design Agent。
 4. 需要落地研发、修复、部署、维护的任务交给 DevOps Agent。
-5. 重要方案、代码和交付物交给 Validation Agent 做独立验证和验收。
-6. CEO Agent 汇总结论、验证证据、风险和决策点，再对用户交付。
+5. 涉及厂房、仓库、办公室、研发办公、总部办公室、门店办公室或生产办公一体空间选址的任务交给 Rental Agent。
+6. 重要方案、代码和交付物交给 Validation Agent 做独立验证和验收。
+7. CEO Agent 汇总结论、验证证据、风险和决策点，再对用户交付。
 
 ## 升级规则
 
