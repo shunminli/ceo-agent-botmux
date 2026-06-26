@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from .wiki_lint import WikiLinter, WikiLintResult, result_to_stdout
 from .workspace import utc_now
 
 
@@ -246,6 +247,15 @@ def append_llmwiki_command(
 ) -> None:
     if not requested:
         return
+    if operation == "lint" and (
+        llmwiki_executable is None or (approve and not llmwiki_operation_available(llmwiki_executable, operation))
+    ):
+        command = ["python3", "-m", "botmux_novel", "wiki-lint", "--workspace", str(workspace_path)]
+        if not approve:
+            commands.append(LlmwikiCommandResult(command=command, status="planned"))
+            return
+        commands.append(run_local_wiki_lint(command=command, workspace_path=workspace_path))
+        return
     if llmwiki_executable is None:
         warnings.append(f"llmwiki executable not found: {llmwiki_bin}; skipped {operation}")
         commands.append(
@@ -270,6 +280,23 @@ def append_llmwiki_command(
         commands.append(LlmwikiCommandResult(command=command, status="planned"))
         return
     commands.append(run_command(command))
+
+
+def run_local_wiki_lint(*, command: List[str], workspace_path: Path) -> LlmwikiCommandResult:
+    result = WikiLinter().lint(workspace_path)
+    status = "succeeded" if result.status == "passed" else "failed"
+    return LlmwikiCommandResult(
+        command=command,
+        status=status,
+        returncode=0 if status == "succeeded" else 1,
+        stdout=result_to_stdout(result),
+        stderr=wiki_lint_stderr(result),
+    )
+
+
+def wiki_lint_stderr(result: WikiLintResult) -> str:
+    errors = [issue for issue in result.issues if issue.severity == "error"]
+    return "\n".join(f"{issue.path}: {issue.message}" for issue in errors)
 
 
 def llmwiki_operation_available(llmwiki_executable: str, operation: str) -> bool:
@@ -347,6 +374,7 @@ def write_sync_plan(
         "lint_plan": {
             "markdown_bundle": "rerun `python -m botmux_novel wiki-bundle` and inspect changed pages",
             "llmwiki": f"llmwiki lint {workspace_path}",
+            "fallback": f"python3 -m botmux_novel wiki-lint --workspace {workspace_path}",
             "reindex": f"llmwiki reindex {workspace_path}",
         },
         "actions": [action.to_dict() for action in actions],

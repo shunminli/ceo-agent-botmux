@@ -241,8 +241,7 @@ class NovelApprovalApplyTest(unittest.TestCase):
 def command_succeeded(commands: list, operation: str) -> bool:
     return any(
         command.status == "succeeded"
-        and len(command.command) >= 2
-        and command.command[1] == operation
+        and command_matches_operation(command.command, operation)
         for command in commands
     )
 
@@ -250,10 +249,17 @@ def command_succeeded(commands: list, operation: str) -> bool:
 def json_command_succeeded(commands: list, operation: str) -> bool:
     return any(
         command["status"] == "succeeded"
-        and len(command["command"]) >= 2
-        and command["command"][1] == operation
+        and command_matches_operation(command["command"], operation)
         for command in commands
     )
+
+
+def command_matches_operation(command: list, operation: str) -> bool:
+    if len(command) >= 2 and command[1] == operation:
+        return True
+    if operation == "lint" and "wiki-lint" in command:
+        return True
+    return False
 
 
 def write_fake_llmwiki(path: Path) -> Path:

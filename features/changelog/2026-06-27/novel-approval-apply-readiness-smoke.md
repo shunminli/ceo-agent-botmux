@@ -10,7 +10,7 @@ The smoke creates a temporary bootstrap package, then runs approved `approval-ap
 
 - The approval package can be consumed.
 - The workspace is initialized automatically when reindex is requested.
-- The approved write path runs llmwiki lint.
+- The approved write path runs write-after lint, using local `wiki-lint` fallback when llmwiki has no `lint` subcommand.
 - Approved wiki pages are copied into the target workspace.
 - Reindex succeeds.
 

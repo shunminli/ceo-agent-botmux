@@ -78,6 +78,60 @@ class NovelRuntimeTest(unittest.TestCase):
             sync_plan = (result.bundle_path / "sync-plan.md").read_text(encoding="utf-8")
             self.assertIn("/wiki/novels/shadow-clock-case/", sync_plan)
 
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "botmux_novel",
+                    "wiki-lint",
+                    "--workspace",
+                    str(project),
+                ],
+                check=True,
+                text=True,
+                capture_output=True,
+            )
+            lint_payload = json.loads(completed.stdout)
+            self.assertEqual(lint_payload["status"], "passed")
+            self.assertEqual(len(lint_payload["checked_files"]), 12)
+
+    def test_wiki_lint_fails_when_required_page_is_missing(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            project = Path(tmpdir) / "wiki-novel"
+            foundation = NovelRuntime().foundation(
+                NovelFoundationRequest(
+                    project_path=project,
+                    title="影钟旧案",
+                    inspiration="一个背负旧案污名的少年，在巡夜钟声中发现妹妹影子会说真话。",
+                )
+            )
+            bundle = NovelRuntime().wiki_bundle(
+                NovelWikiBundleRequest(
+                    project_path=project,
+                    project_slug="shadow-clock-case",
+                    foundation_path=foundation.foundation_path,
+                )
+            )
+            (bundle.bundle_path / "overview.md").unlink()
+
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "botmux_novel",
+                    "wiki-lint",
+                    "--workspace",
+                    str(project),
+                ],
+                text=True,
+                capture_output=True,
+            )
+
+            self.assertEqual(completed.returncode, 2)
+            payload = json.loads(completed.stdout)
+            self.assertEqual(payload["status"], "failed")
+            self.assertTrue(any("overview.md" in issue["path"] for issue in payload["issues"]))
+
     def test_wiki_bundle_rejects_unsafe_project_slug(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             project = Path(tmpdir) / "wiki-novel"
@@ -630,7 +684,7 @@ class NovelRuntimeTest(unittest.TestCase):
             self.assertEqual(result.commands[0].returncode, 7)
             self.assertTrue((workspace / "wiki/novels/shadow-clock-case/overview.md").exists())
 
-    def test_llmwiki_sync_skips_unsupported_lint_with_warning(self) -> None:
+    def test_llmwiki_sync_uses_local_lint_when_cli_lint_is_unsupported(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             project = Path(tmpdir) / "llmwiki-project"
             workspace = Path(tmpdir) / "llmwiki-workspace"
@@ -672,9 +726,12 @@ class NovelRuntimeTest(unittest.TestCase):
                 )
             )
 
-            self.assertEqual(result.status, "completed_with_warnings")
-            self.assertEqual(result.commands[0].status, "skipped")
-            self.assertTrue(any("operation not available: lint" in warning for warning in result.warnings))
+            self.assertEqual(result.status, "completed")
+            self.assertEqual(result.commands[0].status, "succeeded")
+            self.assertIn("wiki-lint", result.commands[0].command)
+            lint_payload = json.loads(result.commands[0].stdout)
+            self.assertEqual(lint_payload["status"], "passed")
+            self.assertEqual(result.warnings, [])
             self.assertTrue((workspace / "wiki/novels/shadow-clock-case/overview.md").exists())
 
     def test_cli_llmwiki_sync_uses_real_entrypoint(self) -> None:

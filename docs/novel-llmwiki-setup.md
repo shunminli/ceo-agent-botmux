@@ -5,7 +5,7 @@
 ## 当前边界
 
 - `python3 -m botmux_novel wiki-bundle` 只写本地 Markdown 审核包：`wiki/novels/{project_slug}/`。
-- `python3 -m botmux_novel llmwiki-sync` 默认只生成同步计划；传 `--approve` 后才把审核包写入 llmwiki workspace 的 Markdown source-of-truth 文件树，传 `--lint` 后会执行写后 lint 门禁；若当前 llmwiki CLI 不支持 `lint` 子命令，则跳过并返回 warning。
+- `python3 -m botmux_novel llmwiki-sync` 默认只生成同步计划；传 `--approve` 后才把审核包写入 llmwiki workspace 的 Markdown source-of-truth 文件树，传 `--lint` 后会执行写后 lint 门禁；若当前 llmwiki CLI 不支持 `lint` 子命令，则自动执行本地 `wiki-lint` fallback。
 - 仓库内 workflow 只生成 Story Bible 候选包、章节候选包和同步计划。
 - 真实 llmwiki 写入前必须经过 `Novel-Director-Curator` preview、影响面说明和 humanGate。
 - `Novel-Creative-Architect` 不直接写 llmwiki；`Novel-Continuity-Validator` 只读检索和校验。
@@ -59,7 +59,7 @@ python3 -m botmux_novel novel-bootstrap \
   --project-slug shadow-clock-case
 ```
 
-产物在 `runs/{bootstrap_run_id}/approval-package.md` 和 `approval-package.json`。审批通过后先执行其中的 `approval-decision --decision approve` 命令，记录 reviewer、notes、timestamp 和历史；再执行 `approval-apply --approve`。`approval-apply` 会读取审批包中的 project、slug、workspace 和 llmwiki 配置；如果目标 workspace 还没有 llmwiki index，会先初始化；底层仍调用 `llmwiki-sync --approve --reindex --lint`，CLI 不支持 lint 时返回 warning，支持 lint 但返回非 0 时写入结果为 `failed`。完成知识库写入后，可继续执行审批包里的 `next_actions.chapter_start_command`，直接从批准的 `foundation.json` 生成首章。
+产物在 `runs/{bootstrap_run_id}/approval-package.md` 和 `approval-package.json`。审批通过后先执行其中的 `approval-decision --decision approve` 命令，记录 reviewer、notes、timestamp 和历史；再执行 `approval-apply --approve`。`approval-apply` 会读取审批包中的 project、slug、workspace 和 llmwiki 配置；如果目标 workspace 还没有 llmwiki index，会先初始化；底层仍调用 `llmwiki-sync --approve --reindex --lint`，CLI 不支持 lint 时会运行本地 `wiki-lint` fallback，lint 返回非 0 时写入结果为 `failed`。完成知识库写入后，可继续执行审批包里的 `next_actions.chapter_start_command`，直接从批准的 `foundation.json` 生成首章。
 
 ```bash
 python3 -m botmux_novel approval-decision \
@@ -117,6 +117,9 @@ python3 -m botmux_novel llmwiki-sync \
   --approve \
   --reindex \
   --lint
+
+python3 -m botmux_novel wiki-lint \
+  --workspace /path/to/novel-project
 ```
 
 6. 用 llmwiki 打开小说项目目录。
@@ -157,7 +160,7 @@ llmwiki mcp-config /path/to/novel-project
 - `impact`：会影响哪些人物、关系、场景、伏笔、世界规则和章节。
 - `source_refs`：来自 Story Bible、章节候选包或用户批准的哪一份材料。
 - `rollback_plan`：误写后如何撤销或恢复。
-- `lint_plan`：写后运行 llmwiki lint 的方式和错误处理策略。
+- `lint_plan`：写后运行 llmwiki lint 或本地 `wiki-lint` fallback 的方式和错误处理策略。
 - `decision_record`：通过 `approval-decision` 写入审批包的 reviewer、decision、notes 和 `decided_at`。
 
 禁止写入：
@@ -189,13 +192,14 @@ python3 -m botmux_novel llmwiki-mcp-config --workspace /path/to/novel-project --
 python3 -m botmux_novel foundation --project /path/to/novel-project --title <title> --inspiration <brief>
 python3 -m botmux_novel wiki-bundle --project /path/to/novel-project --project-slug <slug>
 python3 -m botmux_novel llmwiki-sync --project /path/to/novel-project --project-slug <slug>
+python3 -m botmux_novel wiki-lint --workspace /path/to/novel-project
 llmwiki init /path/to/novel-project
-llmwiki lint /path/to/novel-project
+llmwiki lint /path/to/novel-project  # optional when this llmwiki build exposes a lint subcommand
 llmwiki reindex /path/to/novel-project
 llmwiki mcp-config /path/to/novel-project
 ```
 
-如果 llmwiki lint 报错，先修 Markdown bundle 或写入计划，不要继续章节生产。
+如果 llmwiki lint 或本地 `wiki-lint` 报错，先修 Markdown bundle 或写入计划，不要继续章节生产。
 
 ## 尚未自动化
 

@@ -538,7 +538,7 @@ python3 -m botmux_novel readiness --bootstrap-smoke --approval-apply-smoke --ser
 - 已新增本地 `python3 -m botmux_novel novel-bootstrap`，一键生成开书设定、项目内 wiki 审核包、llmwiki dry-run sync plan、MCP 配置和 human approval package；该命令不执行 approved sync、不覆盖外部 llmwiki workspace。
 - 本地 P0 runtime 已能写出关系图、场景设定、文风档案和带 id/status 的伏笔台账，作为 Story Bible 后续落库的数据契约基础。
 - 已新增本地 `python3 -m botmux_novel wiki-bundle`，把 foundation JSON 导出为 `/wiki/novels/{project_slug}/` Markdown 页面包；该命令不调用 llmwiki，只作为写入前审核材料。
-- 已新增本地 `python3 -m botmux_novel llmwiki-sync`，默认生成同步计划，传 `--approve` 后把审核包写入本地 llmwiki workspace，并可选 `--reindex` 和 `--lint`；当前 llmwiki CLI 不支持 lint 时返回 warning，支持 lint 但返回非 0 时同步结果为 `failed`。
+- 已新增本地 `python3 -m botmux_novel llmwiki-sync`，默认生成同步计划，传 `--approve` 后把审核包写入本地 llmwiki workspace，并可选 `--reindex` 和 `--lint`；当前 llmwiki CLI 不支持 lint 时自动运行本地 `wiki-lint` fallback，lint 返回非 0 时同步结果为 `failed`。
 - 已新增本地 `python3 -m botmux_novel approval-decision`，把 humanGate 的 `approve`、`request_changes` 或 `reject` 写入审批包，记录 reviewer、notes、timestamp 和 `decision_history`。
 - 已新增本地 `python3 -m botmux_novel approval-apply`，读取 `novel-bootstrap` 审批包，默认 dry-run，传 `--approve` 后按包内 project/slug/workspace/llmwiki 配置执行 gated sync，并默认运行 reindex/lint。
 - 已补充 `docs/novel-llmwiki-setup.md`，说明本地 workspace、MCP 权限、humanGate 和 lint 接入流程。

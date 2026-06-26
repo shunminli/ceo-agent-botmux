@@ -18,6 +18,7 @@ from .mcp_config import NovelLlmwikiMcpConfigBuilder, NovelLlmwikiMcpConfigReque
 from .readiness import NovelReadinessChecker, NovelReadinessRequest
 from .runtime import NovelChapterRequest, NovelFoundationRequest, NovelRunRequest, NovelRuntime, NovelWikiBundleRequest
 from .series import NovelSeriesRequest, NovelSeriesRunner
+from .wiki_lint import WikiLinter
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -66,7 +67,7 @@ def build_parser() -> argparse.ArgumentParser:
     approval_parser.add_argument("--no-backup", action="store_true", help="Do not create .bak files before replacing target pages.")
     approval_parser.add_argument("--llmwiki-bin", help="Optional override for the llmwiki executable recorded in the approval package.")
     approval_parser.add_argument("--no-reindex", action="store_true", help="Do not run `llmwiki reindex <workspace>` after approved writes.")
-    approval_parser.add_argument("--no-lint", action="store_true", help="Do not run `llmwiki lint <workspace>` after approved writes.")
+    approval_parser.add_argument("--no-lint", action="store_true", help="Do not run write-after lint after approved writes.")
 
     decision_parser = subparsers.add_parser(
         "approval-decision",
@@ -107,7 +108,13 @@ def build_parser() -> argparse.ArgumentParser:
     llmwiki_parser.add_argument("--no-backup", action="store_true", help="Do not create .bak files before replacing target pages.")
     llmwiki_parser.add_argument("--llmwiki-bin", default="llmwiki", help="llmwiki executable to use for optional commands.")
     llmwiki_parser.add_argument("--reindex", action="store_true", help="Run `llmwiki reindex <workspace>` after approved writes when llmwiki is available.")
-    llmwiki_parser.add_argument("--lint", action="store_true", help="Run `llmwiki lint <workspace>` after approved writes when llmwiki is available.")
+    llmwiki_parser.add_argument("--lint", action="store_true", help="Run write-after lint after approved writes; falls back to local wiki-lint when llmwiki lint is unavailable.")
+
+    wiki_lint_parser = subparsers.add_parser(
+        "wiki-lint",
+        help="Run the local fallback lint for wiki/novels Markdown workspaces.",
+    )
+    wiki_lint_parser.add_argument("--workspace", required=True, help="Workspace directory containing wiki/novels/<slug> Markdown pages.")
 
     mcp_parser = subparsers.add_parser(
         "llmwiki-mcp-config",
@@ -135,7 +142,7 @@ def build_parser() -> argparse.ArgumentParser:
     series_parser.add_argument("--llmwiki-workspace", help="llmwiki workspace directory. Defaults to --project.")
     series_parser.add_argument("--llmwiki-bin", default="llmwiki", help="llmwiki executable to use for optional commands.")
     series_parser.add_argument("--reindex", action="store_true", help="Run `llmwiki reindex <workspace>` after approved llmwiki sync.")
-    series_parser.add_argument("--lint", action="store_true", help="Run `llmwiki lint <workspace>` after approved llmwiki sync.")
+    series_parser.add_argument("--lint", action="store_true", help="Run write-after lint after approved llmwiki sync.")
 
     readiness_parser = subparsers.add_parser(
         "readiness",
@@ -273,6 +280,11 @@ def main(argv: Optional[list[str]] = None) -> int:
         result = LlmwikiSyncer().sync(request)
         print(json.dumps(result.to_dict(), ensure_ascii=False, indent=2))
         return 0 if result.status in {"planned", "completed", "completed_with_warnings"} else 2
+
+    if args.command == "wiki-lint":
+        result = WikiLinter().lint(Path(args.workspace).expanduser().resolve())
+        print(json.dumps(result.to_dict(), ensure_ascii=False, indent=2))
+        return 0 if result.status == "passed" else 2
 
     if args.command == "llmwiki-mcp-config":
         request = NovelLlmwikiMcpConfigRequest(

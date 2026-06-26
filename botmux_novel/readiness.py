@@ -646,9 +646,17 @@ def llmwiki_command_succeeded(commands: List[Any], operation: str) -> bool:
 
 def llmwiki_command_status(commands: List[Any], operation: str) -> Optional[str]:
     for command in commands:
-        if len(command.command) >= 2 and command.command[1] == operation:
+        if command_matches_operation(command.command, operation):
             return command.status
     return None
+
+
+def command_matches_operation(command: List[str], operation: str) -> bool:
+    if len(command) >= 2 and command[1] == operation:
+        return True
+    if operation == "lint" and "wiki-lint" in command:
+        return True
+    return False
 
 
 def command_payload(completed: subprocess.CompletedProcess[str]) -> Dict[str, Any]:
