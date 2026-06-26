@@ -491,6 +491,7 @@ python3 -m botmux_novel readiness --series-smoke --smoke-chapter-count 20
 ### Phase 0：准备 bot 和知识库
 
 - 已创建 3 个小说 bot：`Novel-Director-Curator`、`Novel-Creative-Architect`、`Novel-Continuity-Validator`。
+- 本机已安装 `lucasastorian/llmwiki` 到 `/Users/xiaochen/.local/opt/llmwiki`，PATH 入口为 `/Users/xiaochen/.local/bin/llmwiki`。
 - 给 `Novel-Director-Curator` 配 llmwiki MCP。
 - 给 `Novel-Continuity-Validator` 配 llmwiki 只读能力。
 - 已提供 `botmux_doubao` 本地包装层，可作为 `Novel-Creative-Architect` 的可选 Creative Assist Tool；真实调用仍依赖用户本机已安装并登录 OpenCLI / doubao-cli runner，Codex 仍需能独立完成创作节点。

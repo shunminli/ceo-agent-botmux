@@ -20,6 +20,15 @@ node --version
 
 若 `llmwiki` 不存在，先按官方仓库安装。官方 README 说明 llmwiki 支持本地 workspace、MCP server、Markdown/PDF/DOCX/PPTX/TXT/HTML ingest、搜索、读取、页面创建和编辑等能力；本项目只依赖本地 Markdown workspace 与 MCP 读写能力。
 
+当前本机已安装本地 llmwiki：
+
+- 仓库副本：`/Users/xiaochen/.local/opt/llmwiki`
+- PATH wrapper：`/Users/xiaochen/.local/bin/llmwiki`
+- Python：`/Users/xiaochen/.local/opt/llmwiki/.venv/bin/python`
+- 当前安装提交：`542561d`
+
+安装副本的 `llmwiki` 入口脚本已固定到 venv Python，确保 `llmwiki mcp-config` 输出的仓库脚本路径也能独立运行。
+
 ## 推荐目录
 
 优先把单个小说项目目录作为 llmwiki workspace，这样本地 runtime、wiki bundle 和 llmwiki 索引指向同一份文件树：
@@ -122,6 +131,8 @@ llmwiki mcp-config /path/to/novel-project
 python3 -m unittest discover -s tests -v
 /Users/xiaochen/.botmux/bin/botmux workflow validate workflows/novel-story-foundation.workflow.json
 /Users/xiaochen/.botmux/bin/botmux workflow validate workflows/novel-chapter-production.workflow.json
+llmwiki --help
+python3 -m botmux_novel readiness --series-smoke --smoke-chapter-count 20
 ```
 
 再用真实小说项目执行一次：
@@ -130,13 +141,15 @@ python3 -m unittest discover -s tests -v
 python3 -m botmux_novel foundation --project /path/to/novel-project --title <title> --inspiration <brief>
 python3 -m botmux_novel wiki-bundle --project /path/to/novel-project --project-slug <slug>
 python3 -m botmux_novel llmwiki-sync --project /path/to/novel-project --project-slug <slug>
-llmwiki open /path/to/novel-project
+llmwiki init /path/to/novel-project
+llmwiki reindex /path/to/novel-project
+llmwiki mcp-config /path/to/novel-project
 ```
 
 如果 llmwiki lint 报错，先修 Markdown bundle 或写入计划，不要继续章节生产。
 
 ## 尚未自动化
 
-- 本仓库还没有自动安装 llmwiki 或创建 llmwiki workspace。
+- 本仓库还没有自动安装 llmwiki；当前安装是本机一次性环境准备。
 - 本仓库不直接调用 llmwiki MCP `create/edit/append`；`llmwiki-sync` 只写本地 workspace Markdown 文件树，MCP 写工具仍需由 `Novel-Director-Curator` 在 humanGate 后调用。
 - 首次真实写入必须由用户审批 Story Bible 和 wiki 页面清单后再执行；CLI 层用 `--approve` 表示这个审批已经完成。

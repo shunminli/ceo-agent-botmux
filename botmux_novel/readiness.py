@@ -228,11 +228,39 @@ class NovelReadinessChecker:
                 summary=f"llmwiki executable not found: {llmwiki_bin}; llmwiki-sync can still write local Markdown but reindex is skipped.",
                 data={"llmwiki_bin": llmwiki_bin, "available": False},
             )
+        try:
+            completed = subprocess.run(
+                [executable, "--help"],
+                text=True,
+                capture_output=True,
+                check=False,
+                timeout=15,
+            )
+        except (OSError, subprocess.TimeoutExpired) as exc:
+            return ReadinessCheck(
+                name="llmwiki",
+                status="warn",
+                summary=f"llmwiki executable is present but did not respond to --help: {exc}",
+                data={"llmwiki_bin": executable, "available": True, "usable": False},
+            )
+        if completed.returncode != 0:
+            return ReadinessCheck(
+                name="llmwiki",
+                status="warn",
+                summary=f"llmwiki executable is present but --help failed with exit code {completed.returncode}.",
+                data={
+                    "llmwiki_bin": executable,
+                    "available": True,
+                    "usable": False,
+                    "returncode": completed.returncode,
+                    "stderr": completed.stderr,
+                },
+            )
         return ReadinessCheck(
             name="llmwiki",
             status="pass",
-            summary="llmwiki executable is available.",
-            data={"llmwiki_bin": executable, "available": True},
+            summary="llmwiki executable is available and responds to --help.",
+            data={"llmwiki_bin": executable, "available": True, "usable": True},
         )
 
     def _check_series_smoke(self, *, chapter_count: int) -> ReadinessCheck:

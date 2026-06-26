@@ -94,7 +94,7 @@ Updated: 2026-06-27
 2. 读取 `~/.botmux/bots.json`，确认三个小说 bot 的 appId 和工作目录存在；不会输出 app secret。
 3. 运行 `botmux workflow validate` 校验两个 workflow 模板。
 4. 静态校验 workflow 模板中的 `${params.*}` 和 `${node.output.*}` 绑定，确认参数、上游节点、依赖闭包和输出字段都存在。
-5. 检查 `llmwiki` 是否在 PATH；缺失是 warning，不阻断本地文件同步。
+5. 检查 `llmwiki` 是否在 PATH 且 `llmwiki --help` 可执行；缺失或不可用是 warning，不阻断本地文件同步。
 6. 传 `--series-smoke` 时在临时目录跑连续章节 smoke，并检查 Phase 3 指标阈值。
 
 ### BotMux Assets

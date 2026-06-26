@@ -101,7 +101,7 @@ python3 -m botmux_novel readiness --series-smoke --smoke-chapter-count 20
 - 当前 Agent 是确定性本地实现，不代表真实模型质量。
 - 当前已验证连续 20 章本地稳定性基线：20/20 完成、P0/P1 为 0、归档完整率 1.0、prior context 覆盖率 1.0。
 - 当前 YAML 写入用于本地可读产物，复杂读写和 schema migration 仍需后续迭代。
-- 本机未安装 llmwiki 时，`llmwiki-sync --reindex` 会跳过 reindex 并返回 warning；文件同步仍可完成。
+- 本机已安装 llmwiki；若其他环境未安装，`llmwiki-sync --reindex` 会跳过 reindex 并返回 warning，文件同步仍可完成。
 
 ## 相关逻辑文档
 

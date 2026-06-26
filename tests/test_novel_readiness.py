@@ -127,6 +127,26 @@ class NovelReadinessTest(unittest.TestCase):
             self.assertIn("Unknown upstream node: ghost", messages)
             self.assertIn("Upstream node is not in dependency closure: unrelated", messages)
 
+    def test_llmwiki_check_requires_usable_help_command(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            fake_llmwiki = Path(tmpdir) / "llmwiki"
+            fake_llmwiki.write_text(
+                "#!/bin/sh\n"
+                "if [ \"$1\" = \"--help\" ]; then\n"
+                "  echo \"usage: llmwiki\"\n"
+                "  exit 0\n"
+                "fi\n"
+                "exit 1\n",
+                encoding="utf-8",
+            )
+            fake_llmwiki.chmod(0o755)
+
+            check = NovelReadinessChecker()._check_llmwiki(llmwiki_bin=str(fake_llmwiki))
+
+            self.assertEqual(check.status, "pass")
+            self.assertTrue(check.data["available"])
+            self.assertTrue(check.data["usable"])
+
 
 def install_temp_botmux(botmux_home: Path) -> None:
     BotmuxAssetSyncer().sync(BotmuxAssetSyncRequest(repo_path=REPO_ROOT, botmux_home=botmux_home, write=True))
