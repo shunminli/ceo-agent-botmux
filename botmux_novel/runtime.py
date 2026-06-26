@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import json
+import re
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from .agents import (
     ArchiveMemoryAgent,
@@ -36,6 +38,13 @@ class NovelFoundationRequest:
     chapter_number: int = 1
     mode: str = "lean"
     word_target: int = 1200
+
+
+@dataclass(frozen=True)
+class NovelWikiBundleRequest:
+    project_path: Path
+    project_slug: str
+    foundation_path: Optional[Path] = None
 
 
 @dataclass(frozen=True)
@@ -88,6 +97,26 @@ class NovelFoundationResult:
         }
 
 
+@dataclass(frozen=True)
+class NovelWikiBundleResult:
+    status: str
+    project_path: Path
+    project_slug: str
+    source_path: Path
+    bundle_path: Path
+    artifacts: List[Path]
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "status": self.status,
+            "project_path": str(self.project_path),
+            "project_slug": self.project_slug,
+            "source_path": str(self.source_path),
+            "bundle_path": str(self.bundle_path),
+            "artifacts": [str(path) for path in self.artifacts],
+        }
+
+
 class RunTrace:
     def __init__(self, *, run_id: str, request: Any, started_at: str):
         self.payload: Dict[str, Any] = {
@@ -136,6 +165,22 @@ class NovelRuntime:
         self.checker = ConsistencyAgent()
         self.editor = EditorAgent()
         self.archive_agent = ArchiveMemoryAgent()
+
+    def wiki_bundle(self, request: NovelWikiBundleRequest) -> NovelWikiBundleResult:
+        project_slug = self._validate_project_slug(request.project_slug)
+        workspace = NovelWorkspace(request.project_path)
+        source_path = self._resolve_foundation_path(workspace, request.foundation_path)
+        plan = json.loads(source_path.read_text(encoding="utf-8"))
+        self._validate_plan(plan)
+        artifacts = self._write_wiki_bundle(workspace, plan, project_slug)
+        return NovelWikiBundleResult(
+            status="completed",
+            project_path=workspace.root,
+            project_slug=project_slug,
+            source_path=source_path,
+            bundle_path=workspace.path(f"wiki/novels/{project_slug}"),
+            artifacts=artifacts,
+        )
 
     def foundation(self, request: NovelFoundationRequest) -> NovelFoundationResult:
         self._validate_request(request)
@@ -432,6 +477,42 @@ class NovelRuntime:
             workspace.write_json(f"runs/archive-{chapter}.json", archive),
         ]
 
+    def _resolve_foundation_path(self, workspace: NovelWorkspace, explicit_path: Optional[Path]) -> Path:
+        if explicit_path is not None:
+            path = explicit_path.expanduser().resolve()
+            if not path.exists():
+                raise ValueError(f"foundation file does not exist: {path}")
+            return path
+        candidates = sorted(workspace.root.glob("runs/foundation-*/foundation.json"), key=lambda path: path.stat().st_mtime)
+        if not candidates:
+            raise ValueError("no foundation.json found; run `python -m botmux_novel foundation` first or pass --foundation-json")
+        return candidates[-1]
+
+    def _validate_project_slug(self, project_slug: str) -> str:
+        slug = project_slug.strip()
+        if not slug:
+            raise ValueError("project_slug is required")
+        if re.fullmatch(r"[a-z0-9][a-z0-9_-]{0,79}", slug) is None:
+            raise ValueError("project_slug must use 1-80 lowercase letters, digits, hyphen, or underscore")
+        return slug
+
+    def _write_wiki_bundle(self, workspace: NovelWorkspace, plan: Dict[str, Any], project_slug: str) -> List[Path]:
+        base = f"wiki/novels/{project_slug}"
+        artifacts = [
+            workspace.write_text(f"{base}/overview.md", self._wiki_overview(plan, project_slug)),
+            workspace.write_text(f"{base}/story-bible.md", self._story_markdown(plan)),
+            workspace.write_text(f"{base}/relationships.md", self._wiki_relationships(plan["relationships"])),
+            workspace.write_text(f"{base}/plot-trajectory.md", self._wiki_plot_trajectory(plan)),
+            workspace.write_text(f"{base}/world-scenes.md", self._wiki_scene_settings(plan["scene_settings"])),
+            workspace.write_text(f"{base}/foreshadowing.md", self._wiki_foreshadowing_seed(plan)),
+            workspace.write_text(f"{base}/continuity-rules.md", self._wiki_continuity_rules(plan)),
+            workspace.write_text(f"{base}/chapter-index.md", self._wiki_chapter_index(plan)),
+            workspace.write_text(f"{base}/sync-plan.md", self._wiki_sync_plan(plan, project_slug)),
+        ]
+        for character in plan["characters"]:
+            artifacts.append(workspace.write_text(f"{base}/characters/{character['id']}.md", self._character_markdown(character)))
+        return artifacts
+
     def _story_markdown(self, plan: Dict[str, Any]) -> str:
         return f"""# {plan['project']['title']}
 
@@ -450,6 +531,146 @@ class NovelRuntime:
 ## Ending Constraint
 
 {plan['story_bible']['ending_constraint']}
+"""
+
+    def _wiki_overview(self, plan: Dict[str, Any], project_slug: str) -> str:
+        return f"""# {plan['project']['title']}
+
+- Project slug: `{project_slug}`
+- Mode: `{plan['project']['mode']}`
+- Current chapter: `{plan['project']['current_chapter']}`
+- Word target: {plan['project']['word_target']}
+
+## Story Promise
+
+{plan['story_bible']['core_conflict']}
+
+## Reader Expectations
+
+{markdown_list(plan['genre']['reader_expectations'])}
+
+## Selling Points
+
+{markdown_list(plan['genre']['selling_points'])}
+"""
+
+    def _wiki_relationships(self, relationships: Dict[str, Any]) -> str:
+        lines = [f"# Relationships\n\nProject: {relationships['project_title']}\n"]
+        for edge in relationships["edges"]:
+            lines.append(
+                f"## {edge['source']} -> {edge['target']}\n\n"
+                f"- Type: {edge['type']}\n"
+                f"- Pressure: {edge['pressure']}\n"
+                f"- Secret: {edge.get('secret', '无')}\n"
+            )
+        return "\n".join(lines)
+
+    def _wiki_plot_trajectory(self, plan: Dict[str, Any]) -> str:
+        return f"""# Plot Trajectory
+
+## Volume
+
+{plan['volume_outline']['volume']}
+
+## Goal
+
+{plan['volume_outline']['goal']}
+
+## Turning Points
+
+{markdown_list(plan['volume_outline']['turning_points'])}
+
+## Initial Chapter Goal
+
+- Chapter: {plan['chapter_goal']['chapter_id']}
+- Objective: {plan['chapter_goal']['objective']}
+- Must include: {', '.join(plan['chapter_goal']['must_include'])}
+- Forbidden: {', '.join(plan['chapter_goal']['forbidden'])}
+"""
+
+    def _wiki_scene_settings(self, scene_settings: List[Dict[str, Any]]) -> str:
+        lines = ["# World Scenes\n"]
+        for scene in scene_settings:
+            lines.append(
+                f"## {scene['name']}\n\n"
+                f"- ID: `{scene['id']}`\n"
+                f"- Kind: {scene['kind']}\n"
+                f"- Function: {scene['function']}\n"
+                f"- Conflict Pressure: {scene['conflict_pressure']}\n"
+                f"- Reuse Value: {scene['reuse_value']}\n"
+                f"- Rules:\n{markdown_list(scene['rules'])}\n"
+            )
+        return "\n".join(lines)
+
+    def _wiki_foreshadowing_seed(self, plan: Dict[str, Any]) -> str:
+        return f"""# Foreshadowing
+
+## Seed Rules
+
+{markdown_list(plan['world']['rules'])}
+
+## Initial Hooks
+
+{markdown_list(plan['chapter_goal']['must_include'])}
+
+## Payoff Discipline
+
+- Every new clue must record introduced chapter, planned payoff, current status, and risk level.
+- P0/P1 foreshadowing changes require Director approval and Validator review.
+"""
+
+    def _wiki_continuity_rules(self, plan: Dict[str, Any]) -> str:
+        thresholds = "\n".join(f"- {key}: {value}" for key, value in plan["project"]["quality_thresholds"].items())
+        return f"""# Continuity Rules
+
+## World Rules
+
+{markdown_list(plan['world']['rules'])}
+
+## Forbidden
+
+{markdown_list(plan['world']['forbidden'] + plan['chapter_goal']['forbidden'])}
+
+## Quality Thresholds
+
+{thresholds}
+"""
+
+    def _wiki_chapter_index(self, plan: Dict[str, Any]) -> str:
+        return f"""# Chapter Index
+
+| Chapter | Objective | Status |
+| --- | --- | --- |
+| {plan['chapter_goal']['chapter_id']} | {plan['chapter_goal']['objective']} | planned |
+"""
+
+    def _wiki_sync_plan(self, plan: Dict[str, Any], project_slug: str) -> str:
+        return f"""# Wiki Sync Plan
+
+This bundle is a local export for review before llmwiki writes.
+
+## Target Namespace
+
+`/wiki/novels/{project_slug}/`
+
+## Write Order
+
+1. `overview.md`
+2. `story-bible.md`
+3. `characters/*.md`
+4. `relationships.md`
+5. `plot-trajectory.md`
+6. `world-scenes.md`
+7. `foreshadowing.md`
+8. `continuity-rules.md`
+9. `chapter-index.md`
+
+## Human Gate Checklist
+
+- Confirm Story Bible facts are approved.
+- Confirm proposed relationships and scene rules are not draft-only ideas.
+- Confirm no copyrighted expression from references is copied into wiki pages.
+- Run llmwiki lint after any actual write.
 """
 
     def _global_outline(self, plan: Dict[str, Any]) -> str:

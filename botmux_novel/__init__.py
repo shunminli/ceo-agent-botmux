@@ -1,6 +1,14 @@
 """Local novel creation agent runtime."""
 
-from .runtime import NovelFoundationRequest, NovelFoundationResult, NovelRunRequest, NovelRunResult, NovelRuntime
+from .runtime import (
+    NovelFoundationRequest,
+    NovelFoundationResult,
+    NovelRunRequest,
+    NovelRunResult,
+    NovelRuntime,
+    NovelWikiBundleRequest,
+    NovelWikiBundleResult,
+)
 
 __all__ = [
     "NovelFoundationRequest",
@@ -8,4 +16,6 @@ __all__ = [
     "NovelRunRequest",
     "NovelRunResult",
     "NovelRuntime",
+    "NovelWikiBundleRequest",
+    "NovelWikiBundleResult",
 ]

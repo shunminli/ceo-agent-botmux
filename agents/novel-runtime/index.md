@@ -8,6 +8,7 @@ Updated: 2026-06-26
 
 - 提供 CLI 入口 `python -m botmux_novel run`。
 - 提供开书资产入口 `python -m botmux_novel foundation`，不生成正文。
+- 提供本地 wiki 审核包入口 `python -m botmux_novel wiki-bundle`，不调用 llmwiki。
 - 配套 BotMux workflow：`novel-story-foundation` 和 `novel-chapter-production`，用于三 bot 协作、humanGate 和归档计划。
 - 在本地小说项目目录中创建方案文档约定的文件工作区。
 - 串行编排 6 个 MVP Agent：总导演、章纲、正文写手、编辑、一致性检查、归档记忆。
@@ -19,6 +20,7 @@ Updated: 2026-06-26
 - 当前运行时使用确定性本地 Agent，不调用真实 LLM，也不连接外部 BotMux 服务。
 - 当前只覆盖单项目、单章闭环；连续多章、真实模型 provider、Web UI 和向量检索属于后续迭代。
 - 输出是本地 Markdown/YAML/JSON/SQLite 文件，不涉及生产发布、云同步或多用户权限。
+- `wiki-bundle` 写本地 `wiki/novels/{project_slug}/` Markdown 页面包，用于人工审核或后续 gated llmwiki 写入。
 - BotMux workflow 只生成候选包和计划；项目文件或 llmwiki 写入必须走单独 gated 节点或人工确认。
 
 ## 主流程
@@ -43,6 +45,13 @@ Updated: 2026-06-26
 8. `ConsistencyAgent` 复核通过后由总导演批准定稿。
 9. `ArchiveMemoryAgent` 写入事实、时间线、带 id/status 的伏笔台账、角色状态和冲突记录。
 10. `NovelWorkspace.record_run` 写入 SQLite run 表和 artifact 索引。
+
+### Wiki Bundle
+
+1. `NovelRuntime.wiki_bundle` 读取显式 `foundation.json`，或使用项目中最新的 `runs/foundation-*/foundation.json`。
+2. 运行 schema 必填字段校验。
+3. 写入本地 `wiki/novels/{project_slug}/` Markdown 页面包。
+4. 不调用 llmwiki、不创建远端页面、不覆盖外部知识库。
 
 ## 数据模型
 

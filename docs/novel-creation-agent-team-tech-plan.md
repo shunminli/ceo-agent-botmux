@@ -312,6 +312,9 @@ novel-project/
   runs/
     {run_id}/trace.json
     runs.sqlite
+  wiki/
+    novels/
+      {project_slug}/
   references/
     benchmark/
     prompts/
@@ -452,7 +455,7 @@ python3 -m botmux_novel run \
 | --- | --- | --- |
 | 开书设定 workflow | 已落地为 BotMux workflow，并提供本地 `python3 -m botmux_novel foundation` 子命令 | BotMux 用于多 bot 协作和 humanGate，本地 CLI 用于无外部依赖的开书资产 smoke。 |
 | 人物关系 / 场景 / 伏笔 / 文风 schema | 已落地为独立 schema，并由本地 runtime 写出结构化产物 | 后续接入真实模型时保持字段契约稳定。 |
-| llmwiki sync | 未集成 | 先用 bot workflow 处理，后续封装 adapter。 |
+| llmwiki sync | 已有本地 `wiki-bundle` 导出，真实 llmwiki 写入仍未接入 | 先人工审核本地 Markdown bundle，后续封装 gated llmwiki write adapter。 |
 
 ## 15. 实施路线图
 
@@ -473,6 +476,7 @@ python3 -m botmux_novel run \
 - 首次只做预览，不自动写 llmwiki。
 - 已新增本地 `python3 -m botmux_novel foundation`，只生成开书设定资产、foundation trace 和 SQLite run 记录，不进入正文草稿。
 - 本地 P0 runtime 已能写出关系图、场景设定、文风档案和带 id/status 的伏笔台账，作为 Story Bible 后续落库的数据契约基础。
+- 已新增本地 `python3 -m botmux_novel wiki-bundle`，把 foundation JSON 导出为 `/wiki/novels/{project_slug}/` Markdown 页面包；该命令不调用 llmwiki，只作为写入前审核材料。
 
 ### Phase 2：章节生产 workflow
 
@@ -514,4 +518,4 @@ python3 -m botmux_novel run \
 1. 用真实项目参数运行 `novel-story-foundation`，产出首个 Story Bible 候选包。
 2. 在 `story_bible_package` 的 humanGate 审批关键人设、关系、剧情走势和场景设定。
 3. 把批准后的 Story Bible 输入 `novel-chapter-production` 或现有 `botmux_novel run`。
-4. 根据 `wiki_sync_plan` / `archive_plan` 决定是否创建单独的 gated llmwiki 写入 workflow。
+4. 先用 `python3 -m botmux_novel wiki-bundle` 导出本地 wiki 页面包，再根据 `wiki_sync_plan` / `archive_plan` 决定是否创建单独的 gated llmwiki 写入 workflow。
