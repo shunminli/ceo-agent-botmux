@@ -48,6 +48,13 @@ python3 -m botmux_novel chapter \
   --chapter-number 2 \
   --chapter-goal "让林烬用半张残页验证巡夜钟异常，并把妹妹影子证词转成下一章追查目标。"
 
+python3 -m botmux_novel series \
+  --project /tmp/novel-series-demo \
+  --title 影钟旧案 \
+  --inspiration "一个背负旧案污名的少年，在巡夜钟声中发现妹妹影子会说真话。" \
+  --project-slug shadow-clock-case \
+  --chapter-count 5
+
 python3 -m botmux_novel run \
   --project /tmp/novel-demo \
   --title 影钟旧案 \

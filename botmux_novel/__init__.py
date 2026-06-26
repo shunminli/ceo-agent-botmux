@@ -23,6 +23,7 @@ from .runtime import (
     NovelWikiBundleRequest,
     NovelWikiBundleResult,
 )
+from .series import NovelSeriesRequest, NovelSeriesResult, NovelSeriesRunner
 
 __all__ = [
     "BotmuxAssetAction",
@@ -39,6 +40,9 @@ __all__ = [
     "NovelFoundationResult",
     "NovelRunRequest",
     "NovelRunResult",
+    "NovelSeriesRequest",
+    "NovelSeriesResult",
+    "NovelSeriesRunner",
     "NovelRuntime",
     "NovelWikiBundleRequest",
     "NovelWikiBundleResult",

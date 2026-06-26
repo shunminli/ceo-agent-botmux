@@ -15,6 +15,8 @@ from botmux_novel import (
     NovelFoundationRequest,
     NovelRunRequest,
     NovelRuntime,
+    NovelSeriesRequest,
+    NovelSeriesRunner,
     NovelWikiBundleRequest,
 )
 from botmux_novel.agents import BlueprintAgent, ConsistencyAgent, ContextPackBuilder, DirectorAgent
@@ -561,6 +563,65 @@ class NovelRuntimeTest(unittest.TestCase):
             self.assertEqual(payload["status"], "completed")
             self.assertTrue(Path(payload["plan_path"]).exists())
             self.assertTrue((workspace / "wiki/novels/shadow-clock-case/overview.md").exists())
+
+    def test_series_generates_five_chapters_and_quality_metrics(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            project = Path(tmpdir) / "series-project"
+
+            result = NovelSeriesRunner().run(
+                NovelSeriesRequest(
+                    project_path=project,
+                    title="影钟旧案",
+                    inspiration="少年在旧书楼发现父亲旧案残页。",
+                    project_slug="shadow-clock-case",
+                    chapter_count=5,
+                    llmwiki_sync=True,
+                )
+            )
+
+            self.assertEqual(result.status, "completed")
+            self.assertEqual(len(result.chapters), 5)
+            self.assertTrue(result.metrics_path.exists())
+            self.assertEqual(result.metrics["chapter_count"], 5)
+            self.assertEqual(result.metrics["completed_chapter_count"], 5)
+            self.assertEqual(result.metrics["p0_p1_issue_count"], 0)
+            self.assertEqual(result.metrics["revision_rounds"], 5)
+            self.assertEqual(result.metrics["archive_completion_rate"], 1.0)
+            self.assertEqual(result.metrics["prior_context_rate"], 1.0)
+            self.assertEqual(result.metrics["llmwiki_sync_status"], "planned")
+            self.assertTrue((project / "manuscript/final/ch-005.md").exists())
+            self.assertTrue((project / "runs/archive-ch-005.json").exists())
+
+    def test_cli_series_uses_real_entrypoint(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            project = Path(tmpdir) / "cli-series-project"
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "botmux_novel",
+                    "series",
+                    "--project",
+                    str(project),
+                    "--title",
+                    "影钟旧案",
+                    "--inspiration",
+                    "少年在旧书楼发现父亲旧案残页。",
+                    "--project-slug",
+                    "shadow-clock-case",
+                    "--chapter-count",
+                    "3",
+                ],
+                check=True,
+                text=True,
+                capture_output=True,
+            )
+
+            payload = json.loads(completed.stdout)
+            self.assertEqual(payload["status"], "completed")
+            self.assertEqual(payload["metrics"]["chapter_count"], 3)
+            self.assertTrue(Path(payload["metrics_path"]).exists())
+            self.assertTrue((project / "manuscript/final/ch-003.md").exists())
 
     def test_gate_blocks_missing_required_context(self) -> None:
         plan = DirectorAgent().plan_project(

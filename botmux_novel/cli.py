@@ -8,6 +8,7 @@ from typing import Optional
 from .botmux_assets import BotmuxAssetSyncRequest, BotmuxAssetSyncer
 from .llmwiki_sync import LlmwikiSyncRequest, LlmwikiSyncer
 from .runtime import NovelChapterRequest, NovelFoundationRequest, NovelRunRequest, NovelRuntime, NovelWikiBundleRequest
+from .series import NovelSeriesRequest, NovelSeriesRunner
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -63,6 +64,23 @@ def build_parser() -> argparse.ArgumentParser:
     llmwiki_parser.add_argument("--no-backup", action="store_true", help="Do not create .bak files before replacing target pages.")
     llmwiki_parser.add_argument("--llmwiki-bin", default="llmwiki", help="llmwiki executable to use for optional commands.")
     llmwiki_parser.add_argument("--reindex", action="store_true", help="Run `llmwiki reindex <workspace>` after approved writes when llmwiki is available.")
+
+    series_parser = subparsers.add_parser(
+        "series",
+        help="Run a multi-chapter local sample and emit Phase 3 quality metrics.",
+    )
+    series_parser.add_argument("--project", required=True, help="Target novel project directory.")
+    series_parser.add_argument("--title", required=True, help="Novel project title.")
+    series_parser.add_argument("--inspiration", required=True, help="One-sentence story inspiration.")
+    series_parser.add_argument("--project-slug", required=True, help="Target wiki namespace slug.")
+    series_parser.add_argument("--chapter-count", type=int, default=5, help="Number of chapters to generate.")
+    series_parser.add_argument("--mode", choices=["full", "lean", "solo"], default="lean", help="Agent execution mode.")
+    series_parser.add_argument("--word-target", type=int, default=1200, help="Target chapter length.")
+    series_parser.add_argument("--llmwiki-sync", action="store_true", help="Also create a gated llmwiki-sync plan.")
+    series_parser.add_argument("--approve-llmwiki", action="store_true", help="Apply llmwiki workspace sync after bundle export.")
+    series_parser.add_argument("--llmwiki-workspace", help="llmwiki workspace directory. Defaults to --project.")
+    series_parser.add_argument("--llmwiki-bin", default="llmwiki", help="llmwiki executable to use for optional commands.")
+    series_parser.add_argument("--reindex", action="store_true", help="Run `llmwiki reindex <workspace>` after approved llmwiki sync.")
 
     assets_parser = subparsers.add_parser(
         "botmux-assets",
@@ -141,6 +159,25 @@ def main(argv: Optional[list[str]] = None) -> int:
         result = LlmwikiSyncer().sync(request)
         print(json.dumps(result.to_dict(), ensure_ascii=False, indent=2))
         return 0 if result.status in {"planned", "completed", "completed_with_warnings"} else 2
+
+    if args.command == "series":
+        request = NovelSeriesRequest(
+            project_path=Path(args.project).expanduser().resolve(),
+            title=args.title,
+            inspiration=args.inspiration,
+            project_slug=args.project_slug,
+            chapter_count=args.chapter_count,
+            mode=args.mode,
+            word_target=args.word_target,
+            llmwiki_sync=args.llmwiki_sync,
+            approve_llmwiki=args.approve_llmwiki,
+            llmwiki_workspace_path=Path(args.llmwiki_workspace).expanduser().resolve() if args.llmwiki_workspace else None,
+            llmwiki_bin=args.llmwiki_bin,
+            reindex=args.reindex,
+        )
+        result = NovelSeriesRunner().run(request)
+        print(json.dumps(result.to_dict(), ensure_ascii=False, indent=2))
+        return 0 if result.status == "completed" else 2
 
     if args.command == "botmux-assets":
         request = BotmuxAssetSyncRequest(

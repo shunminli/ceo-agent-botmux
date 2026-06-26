@@ -35,6 +35,13 @@ python3 -m botmux_novel chapter \
   --chapter-number 2 \
   --chapter-goal "让林烬用半张残页验证巡夜钟异常，并把妹妹影子证词转成下一章追查目标。"
 
+python3 -m botmux_novel series \
+  --project /tmp/novel-series-demo \
+  --title 影钟旧案 \
+  --inspiration "一个背负旧案污名的少年，在巡夜钟声中发现妹妹影子会说真话。" \
+  --project-slug shadow-clock-case \
+  --chapter-count 5
+
 python3 -m botmux_novel run \
   --project /tmp/novel-demo \
   --title 影钟旧案 \
@@ -64,6 +71,7 @@ python3 -m botmux_novel botmux-assets --write
 - `runs/{chapter_run_id}/source-foundation.json`：`chapter` 子命令使用的 Story Bible 来源快照。
 - `runs/{chapter_run_id}/prior-context.json`：`chapter` 子命令自动汇总的前文章节归档上下文。
 - `runs/llmwiki-sync-{project_slug}-{timestamp}.json`：`llmwiki-sync` 子命令生成的写入门禁计划、影响面、回滚计划和命令结果。
+- `runs/{series_run_id}/series-metrics.json`：`series` 子命令生成的连续章节质量指标。
 - `wiki/novels/{project_slug}/*.md`：`wiki-bundle` 子命令生成的本地 llmwiki 写入前审核包。
 - `workflows/*.workflow.json`：版本化的 BotMux 三 bot 协作模板，测试会校验输出契约、人类门禁和本机安装副本一致性。
 - `~/.botmux/workspace/{Novel-*}/AGENTS.md`：由 `botmux-assets --write` 从仓库身份文档生成的运行态 workspace 指令。
@@ -75,6 +83,7 @@ python3 -m botmux_novel botmux-assets --write
 - `chapter` 从本地 `foundation.json` 继续生产章节，不重新规划 Story Bible，并自动读取早于当前章节的 `runs/archive-*.json` 作为连续性上下文。
 - `wiki-bundle` 只读取本地 `foundation.json` 并写项目内 Markdown bundle，不调用 llmwiki。
 - `llmwiki-sync` 默认只生成计划；只有传 `--approve` 才把审核包复制到 llmwiki workspace。它不安装 llmwiki，不调用 MCP 写工具。
+- `series` 默认连续生成 5 章、导出 wiki bundle，并统计 P0/P1、修订轮次、归档完整率和 prior context 覆盖率。
 - `botmux-assets` 默认只报告差异；传 `--write` 后才同步本机 BotMux 资产，并为被替换的 `AGENTS.md` 创建备份。
 - `novel-chapter-production` 只输出章节定稿候选包和归档计划，不直接写项目文件或 llmwiki。
 - 质量门禁区分 `pass`、`revise` 和 `block`。
@@ -86,7 +95,7 @@ python3 -m botmux_novel botmux-assets --write
 ## 限制
 
 - 当前 Agent 是确定性本地实现，不代表真实模型质量。
-- 当前已验证连续章节 smoke，但尚未验证连续 20 章稳定性。
+- 当前已验证连续 5 章 smoke，但尚未验证连续 20 章稳定性。
 - 当前 YAML 写入用于本地可读产物，复杂读写和 schema migration 仍需后续迭代。
 - 本机未安装 llmwiki 时，`llmwiki-sync --reindex` 会跳过 reindex 并返回 warning；文件同步仍可完成。
 

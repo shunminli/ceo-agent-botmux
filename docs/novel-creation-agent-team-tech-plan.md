@@ -446,6 +446,7 @@ novel-project/
 
 - `NovelRuntime.run` 串行执行 Intake、Plan、RetrieveContext、Generate、Review、Revise、Approve、Archive。
 - `NovelRuntime.chapter` 从已有 `foundation.json` 继续生产章节，避免重新规划已批准 Story Bible。
+- `NovelSeriesRunner` 可连续生成默认 5 章样例并输出 Phase 3 质量指标。
 - 本地工作区输出 `project.yaml`、`story.md`、`settings/*`、`characters/*`、`outline/*`、`tracking/*`、`runs/*`。
 - `python3 -m botmux_novel botmux-assets` 同步仓库 workflow 模板和三个小说 bot workspace `AGENTS.md`。
 - 测试覆盖首章闭环、真实 CLI 入口和门禁阻断。
@@ -462,6 +463,13 @@ python3 -m botmux_novel chapter \
   --project /tmp/novel-demo \
   --chapter-number 2 \
   --chapter-goal "让林烬用半张残页验证巡夜钟异常，并把妹妹影子证词转成下一章追查目标。"
+
+python3 -m botmux_novel series \
+  --project /tmp/novel-series-demo \
+  --title 影钟旧案 \
+  --inspiration "一个背负旧案污名的少年，在巡夜钟声中发现妹妹影子会说真话。" \
+  --project-slug shadow-clock-case \
+  --chapter-count 5
 ```
 
 后续演进：
@@ -507,8 +515,8 @@ python3 -m botmux_novel chapter \
 
 ### Phase 3：质量评估后再扩展
 
-- 连续生成 5 章样例项目。
-- 统计 P0/P1 冲突、修订轮次、归档完整率和用户修改点。
+- 已新增本地 `python3 -m botmux_novel series`，可连续生成 5 章样例项目。
+- `series` 会统计 P0/P1 冲突、修订轮次、归档完整率、prior context 覆盖率和用户修改点。
 - 只有当某类任务反复成为瓶颈时，才新增专职 bot。
 
 ## 16. 验收标准
