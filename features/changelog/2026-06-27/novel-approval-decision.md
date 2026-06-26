@@ -17,6 +17,6 @@ Behavior:
 - Re-renders sibling `approval-package.md` when present so the human-readable package shows the recorded decision.
 - Keeps llmwiki writes separate; the command only updates the approval package.
 - `approval-apply --approve` now refuses packages recorded as `request_changes` or `reject`.
-- Readiness `--approval-apply-smoke` covers the formal path: bootstrap, decision record, approved apply, workspace init, page sync, and reindex.
+- Readiness `--approval-apply-smoke` covers the formal path: bootstrap, decision record, approved apply, workspace init, page sync, lint, and reindex.
 
 This makes the Story Bible/wiki write gate auditable without requiring manual JSON edits.

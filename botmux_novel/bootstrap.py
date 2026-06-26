@@ -99,6 +99,7 @@ class NovelBootstrapper:
                 approve=False,
                 llmwiki_bin=request.llmwiki_bin,
                 reindex=True,
+                lint=True,
             )
         )
         mcp_config = self.mcp_config_builder.build(
@@ -231,6 +232,7 @@ def approval_payload(
                 request.llmwiki_bin,
                 "--approve",
                 "--reindex",
+                "--lint",
             ],
         },
         "llmwiki": {

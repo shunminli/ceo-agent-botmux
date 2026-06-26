@@ -44,7 +44,9 @@ python3 -m botmux_novel wiki-bundle \
 python3 -m botmux_novel llmwiki-sync \
   --project /tmp/novel-demo \
   --project-slug shadow-clock-case \
-  --approve
+  --approve \
+  --reindex \
+  --lint
 
 python3 -m botmux_novel llmwiki-mcp-config \
   --workspace /tmp/novel-demo \
@@ -117,10 +119,10 @@ python3 -m botmux_novel readiness --bootstrap-smoke --approval-apply-smoke --ser
 - `foundation` 只生成开书设定资产，不写 `manuscript/draft|revised|final`。
 - `novel-bootstrap` 串联开书设定、项目内 wiki bundle、llmwiki dry-run sync plan、MCP 配置和审批包；审批包会包含 `next_actions.chapter_start_command`，用于在审批和写入后从批准的 foundation 直接启动首章；它不会执行 approved sync、覆盖外部 llmwiki workspace 或修改全局配置。
 - `approval-decision` 只把 humanGate 决策写入审批包 JSON，并在同目录 `approval-package.md` 存在时重渲染 Markdown 审批包；它不执行 llmwiki 写入，正式批准路径应先记录 `--decision approve`。
-- `approval-apply` 默认只重新生成同步计划；只有传 `--approve` 才会按审批包写入 llmwiki workspace。若审批包已记录 `request_changes` 或 `reject`，会拒绝写入；若未记录 `approve` 但命令显式 `--approve`，会保留 warning 说明这是命令级 humanGate 信号。
+- `approval-apply` 默认只重新生成同步计划；只有传 `--approve` 才会按审批包写入 llmwiki workspace，并默认运行 `llmwiki reindex` 与 `llmwiki lint`。若审批包已记录 `request_changes` 或 `reject`，会拒绝写入；若未记录 `approve` 但命令显式 `--approve`，会保留 warning 说明这是命令级 humanGate 信号。
 - `chapter` 从本地 `foundation.json` 继续生产章节，不重新规划 Story Bible；未传 `--chapter-goal` 时自动使用 `foundation.json` 的 `chapter_goal.objective`，自动读取早于当前章节的 `runs/archive-*.json` 作为连续性上下文，并在完成后生成下一章 handoff 命令。
 - `wiki-bundle` 只读取本地 `foundation.json` 并写项目内 Markdown bundle，不调用 llmwiki。
-- `llmwiki-sync` 默认只生成计划；只有传 `--approve` 才把审核包复制到 llmwiki workspace。它不安装 llmwiki，不调用 MCP 写工具。
+- `llmwiki-sync` 默认只生成计划；只有传 `--approve` 才把审核包复制到 llmwiki workspace。传 `--lint` 后会运行 `llmwiki lint <workspace>`；若当前 llmwiki CLI 不支持 `lint` 子命令则跳过并返回 warning，若支持 lint 但检查失败则同步结果为 `failed`。它不安装 llmwiki，不调用 MCP 写工具。
 - `llmwiki-mcp-config` 只生成配置片段和角色绑定策略，不写 `~/.codex/config.toml`，默认只建议 Director 和 Validator 接入 llmwiki MCP。
 - `series` 默认连续生成 5 章、导出 wiki bundle，并统计 P0/P1、修订轮次、归档完整率和 prior context 覆盖率。
 - `readiness` 只读检查本机状态；缺少 llmwiki 时返回 `ready_with_warnings`，BotMux 配置、workflow validate、workflow 绑定校验或显式请求的 smoke 失败时返回 `blocked`。
@@ -137,7 +139,7 @@ python3 -m botmux_novel readiness --bootstrap-smoke --approval-apply-smoke --ser
 - 当前 Agent 是确定性本地实现，不代表真实模型质量。
 - 当前已验证连续 20 章本地稳定性基线：20/20 完成、P0/P1 为 0、归档完整率 1.0、prior context 覆盖率 1.0。
 - 当前 YAML 写入用于本地可读产物，复杂读写和 schema migration 仍需后续迭代。
-- 本机已安装 llmwiki；若其他环境未安装，`llmwiki-sync --reindex` 会跳过 reindex 并返回 warning，文件同步仍可完成。
+- 本机已安装 llmwiki；若其他环境未安装，`llmwiki-sync --reindex --lint` 会跳过 reindex/lint 并返回 warning；若环境里的 llmwiki 版本尚未提供 CLI `lint` 子命令，也会把 lint 标记为 skipped warning，文件同步仍可完成。
 
 ## 相关逻辑文档
 

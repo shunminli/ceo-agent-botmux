@@ -572,6 +572,7 @@ class NovelRuntimeTest(unittest.TestCase):
                     approve=True,
                     llmwiki_bin=str(fake_llmwiki),
                     reindex=True,
+                    lint=True,
                 )
             )
 
@@ -579,6 +580,102 @@ class NovelRuntimeTest(unittest.TestCase):
             self.assertTrue(result.llmwiki_available)
             self.assertEqual(result.commands[0].status, "succeeded")
             self.assertIn("reindexed reindex", result.commands[0].stdout)
+            self.assertEqual(result.commands[1].status, "succeeded")
+            self.assertEqual(result.commands[1].command[1], "lint")
+
+    def test_llmwiki_sync_lint_failure_fails_sync(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            project = Path(tmpdir) / "llmwiki-project"
+            workspace = Path(tmpdir) / "llmwiki-workspace"
+            fake_llmwiki = Path(tmpdir) / "llmwiki"
+            fake_llmwiki.write_text(
+                "#!/bin/sh\n"
+                "if [ \"$1\" = \"lint\" ]; then\n"
+                "  echo lint failed >&2\n"
+                "  exit 7\n"
+                "fi\n"
+                "exit 0\n",
+                encoding="utf-8",
+            )
+            fake_llmwiki.chmod(0o755)
+            runtime = NovelRuntime()
+            foundation = runtime.foundation(
+                NovelFoundationRequest(
+                    project_path=project,
+                    title="影钟旧案",
+                    inspiration="少年在旧书楼发现父亲旧案残页。",
+                )
+            )
+            runtime.wiki_bundle(
+                NovelWikiBundleRequest(
+                    project_path=project,
+                    project_slug="shadow-clock-case",
+                    foundation_path=foundation.foundation_path,
+                )
+            )
+
+            result = LlmwikiSyncer().sync(
+                LlmwikiSyncRequest(
+                    project_path=project,
+                    project_slug="shadow-clock-case",
+                    workspace_path=workspace,
+                    approve=True,
+                    llmwiki_bin=str(fake_llmwiki),
+                    lint=True,
+                )
+            )
+
+            self.assertEqual(result.status, "failed")
+            self.assertEqual(result.commands[0].status, "failed")
+            self.assertEqual(result.commands[0].returncode, 7)
+            self.assertTrue((workspace / "wiki/novels/shadow-clock-case/overview.md").exists())
+
+    def test_llmwiki_sync_skips_unsupported_lint_with_warning(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            project = Path(tmpdir) / "llmwiki-project"
+            workspace = Path(tmpdir) / "llmwiki-workspace"
+            fake_llmwiki = Path(tmpdir) / "llmwiki"
+            fake_llmwiki.write_text(
+                "#!/bin/sh\n"
+                "if [ \"$1\" = \"lint\" ]; then\n"
+                "  echo \"llmwiki: error: argument command: invalid choice: 'lint'\" >&2\n"
+                "  exit 2\n"
+                "fi\n"
+                "exit 0\n",
+                encoding="utf-8",
+            )
+            fake_llmwiki.chmod(0o755)
+            runtime = NovelRuntime()
+            foundation = runtime.foundation(
+                NovelFoundationRequest(
+                    project_path=project,
+                    title="影钟旧案",
+                    inspiration="少年在旧书楼发现父亲旧案残页。",
+                )
+            )
+            runtime.wiki_bundle(
+                NovelWikiBundleRequest(
+                    project_path=project,
+                    project_slug="shadow-clock-case",
+                    foundation_path=foundation.foundation_path,
+                )
+            )
+
+            result = LlmwikiSyncer().sync(
+                LlmwikiSyncRequest(
+                    project_path=project,
+                    project_slug="shadow-clock-case",
+                    workspace_path=workspace,
+                    approve=True,
+                    llmwiki_bin=str(fake_llmwiki),
+                    lint=True,
+                )
+            )
+
+            self.assertEqual(result.status, "completed_with_warnings")
+            self.assertEqual(result.commands[0].status, "skipped")
+            self.assertTrue(any("operation not available: lint" in warning for warning in result.warnings))
+            self.assertTrue((workspace / "wiki/novels/shadow-clock-case/overview.md").exists())
 
     def test_cli_llmwiki_sync_uses_real_entrypoint(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:

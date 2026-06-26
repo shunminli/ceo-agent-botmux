@@ -47,6 +47,7 @@ class NovelBootstrapTest(unittest.TestCase):
             self.assertEqual(package["status"], "ready_for_human_review")
             self.assertEqual(package["human_gate"]["decision"], "approve|request_changes|reject")
             self.assertIn("--approve", package["human_gate"]["approved_write_command"])
+            self.assertIn("--lint", package["human_gate"]["approved_write_command"])
             self.assertIn("--llmwiki-bin", package["human_gate"]["approved_write_command"])
             self.assertIn(str(fake_llmwiki), package["human_gate"]["approved_write_command"])
             self.assertIn("approval-decision", package["human_gate"]["approval_decision_command"])

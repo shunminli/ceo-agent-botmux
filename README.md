@@ -59,7 +59,9 @@ python3 -m botmux_novel wiki-bundle \
 python3 -m botmux_novel llmwiki-sync \
   --project /tmp/novel-demo \
   --project-slug shadow-clock-case \
-  --approve
+  --approve \
+  --reindex \
+  --lint
 
 python3 -m botmux_novel llmwiki-mcp-config \
   --workspace /tmp/novel-demo \

@@ -23,6 +23,7 @@ class NovelApprovalApplyRequest:
     backup: bool = True
     llmwiki_bin: Optional[str] = None
     reindex: bool = True
+    lint: bool = True
 
 
 @dataclass(frozen=True)
@@ -132,6 +133,7 @@ class NovelApprovalApplier:
                 backup=request.backup,
                 llmwiki_bin=llmwiki_bin,
                 reindex=request.reindex,
+                lint=request.lint,
             )
         )
         status = approval_status(sync_status=sync_result.status, warnings=warnings, init_commands=init_commands)

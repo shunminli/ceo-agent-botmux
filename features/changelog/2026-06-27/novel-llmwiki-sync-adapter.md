@@ -15,7 +15,7 @@ python3 -m botmux_novel llmwiki-sync \
 - Without `--approve`, writes only a local `runs/llmwiki-sync-{project_slug}-{timestamp}.json` plan.
 - With `--approve`, copies approved Markdown pages into `--workspace/wiki/novels/{project_slug}/`.
 - Creates `.bak-{timestamp}` backups before overwriting changed pages unless `--no-backup` is passed.
-- Can optionally run `llmwiki reindex <workspace>` with `--reindex` when an llmwiki executable is available.
+- Can optionally run `llmwiki reindex <workspace>` with `--reindex` and `llmwiki lint <workspace>` with `--lint` when an llmwiki executable is available.
 
 ## Boundaries
 

@@ -72,7 +72,8 @@ class NovelApprovalApplyTest(unittest.TestCase):
             self.assertTrue(result.approved)
             self.assertTrue((workspace / "wiki/novels/shadow-clock-case/overview.md").exists())
             self.assertTrue(any(command.status == "succeeded" for command in result.init_commands))
-            self.assertTrue(any(command.status == "succeeded" for command in result.llmwiki_sync.commands))
+            self.assertTrue(command_succeeded(result.llmwiki_sync.commands, "reindex"))
+            self.assertTrue(command_succeeded(result.llmwiki_sync.commands, "lint"))
             self.assertTrue(any("humanGate" in warning for warning in result.warnings))
 
     def test_approval_decision_records_approve_before_apply(self) -> None:
@@ -122,6 +123,8 @@ class NovelApprovalApplyTest(unittest.TestCase):
             self.assertEqual(result.status, "completed")
             self.assertEqual(result.warnings, [])
             self.assertTrue((workspace / "wiki/novels/shadow-clock-case/overview.md").exists())
+            self.assertTrue(command_succeeded(result.llmwiki_sync.commands, "reindex"))
+            self.assertTrue(command_succeeded(result.llmwiki_sync.commands, "lint"))
 
     def test_approval_apply_refuses_recorded_request_changes(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -230,7 +233,27 @@ class NovelApprovalApplyTest(unittest.TestCase):
             self.assertEqual(payload["status"], "completed")
             self.assertTrue(payload["approved"])
             self.assertTrue(any(command["status"] == "succeeded" for command in payload["init_commands"]))
+            self.assertTrue(json_command_succeeded(payload["llmwiki_sync"]["commands"], "reindex"))
+            self.assertTrue(json_command_succeeded(payload["llmwiki_sync"]["commands"], "lint"))
             self.assertTrue((workspace / "wiki/novels/shadow-clock-case/overview.md").exists())
+
+
+def command_succeeded(commands: list, operation: str) -> bool:
+    return any(
+        command.status == "succeeded"
+        and len(command.command) >= 2
+        and command.command[1] == operation
+        for command in commands
+    )
+
+
+def json_command_succeeded(commands: list, operation: str) -> bool:
+    return any(
+        command["status"] == "succeeded"
+        and len(command["command"]) >= 2
+        and command["command"][1] == operation
+        for command in commands
+    )
 
 
 def write_fake_llmwiki(path: Path) -> Path:
@@ -242,6 +265,10 @@ def write_fake_llmwiki(path: Path) -> Path:
         "fi\n"
         "if [ \"$1\" = \"reindex\" ]; then\n"
         "  echo \"reindexed $2\"\n"
+        "  exit 0\n"
+        "fi\n"
+        "if [ \"$1\" = \"lint\" ]; then\n"
+        "  echo \"linted $2\"\n"
         "  exit 0\n"
         "fi\n"
         "exit 0\n",

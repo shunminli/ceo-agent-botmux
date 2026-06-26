@@ -20,6 +20,7 @@ class LlmwikiSyncRequest:
     backup: bool = True
     llmwiki_bin: str = "llmwiki"
     reindex: bool = False
+    lint: bool = False
 
 
 @dataclass(frozen=True)
@@ -124,24 +125,26 @@ class LlmwikiSyncer:
         commands: List[LlmwikiCommandResult] = []
         llmwiki_executable = resolve_executable(request.llmwiki_bin)
         llmwiki_available = llmwiki_executable is not None
-        if request.reindex:
-            if llmwiki_executable is None:
-                warnings.append(f"llmwiki executable not found: {request.llmwiki_bin}; skipped reindex")
-                commands.append(
-                    LlmwikiCommandResult(
-                        command=[request.llmwiki_bin, "reindex", str(workspace_path)],
-                        status="skipped",
-                    )
-                )
-            elif not request.approve:
-                commands.append(
-                    LlmwikiCommandResult(
-                        command=[llmwiki_executable, "reindex", str(workspace_path)],
-                        status="planned",
-                    )
-                )
-            else:
-                commands.append(run_command([llmwiki_executable, "reindex", str(workspace_path)]))
+        append_llmwiki_command(
+            commands=commands,
+            warnings=warnings,
+            requested=request.reindex,
+            operation="reindex",
+            workspace_path=workspace_path,
+            approve=request.approve,
+            llmwiki_bin=request.llmwiki_bin,
+            llmwiki_executable=llmwiki_executable,
+        )
+        append_llmwiki_command(
+            commands=commands,
+            warnings=warnings,
+            requested=request.lint,
+            operation="lint",
+            workspace_path=workspace_path,
+            approve=request.approve,
+            llmwiki_bin=request.llmwiki_bin,
+            llmwiki_executable=llmwiki_executable,
+        )
 
         status = result_status(approved=request.approve, commands=commands, warnings=warnings)
         plan_path = write_sync_plan(
@@ -230,6 +233,64 @@ def run_command(command: List[str]) -> LlmwikiCommandResult:
     )
 
 
+def append_llmwiki_command(
+    *,
+    commands: List[LlmwikiCommandResult],
+    warnings: List[str],
+    requested: bool,
+    operation: str,
+    workspace_path: Path,
+    approve: bool,
+    llmwiki_bin: str,
+    llmwiki_executable: Optional[str],
+) -> None:
+    if not requested:
+        return
+    if llmwiki_executable is None:
+        warnings.append(f"llmwiki executable not found: {llmwiki_bin}; skipped {operation}")
+        commands.append(
+            LlmwikiCommandResult(
+                command=[llmwiki_bin, operation, str(workspace_path)],
+                status="skipped",
+            )
+        )
+        return
+    command = [llmwiki_executable, operation, str(workspace_path)]
+    if approve and not llmwiki_operation_available(llmwiki_executable, operation):
+        warnings.append(f"llmwiki operation not available: {operation}; skipped {operation}")
+        commands.append(
+            LlmwikiCommandResult(
+                command=command,
+                status="skipped",
+                stderr=f"`{operation}` is not supported by this llmwiki executable",
+            )
+        )
+        return
+    if not approve:
+        commands.append(LlmwikiCommandResult(command=command, status="planned"))
+        return
+    commands.append(run_command(command))
+
+
+def llmwiki_operation_available(llmwiki_executable: str, operation: str) -> bool:
+    if operation != "lint":
+        return True
+    try:
+        completed = subprocess.run(
+            [llmwiki_executable, operation, "--help"],
+            text=True,
+            capture_output=True,
+            check=False,
+            timeout=10,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return True
+    if completed.returncode == 0:
+        return True
+    output = f"{completed.stdout}\n{completed.stderr}".lower()
+    return not ("invalid choice" in output and f"'{operation}'" in output)
+
+
 def result_status(
     *,
     approved: bool,
@@ -285,7 +346,7 @@ def write_sync_plan(
         "rollback_plan": rollback_plan(actions),
         "lint_plan": {
             "markdown_bundle": "rerun `python -m botmux_novel wiki-bundle` and inspect changed pages",
-            "llmwiki": "open the workspace with llmwiki MCP and run the lint tool after writes",
+            "llmwiki": f"llmwiki lint {workspace_path}",
             "reindex": f"llmwiki reindex {workspace_path}",
         },
         "actions": [action.to_dict() for action in actions],

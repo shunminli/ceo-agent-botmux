@@ -5,7 +5,7 @@
 ## 当前边界
 
 - `python3 -m botmux_novel wiki-bundle` 只写本地 Markdown 审核包：`wiki/novels/{project_slug}/`。
-- `python3 -m botmux_novel llmwiki-sync` 默认只生成同步计划；传 `--approve` 后才把审核包写入 llmwiki workspace 的 Markdown source-of-truth 文件树。
+- `python3 -m botmux_novel llmwiki-sync` 默认只生成同步计划；传 `--approve` 后才把审核包写入 llmwiki workspace 的 Markdown source-of-truth 文件树，传 `--lint` 后会执行写后 lint 门禁；若当前 llmwiki CLI 不支持 `lint` 子命令，则跳过并返回 warning。
 - 仓库内 workflow 只生成 Story Bible 候选包、章节候选包和同步计划。
 - 真实 llmwiki 写入前必须经过 `Novel-Director-Curator` preview、影响面说明和 humanGate。
 - `Novel-Creative-Architect` 不直接写 llmwiki；`Novel-Continuity-Validator` 只读检索和校验。
@@ -59,7 +59,7 @@ python3 -m botmux_novel novel-bootstrap \
   --project-slug shadow-clock-case
 ```
 
-产物在 `runs/{bootstrap_run_id}/approval-package.md` 和 `approval-package.json`。审批通过后先执行其中的 `approval-decision --decision approve` 命令，记录 reviewer、notes、timestamp 和历史；再执行 `approval-apply --approve`。`approval-apply` 会读取审批包中的 project、slug、workspace 和 llmwiki 配置；如果目标 workspace 还没有 llmwiki index，会先初始化；底层仍调用 `llmwiki-sync --approve --reindex`。完成知识库写入后，可继续执行审批包里的 `next_actions.chapter_start_command`，直接从批准的 `foundation.json` 生成首章。
+产物在 `runs/{bootstrap_run_id}/approval-package.md` 和 `approval-package.json`。审批通过后先执行其中的 `approval-decision --decision approve` 命令，记录 reviewer、notes、timestamp 和历史；再执行 `approval-apply --approve`。`approval-apply` 会读取审批包中的 project、slug、workspace 和 llmwiki 配置；如果目标 workspace 还没有 llmwiki index，会先初始化；底层仍调用 `llmwiki-sync --approve --reindex --lint`，CLI 不支持 lint 时返回 warning，支持 lint 但返回非 0 时写入结果为 `failed`。完成知识库写入后，可继续执行审批包里的 `next_actions.chapter_start_command`，直接从批准的 `foundation.json` 生成首章。
 
 ```bash
 python3 -m botmux_novel approval-decision \
@@ -114,7 +114,9 @@ python3 -m botmux_novel llmwiki-sync \
   --project /path/to/novel-project \
   --project-slug shadow-clock-case \
   --workspace /path/to/novel-project \
-  --approve
+  --approve \
+  --reindex \
+  --lint
 ```
 
 6. 用 llmwiki 打开小说项目目录。
@@ -188,6 +190,7 @@ python3 -m botmux_novel foundation --project /path/to/novel-project --title <tit
 python3 -m botmux_novel wiki-bundle --project /path/to/novel-project --project-slug <slug>
 python3 -m botmux_novel llmwiki-sync --project /path/to/novel-project --project-slug <slug>
 llmwiki init /path/to/novel-project
+llmwiki lint /path/to/novel-project
 llmwiki reindex /path/to/novel-project
 llmwiki mcp-config /path/to/novel-project
 ```
@@ -198,4 +201,4 @@ llmwiki mcp-config /path/to/novel-project
 
 - 本仓库还没有自动安装 llmwiki；当前安装是本机一次性环境准备。
 - 本仓库不直接调用 llmwiki MCP `create/edit/append`；`llmwiki-sync` 只写本地 workspace Markdown 文件树，MCP 写工具仍需由 `Novel-Director-Curator` 在 humanGate 后调用。
-- 首次真实写入必须由用户审批 Story Bible 和 wiki 页面清单后再执行；正式 CLI 路径用 `approval-decision --decision approve` 记录审批，再用 `approval-apply --approve` 执行写入。
+- 首次真实写入必须由用户审批 Story Bible 和 wiki 页面清单后再执行；正式 CLI 路径用 `approval-decision --decision approve` 记录审批，再用 `approval-apply --approve` 执行写入、lint 和 reindex。

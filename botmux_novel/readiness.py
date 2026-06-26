@@ -464,22 +464,29 @@ class NovelReadinessChecker:
                 target_overview = workspace_path / "wiki" / "novels" / project_slug / "overview.md"
                 index_path = workspace_path / ".llmwiki" / "index.db"
                 init_succeeded = any(command.status == "succeeded" for command in apply_result.init_commands)
-                reindex_succeeded = any(command.status == "succeeded" for command in apply_result.llmwiki_sync.commands)
+                reindex_succeeded = llmwiki_command_succeeded(apply_result.llmwiki_sync.commands, "reindex")
+                lint_status = llmwiki_command_status(apply_result.llmwiki_sync.commands, "lint")
+                lint_succeeded = lint_status == "succeeded"
+                lint_skipped = lint_status == "skipped"
                 passed = (
                     apply_result.status in {"completed", "completed_with_warnings"}
                     and apply_result.approved
                     and init_succeeded
                     and reindex_succeeded
+                    and (lint_succeeded or lint_skipped)
                     and target_overview.exists()
                     and index_path.exists()
                 )
+                check_status = "pass" if passed and lint_succeeded else "warn" if passed else "fail"
                 return ReadinessCheck(
                     name="approval_apply_smoke",
-                    status="pass" if passed else "fail",
+                    status=check_status,
                     summary=(
-                        "Approval apply smoke initialized a temporary workspace, applied approved wiki pages, and reindexed it."
+                        "Approval apply smoke initialized a temporary workspace, applied approved wiki pages, linted it, and reindexed it."
+                        if passed and lint_succeeded
+                        else "Approval apply smoke initialized a temporary workspace, applied approved wiki pages, and reindexed it; llmwiki lint is unavailable in this executable."
                         if passed
-                        else "Approval apply smoke did not meet expected init/write/reindex checks."
+                        else "Approval apply smoke did not meet expected init/write/lint/reindex checks."
                     ),
                     data={
                         "llmwiki_bin": executable,
@@ -491,6 +498,9 @@ class NovelReadinessChecker:
                         "approved": apply_result.approved,
                         "target_overview_exists": target_overview.exists(),
                         "index_exists": index_path.exists(),
+                        "reindex_succeeded": reindex_succeeded,
+                        "lint_succeeded": lint_succeeded,
+                        "lint_status": lint_status,
                         "init_commands": [command.to_dict() for command in apply_result.init_commands],
                         "sync_commands": [command.to_dict() for command in apply_result.llmwiki_sync.commands],
                         "warnings": apply_result.warnings,
@@ -563,25 +573,33 @@ class NovelReadinessChecker:
                         approve=True,
                         llmwiki_bin=executable,
                         reindex=True,
+                        lint=True,
                     )
                 )
                 target_overview = workspace_path / "wiki" / "novels" / project_slug / "overview.md"
                 index_path = workspace_path / ".llmwiki" / "index.db"
-                reindex_succeeded = any(command.status == "succeeded" for command in sync_result.commands)
+                reindex_succeeded = llmwiki_command_succeeded(sync_result.commands, "reindex")
+                lint_status = llmwiki_command_status(sync_result.commands, "lint")
+                lint_succeeded = lint_status == "succeeded"
+                lint_skipped = lint_status == "skipped"
                 passed = (
-                    sync_result.status == "completed"
+                    sync_result.status in {"completed", "completed_with_warnings"}
                     and sync_result.llmwiki_available
                     and reindex_succeeded
+                    and (lint_succeeded or lint_skipped)
                     and target_overview.exists()
                     and index_path.exists()
                 )
+                check_status = "pass" if passed and lint_succeeded else "warn" if passed else "fail"
                 return ReadinessCheck(
                     name="llmwiki_smoke",
-                    status="pass" if passed else "fail",
+                    status=check_status,
                     summary=(
-                        "Approved llmwiki sync smoke copied wiki pages and reindexed a temporary workspace."
+                        "Approved llmwiki sync smoke copied wiki pages, linted them, and reindexed a temporary workspace."
+                        if passed and lint_succeeded
+                        else "Approved llmwiki sync smoke copied wiki pages and reindexed a temporary workspace; llmwiki lint is unavailable in this executable."
                         if passed
-                        else "Approved llmwiki sync smoke did not meet expected write/reindex checks."
+                        else "Approved llmwiki sync smoke did not meet expected write/lint/reindex checks."
                     ),
                     data={
                         "llmwiki_bin": executable,
@@ -591,6 +609,9 @@ class NovelReadinessChecker:
                         "target_overview_exists": target_overview.exists(),
                         "index_exists": index_path.exists(),
                         "sync_status": sync_result.status,
+                        "reindex_succeeded": reindex_succeeded,
+                        "lint_succeeded": lint_succeeded,
+                        "lint_status": lint_status,
                         "commands": [command.to_dict() for command in sync_result.commands],
                         "actions": [action.to_dict() for action in sync_result.actions],
                     },
@@ -617,6 +638,17 @@ def resolve_executable(command: str) -> Optional[str]:
     if expanded.parent != Path(".") and expanded.exists():
         return str(expanded.resolve())
     return shutil.which(command)
+
+
+def llmwiki_command_succeeded(commands: List[Any], operation: str) -> bool:
+    return llmwiki_command_status(commands, operation) == "succeeded"
+
+
+def llmwiki_command_status(commands: List[Any], operation: str) -> Optional[str]:
+    for command in commands:
+        if len(command.command) >= 2 and command.command[1] == operation:
+            return command.status
+    return None
 
 
 def command_payload(completed: subprocess.CompletedProcess[str]) -> Dict[str, Any]:

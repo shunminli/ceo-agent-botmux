@@ -11,6 +11,6 @@ Current automatic coverage remains:
 - `botmux workflow validate` for BotMux template structure and graph invariants.
 - `python3 -m botmux_novel readiness` for static `${params.*}` and `${node.output.*}` binding checks.
 - `python3 -m botmux_novel readiness --series-smoke --smoke-chapter-count 20` for local runtime continuity, archive, and prior-context stability.
-- `python3 -m botmux_novel readiness --llmwiki-smoke` for approved temporary llmwiki workspace write and reindex coverage.
+- `python3 -m botmux_novel readiness --llmwiki-smoke` for approved temporary llmwiki workspace write, lint, and reindex coverage.
 
 Real BotMux workflow execution still requires real bot output and will stop at `humanGate` for user approval.

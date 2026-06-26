@@ -147,7 +147,7 @@ class NovelReadinessTest(unittest.TestCase):
             self.assertTrue(check.data["available"])
             self.assertTrue(check.data["usable"])
 
-    def test_llmwiki_smoke_runs_approved_sync_and_reindex(self) -> None:
+    def test_llmwiki_smoke_runs_approved_sync_lint_and_reindex(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)
             botmux_home = root / ".botmux"
@@ -174,6 +174,8 @@ class NovelReadinessTest(unittest.TestCase):
             self.assertEqual(checks["llmwiki_smoke"].data["sync_status"], "completed")
             self.assertTrue(checks["llmwiki_smoke"].data["target_overview_exists"])
             self.assertTrue(checks["llmwiki_smoke"].data["index_exists"])
+            self.assertTrue(checks["llmwiki_smoke"].data["reindex_succeeded"])
+            self.assertTrue(checks["llmwiki_smoke"].data["lint_succeeded"])
 
     def test_bootstrap_smoke_generates_approval_package_without_workspace_writes(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -207,7 +209,7 @@ class NovelReadinessTest(unittest.TestCase):
             self.assertTrue(checks["bootstrap_smoke"].data["chapter_start_result"]["final_path_exists"])
             self.assertFalse(checks["bootstrap_smoke"].data["target_overview_exists"])
 
-    def test_approval_apply_smoke_runs_init_write_and_reindex(self) -> None:
+    def test_approval_apply_smoke_runs_init_write_lint_and_reindex(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)
             botmux_home = root / ".botmux"
@@ -235,6 +237,8 @@ class NovelReadinessTest(unittest.TestCase):
             self.assertTrue(checks["approval_apply_smoke"].data["approved"])
             self.assertTrue(checks["approval_apply_smoke"].data["target_overview_exists"])
             self.assertTrue(checks["approval_apply_smoke"].data["index_exists"])
+            self.assertTrue(checks["approval_apply_smoke"].data["reindex_succeeded"])
+            self.assertTrue(checks["approval_apply_smoke"].data["lint_succeeded"])
 
     def test_cli_readiness_can_run_llmwiki_smoke(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -271,6 +275,7 @@ class NovelReadinessTest(unittest.TestCase):
             self.assertEqual(payload["status"], "ready")
             checks = {check["name"]: check for check in payload["checks"]}
             self.assertEqual(checks["llmwiki_smoke"]["status"], "pass")
+            self.assertTrue(checks["llmwiki_smoke"]["data"]["lint_succeeded"])
 
     def test_cli_readiness_can_run_bootstrap_smoke(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -345,6 +350,7 @@ class NovelReadinessTest(unittest.TestCase):
             checks = {check["name"]: check for check in payload["checks"]}
             self.assertEqual(checks["approval_apply_smoke"]["status"], "pass")
             self.assertTrue(checks["approval_apply_smoke"]["data"]["target_overview_exists"])
+            self.assertTrue(checks["approval_apply_smoke"]["data"]["lint_succeeded"])
 
 
 def install_temp_botmux(botmux_home: Path) -> None:
@@ -392,6 +398,10 @@ def write_fake_llmwiki(path: Path) -> None:
         "if [ \"$1\" = \"reindex\" ]; then\n"
         "  test -f \"$2/.llmwiki/index.db\" || exit 3\n"
         "  echo \"reindexed $2\"\n"
+        "  exit 0\n"
+        "fi\n"
+        "if [ \"$1\" = \"lint\" ]; then\n"
+        "  echo \"linted $2\"\n"
         "  exit 0\n"
         "fi\n"
         "echo \"unexpected llmwiki command\" >&2\n"

@@ -34,6 +34,7 @@ class NovelSeriesRequest:
     llmwiki_workspace_path: Optional[Path] = None
     llmwiki_bin: str = "llmwiki"
     reindex: bool = False
+    lint: bool = False
 
 
 @dataclass(frozen=True)
@@ -116,6 +117,7 @@ class NovelSeriesRunner:
                     approve=request.approve_llmwiki,
                     llmwiki_bin=request.llmwiki_bin,
                     reindex=request.reindex,
+                    lint=request.lint,
                 )
             )
 

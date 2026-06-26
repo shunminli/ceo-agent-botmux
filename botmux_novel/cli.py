@@ -66,6 +66,7 @@ def build_parser() -> argparse.ArgumentParser:
     approval_parser.add_argument("--no-backup", action="store_true", help="Do not create .bak files before replacing target pages.")
     approval_parser.add_argument("--llmwiki-bin", help="Optional override for the llmwiki executable recorded in the approval package.")
     approval_parser.add_argument("--no-reindex", action="store_true", help="Do not run `llmwiki reindex <workspace>` after approved writes.")
+    approval_parser.add_argument("--no-lint", action="store_true", help="Do not run `llmwiki lint <workspace>` after approved writes.")
 
     decision_parser = subparsers.add_parser(
         "approval-decision",
@@ -106,6 +107,7 @@ def build_parser() -> argparse.ArgumentParser:
     llmwiki_parser.add_argument("--no-backup", action="store_true", help="Do not create .bak files before replacing target pages.")
     llmwiki_parser.add_argument("--llmwiki-bin", default="llmwiki", help="llmwiki executable to use for optional commands.")
     llmwiki_parser.add_argument("--reindex", action="store_true", help="Run `llmwiki reindex <workspace>` after approved writes when llmwiki is available.")
+    llmwiki_parser.add_argument("--lint", action="store_true", help="Run `llmwiki lint <workspace>` after approved writes when llmwiki is available.")
 
     mcp_parser = subparsers.add_parser(
         "llmwiki-mcp-config",
@@ -133,6 +135,7 @@ def build_parser() -> argparse.ArgumentParser:
     series_parser.add_argument("--llmwiki-workspace", help="llmwiki workspace directory. Defaults to --project.")
     series_parser.add_argument("--llmwiki-bin", default="llmwiki", help="llmwiki executable to use for optional commands.")
     series_parser.add_argument("--reindex", action="store_true", help="Run `llmwiki reindex <workspace>` after approved llmwiki sync.")
+    series_parser.add_argument("--lint", action="store_true", help="Run `llmwiki lint <workspace>` after approved llmwiki sync.")
 
     readiness_parser = subparsers.add_parser(
         "readiness",
@@ -149,7 +152,7 @@ def build_parser() -> argparse.ArgumentParser:
     readiness_parser.add_argument(
         "--llmwiki-smoke",
         action="store_true",
-        help="Run a temporary approved llmwiki workspace sync and reindex smoke.",
+        help="Run a temporary approved llmwiki workspace sync, lint, and reindex smoke.",
     )
 
     assets_parser = subparsers.add_parser(
@@ -216,6 +219,7 @@ def main(argv: Optional[list[str]] = None) -> int:
             backup=not args.no_backup,
             llmwiki_bin=args.llmwiki_bin,
             reindex=not args.no_reindex,
+            lint=not args.no_lint,
         )
         result = NovelApprovalApplier().apply(request)
         print(json.dumps(result.to_dict(), ensure_ascii=False, indent=2))
@@ -264,6 +268,7 @@ def main(argv: Optional[list[str]] = None) -> int:
             backup=not args.no_backup,
             llmwiki_bin=args.llmwiki_bin,
             reindex=args.reindex,
+            lint=args.lint,
         )
         result = LlmwikiSyncer().sync(request)
         print(json.dumps(result.to_dict(), ensure_ascii=False, indent=2))
@@ -295,6 +300,7 @@ def main(argv: Optional[list[str]] = None) -> int:
             llmwiki_workspace_path=Path(args.llmwiki_workspace).expanduser().resolve() if args.llmwiki_workspace else None,
             llmwiki_bin=args.llmwiki_bin,
             reindex=args.reindex,
+            lint=args.lint,
         )
         result = NovelSeriesRunner().run(request)
         print(json.dumps(result.to_dict(), ensure_ascii=False, indent=2))
