@@ -696,20 +696,74 @@ class NovelRuntime:
 
     def _write_wiki_bundle(self, workspace: NovelWorkspace, plan: Dict[str, Any], project_slug: str) -> List[Path]:
         base = f"wiki/novels/{project_slug}"
+        archives = self._load_archives_for_wiki(workspace)
+        self._clear_wiki_archive_pages(workspace, base)
         artifacts = [
             workspace.write_text(f"{base}/overview.md", self._wiki_overview(plan, project_slug)),
             workspace.write_text(f"{base}/story-bible.md", self._story_markdown(plan)),
             workspace.write_text(f"{base}/relationships.md", self._wiki_relationships(plan["relationships"])),
             workspace.write_text(f"{base}/plot-trajectory.md", self._wiki_plot_trajectory(plan)),
             workspace.write_text(f"{base}/world-scenes.md", self._wiki_scene_settings(plan["scene_settings"])),
-            workspace.write_text(f"{base}/foreshadowing.md", self._wiki_foreshadowing_seed(plan)),
+            workspace.write_text(f"{base}/foreshadowing.md", self._wiki_foreshadowing_seed(plan, archives)),
             workspace.write_text(f"{base}/continuity-rules.md", self._wiki_continuity_rules(plan)),
-            workspace.write_text(f"{base}/chapter-index.md", self._wiki_chapter_index(plan)),
-            workspace.write_text(f"{base}/sync-plan.md", self._wiki_sync_plan(plan, project_slug)),
+            workspace.write_text(f"{base}/chapter-index.md", self._wiki_chapter_index(plan, archives)),
+            workspace.write_text(f"{base}/sync-plan.md", self._wiki_sync_plan(plan, project_slug, archives)),
         ]
         for character in plan["characters"]:
             artifacts.append(workspace.write_text(f"{base}/characters/{character['id']}.md", self._character_markdown(character)))
+        if archives:
+            artifacts.append(workspace.write_text(f"{base}/chapter-archive.md", self._wiki_chapter_archive(archives)))
+            artifacts.append(workspace.write_text(f"{base}/timeline.md", self._wiki_archive_timeline(archives)))
+            artifacts.append(workspace.write_text(f"{base}/character-state.md", self._wiki_archive_character_state(archives)))
+            for archive_record in archives:
+                chapter = archive_record["chapter_id"]
+                artifacts.append(workspace.write_text(f"{base}/chapters/{chapter}.md", self._wiki_chapter_archive_page(archive_record)))
         return artifacts
+
+    def _load_archives_for_wiki(self, workspace: NovelWorkspace) -> List[Dict[str, Any]]:
+        records: List[Dict[str, Any]] = []
+        for path in workspace.root.glob("runs/archive-*.json"):
+            chapter = path.stem.removeprefix("archive-")
+            try:
+                archive = json.loads(path.read_text(encoding="utf-8"))
+            except json.JSONDecodeError as exc:
+                raise ValueError(f"invalid archive JSON for wiki bundle: {path}") from exc
+            for key in ["facts", "timeline", "foreshadowing", "character_state", "continuity_issues"]:
+                if not isinstance(archive.get(key, []), list):
+                    raise ValueError(f"archive {path} field {key} must be an array")
+            final_path = workspace.root / "manuscript" / "final" / f"{chapter}.md"
+            records.append(
+                {
+                    "chapter_id": chapter,
+                    "sort_key": self._chapter_sort_key(chapter),
+                    "source_ref": str(path.relative_to(workspace.root)),
+                    "archive": archive,
+                    "final_path": final_path if final_path.exists() else None,
+                }
+            )
+        return sorted(
+            records,
+            key=lambda item: (
+                item["sort_key"] is None,
+                item["sort_key"] if item["sort_key"] is not None else 0,
+                item["chapter_id"],
+            ),
+        )
+
+    def _clear_wiki_archive_pages(self, workspace: NovelWorkspace, base: str) -> None:
+        namespace_path = workspace.root / base
+        for name in ["chapter-archive.md", "timeline.md", "character-state.md"]:
+            path = namespace_path / name
+            if path.exists():
+                path.unlink()
+        chapters_path = namespace_path / "chapters"
+        if chapters_path.is_dir():
+            for path in chapters_path.glob("*.md"):
+                path.unlink()
+            try:
+                chapters_path.rmdir()
+            except OSError:
+                pass
 
     def _story_markdown(self, plan: Dict[str, Any]) -> str:
         return f"""# {plan['project']['title']}
@@ -800,7 +854,15 @@ class NovelRuntime:
             )
         return "\n".join(lines)
 
-    def _wiki_foreshadowing_seed(self, plan: Dict[str, Any]) -> str:
+    def _wiki_foreshadowing_seed(self, plan: Dict[str, Any], archives: List[Dict[str, Any]]) -> str:
+        archived_items: List[str] = []
+        for record in archives:
+            chapter = record["chapter_id"]
+            for item in record["archive"].get("foreshadowing", []):
+                archived_items.append(self._wiki_foreshadowing_item(chapter, item))
+        archive_section = ""
+        if archived_items:
+            archive_section = "\n## Archived Ledger\n\n" + "\n".join(archived_items) + "\n"
         return f"""# Foreshadowing
 
 ## Seed Rules
@@ -811,11 +873,25 @@ class NovelRuntime:
 
 {markdown_list(plan['chapter_goal']['must_include'])}
 
-## Payoff Discipline
+{archive_section}## Payoff Discipline
 
 - Every new clue must record introduced chapter, planned payoff, current status, and risk level.
 - P0/P1 foreshadowing changes require Director approval and Validator review.
 """
+
+    def _wiki_foreshadowing_item(self, chapter: str, item: Any) -> str:
+        if not isinstance(item, dict):
+            return f"- {chapter}: {self._wiki_inline(item)}"
+        clue = item.get("clue") or item.get("item") or item.get("description") or item.get("id") or "clue"
+        status = item.get("status", "unknown")
+        payoff = item.get("payoff_plan") or item.get("planned_payoff") or item.get("payoff") or "unplanned"
+        risk = item.get("risk_level") or item.get("risk") or "unknown"
+        introduced = item.get("introduced_chapter") or item.get("introduced_in") or chapter
+        return (
+            f"- {chapter}: {self._wiki_inline(clue)} "
+            f"(status: `{self._wiki_inline(status)}`, introduced: `{self._wiki_inline(introduced)}`, "
+            f"payoff: {self._wiki_inline(payoff)}, risk: `{self._wiki_inline(risk)}`)"
+        )
 
     def _wiki_continuity_rules(self, plan: Dict[str, Any]) -> str:
         thresholds = "\n".join(f"- {key}: {value}" for key, value in plan["project"]["quality_thresholds"].items())
@@ -834,15 +910,47 @@ class NovelRuntime:
 {thresholds}
 """
 
-    def _wiki_chapter_index(self, plan: Dict[str, Any]) -> str:
-        return f"""# Chapter Index
+    def _wiki_chapter_index(self, plan: Dict[str, Any], archives: List[Dict[str, Any]]) -> str:
+        rows = ["| Chapter | Objective | Status | Source |", "| --- | --- | --- | --- |"]
+        archived_chapters = {record["chapter_id"] for record in archives}
+        for record in archives:
+            archive = record["archive"]
+            objective = archive.get("objective") or archive.get("chapter_goal") or archive.get("summary") or "archived chapter"
+            rows.append(
+                f"| {record['chapter_id']} | {self._wiki_table_cell(objective)} | archived | `{record['source_ref']}` |"
+            )
+        planned_chapter = plan["chapter_goal"]["chapter_id"]
+        if planned_chapter not in archived_chapters:
+            rows.append(
+                f"| {planned_chapter} | {self._wiki_table_cell(plan['chapter_goal']['objective'])} | planned | `foundation.json` |"
+            )
+        return "# Chapter Index\n\n" + "\n".join(rows) + "\n"
 
-| Chapter | Objective | Status |
-| --- | --- | --- |
-| {plan['chapter_goal']['chapter_id']} | {plan['chapter_goal']['objective']} | planned |
-"""
-
-    def _wiki_sync_plan(self, plan: Dict[str, Any], project_slug: str) -> str:
+    def _wiki_sync_plan(self, plan: Dict[str, Any], project_slug: str, archives: List[Dict[str, Any]]) -> str:
+        write_order = [
+            "`overview.md`",
+            "`story-bible.md`",
+            "`characters/*.md`",
+            "`relationships.md`",
+            "`plot-trajectory.md`",
+            "`world-scenes.md`",
+            "`foreshadowing.md`",
+            "`continuity-rules.md`",
+            "`chapter-index.md`",
+        ]
+        if archives:
+            write_order.extend(
+                [
+                    "`chapter-archive.md`",
+                    "`timeline.md`",
+                    "`character-state.md`",
+                    "`chapters/*.md`",
+                ]
+            )
+        write_order_text = "\n".join(f"{index}. {item}" for index, item in enumerate(write_order, start=1))
+        archive_gate = ""
+        if archives:
+            archive_gate = "\n- Confirm archived chapter facts, timeline, foreshadowing, and character state match the final manuscript.\n"
         return f"""# Wiki Sync Plan
 
 This bundle is a local export for review before llmwiki writes.
@@ -853,23 +961,150 @@ This bundle is a local export for review before llmwiki writes.
 
 ## Write Order
 
-1. `overview.md`
-2. `story-bible.md`
-3. `characters/*.md`
-4. `relationships.md`
-5. `plot-trajectory.md`
-6. `world-scenes.md`
-7. `foreshadowing.md`
-8. `continuity-rules.md`
-9. `chapter-index.md`
+{write_order_text}
 
 ## Human Gate Checklist
 
 - Confirm Story Bible facts are approved.
 - Confirm proposed relationships and scene rules are not draft-only ideas.
-- Confirm no copyrighted expression from references is copied into wiki pages.
+{archive_gate}- Confirm no copyrighted expression from references is copied into wiki pages.
 - Run llmwiki lint after any actual write.
 """
+
+    def _wiki_chapter_archive(self, archives: List[Dict[str, Any]]) -> str:
+        rows = [
+            "| Chapter | Facts | Timeline | Foreshadowing | Character State | Continuity Issues | Source |",
+            "| --- | ---: | ---: | ---: | ---: | ---: | --- |",
+        ]
+        for record in archives:
+            archive = record["archive"]
+            rows.append(
+                "| "
+                f"{record['chapter_id']} | "
+                f"{len(archive.get('facts', []))} | "
+                f"{len(archive.get('timeline', []))} | "
+                f"{len(archive.get('foreshadowing', []))} | "
+                f"{len(archive.get('character_state', []))} | "
+                f"{len(archive.get('continuity_issues', []))} | "
+                f"`{record['source_ref']}` |"
+            )
+        return "# Chapter Archive\n\n" + "\n".join(rows) + "\n"
+
+    def _wiki_archive_timeline(self, archives: List[Dict[str, Any]]) -> str:
+        lines = ["# Timeline\n"]
+        for record in archives:
+            entries = record["archive"].get("timeline", [])
+            lines.append(f"## {record['chapter_id']}\n")
+            lines.append(self._wiki_object_list(entries, preferred_keys=["event", "summary", "value"], empty="No timeline entries."))
+            lines.append("")
+        return "\n".join(lines)
+
+    def _wiki_archive_character_state(self, archives: List[Dict[str, Any]]) -> str:
+        lines = ["# Character State\n"]
+        for record in archives:
+            states = record["archive"].get("character_state", [])
+            lines.append(f"## {record['chapter_id']}\n")
+            lines.append(self._wiki_object_list(states, preferred_keys=["state", "current_state", "summary", "value"], label_keys=["character_id", "character", "name"], empty="No character states."))
+            lines.append("")
+        return "\n".join(lines)
+
+    def _wiki_chapter_archive_page(self, record: Dict[str, Any]) -> str:
+        archive = record["archive"]
+        final_section = "No final manuscript found for this archive."
+        final_path = record.get("final_path")
+        if isinstance(final_path, Path) and final_path.exists():
+            final_section = self._wiki_body_text(final_path.read_text(encoding="utf-8"))
+        return f"""# {record['chapter_id']}
+
+- Source archive: `{record['source_ref']}`
+- Archive decision: `{self._wiki_inline(archive.get('archive_decision', 'unknown'))}`
+- Final word count: {self._wiki_inline(archive.get('final_word_count', 'unknown'))}
+
+## Facts
+
+{self._wiki_object_list(archive.get('facts', []), preferred_keys=['fact', 'summary', 'value'], empty='No facts archived.')}
+
+## Timeline
+
+{self._wiki_object_list(archive.get('timeline', []), preferred_keys=['event', 'summary', 'value'], empty='No timeline entries archived.')}
+
+## Foreshadowing
+
+{self._wiki_object_list(archive.get('foreshadowing', []), preferred_keys=['clue', 'item', 'description', 'id'], empty='No foreshadowing archived.')}
+
+## Character State
+
+{self._wiki_object_list(archive.get('character_state', []), preferred_keys=['state', 'current_state', 'summary', 'value'], label_keys=['character_id', 'character', 'name'], empty='No character states archived.')}
+
+## Continuity Issues
+
+{self._wiki_object_list(archive.get('continuity_issues', []), preferred_keys=['issue', 'summary', 'value'], empty='No continuity issues archived.')}
+
+## Final Manuscript
+
+{final_section}
+"""
+
+    def _wiki_object_list(
+        self,
+        items: Any,
+        *,
+        preferred_keys: List[str],
+        empty: str,
+        label_keys: Optional[List[str]] = None,
+    ) -> str:
+        if not isinstance(items, list) or not items:
+            return f"- {empty}"
+        lines = []
+        for item in items:
+            if isinstance(item, dict):
+                label = self._first_present(item, label_keys or [])
+                value = self._first_present(item, preferred_keys)
+                if value is None:
+                    value = json.dumps(item, ensure_ascii=False, sort_keys=True)
+                detail_parts = []
+                for detail_key in [
+                    "status",
+                    "risk_level",
+                    "risk",
+                    "source",
+                    "source_archive",
+                    "introduced_chapter",
+                    "introduced_in",
+                    "payoff_plan",
+                    "planned_payoff",
+                ]:
+                    if item.get(detail_key) not in (None, ""):
+                        detail_parts.append(f"{detail_key}: {self._wiki_inline(item[detail_key])}")
+                details = f" ({'; '.join(detail_parts)})" if detail_parts else ""
+                prefix = f"{self._wiki_inline(label)}: " if label is not None else ""
+                lines.append(f"- {prefix}{self._wiki_inline(value)}{details}")
+            else:
+                lines.append(f"- {self._wiki_inline(item)}")
+        return "\n".join(lines)
+
+    def _first_present(self, item: Dict[str, Any], keys: List[str]) -> Optional[Any]:
+        for key in keys:
+            value = item.get(key)
+            if value not in (None, ""):
+                return value
+        return None
+
+    def _wiki_body_text(self, value: Any) -> str:
+        text = str(value).strip()
+        if not text:
+            return "No final manuscript found for this archive."
+        return text.replace("[", "&#91;").replace("]", "&#93;")
+
+    def _wiki_inline(self, value: Any) -> str:
+        if isinstance(value, (dict, list)):
+            text = json.dumps(value, ensure_ascii=False, sort_keys=True)
+        else:
+            text = str(value)
+        return text.replace("\n", " ").replace("|", "\\|").replace("[", "&#91;").replace("]", "&#93;")
+
+    def _wiki_table_cell(self, value: Any) -> str:
+        return self._wiki_inline(value)
 
     def _global_outline(self, plan: Dict[str, Any]) -> str:
         return f"""# Global Outline

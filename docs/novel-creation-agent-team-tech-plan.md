@@ -561,6 +561,7 @@ python3 -m botmux_novel readiness --bootstrap-smoke --approval-apply-smoke --ser
 - 已新增本地 `python3 -m botmux_novel chapter`，可用已批准/已生成的 `foundation.json` 继续生产章节，用于无 BotMux 依赖的 Phase 2 smoke。
 - `chapter` 会自动读取早于当前章节的 `runs/archive-*.json`，生成 `runs/{chapter_run_id}/prior-context.json` 并注入上下文包，避免第二章以后丢失前文事实、伏笔和角色状态。
 - 已新增本地 `python3 -m botmux_novel chapter-workflow-import`，把真实 `novel-chapter-production` workflow 输出导入为本地 draft/revised/final、tracking 归档、SQLite run 记录和下一章 handoff；只有 Director 决策和 `archive_plan` 均通过时才写 final，被 block 的章节只写 blocked run artifacts。
+- `wiki-bundle` 会读取已有 `runs/archive-*.json`，把章节归档、定稿正文、聚合时间线和人物状态加入本地 llmwiki 审核包；章节知识库写入仍必须通过 `llmwiki-sync --approve` 或同等 humanGate。
 
 ### Phase 3：质量评估后再扩展
 

@@ -95,6 +95,77 @@ class NovelRuntimeTest(unittest.TestCase):
             self.assertEqual(lint_payload["status"], "passed")
             self.assertEqual(len(lint_payload["checked_files"]), 12)
 
+    def test_wiki_bundle_includes_archived_chapter_memory(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            project = Path(tmpdir) / "wiki-archive-novel"
+            runtime = NovelRuntime()
+            foundation = runtime.foundation(
+                NovelFoundationRequest(
+                    project_path=project,
+                    title="影钟旧案",
+                    inspiration="一个背负旧案污名的少年，在巡夜钟声中发现妹妹影子会说真话。",
+                )
+            )
+            runtime.chapter(
+                NovelChapterRequest(
+                    project_path=project,
+                    chapter_number=1,
+                    chapter_goal="用旧书楼残页引出主角秘密能力并埋下巡夜钟伏笔。",
+                    foundation_path=foundation.foundation_path,
+                )
+            )
+
+            result = runtime.wiki_bundle(
+                NovelWikiBundleRequest(
+                    project_path=project,
+                    project_slug="shadow-clock-case",
+                    foundation_path=foundation.foundation_path,
+                )
+            )
+
+            self.assertTrue((result.bundle_path / "chapter-archive.md").exists())
+            self.assertTrue((result.bundle_path / "timeline.md").exists())
+            self.assertTrue((result.bundle_path / "character-state.md").exists())
+            chapter_page = result.bundle_path / "chapters/ch-001.md"
+            self.assertTrue(chapter_page.exists())
+
+            chapter_index = (result.bundle_path / "chapter-index.md").read_text(encoding="utf-8")
+            self.assertIn("| ch-001 |", chapter_index)
+            self.assertIn("archived", chapter_index)
+            chapter_text = chapter_page.read_text(encoding="utf-8")
+            self.assertIn("林烬在玄衣巡使影子里看见旧案残页。", chapter_text)
+            self.assertIn("## Final Manuscript", chapter_text)
+            foreshadowing = (result.bundle_path / "foreshadowing.md").read_text(encoding="utf-8")
+            self.assertIn("巡夜钟提前响起", foreshadowing)
+
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "botmux_novel",
+                    "wiki-lint",
+                    "--workspace",
+                    str(project),
+                ],
+                check=True,
+                text=True,
+                capture_output=True,
+            )
+            lint_payload = json.loads(completed.stdout)
+            self.assertEqual(lint_payload["status"], "passed")
+            self.assertGreater(len(lint_payload["checked_files"]), 12)
+
+            (project / "runs/archive-ch-001.json").unlink()
+            rerun = runtime.wiki_bundle(
+                NovelWikiBundleRequest(
+                    project_path=project,
+                    project_slug="shadow-clock-case",
+                    foundation_path=foundation.foundation_path,
+                )
+            )
+            self.assertFalse((rerun.bundle_path / "chapter-archive.md").exists())
+            self.assertFalse((rerun.bundle_path / "chapters/ch-001.md").exists())
+
     def test_wiki_lint_fails_when_required_page_is_missing(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             project = Path(tmpdir) / "wiki-novel"

@@ -133,14 +133,15 @@ Updated: 2026-06-27
 4. 只有 Director 决策和归档计划均通过，且存在 `final_text` 时，才写入 `manuscript/final/{chapter}.md`、tracking YAML、`runs/archive-{chapter}.json`、summary、trace 和 SQLite run 记录。
 5. 若 Director 或 archive plan 阻断，写入 `runs/{run_id}/blocked-chapter-import.json` 和 blocked trace；不写 final，不更新 tracking。
 6. 成功导入后写入 `runs/{run_id}/next-chapter-command.json|md`，优先给出下一章 BotMux workflow 命令；如果导入时传入 `--foundation-json`，也给出本地 runtime 下一章命令。
-7. 不调用 llmwiki、不覆盖 wiki workspace；章节知识库更新仍需要后续单独 gated sync。
+7. 不调用 llmwiki、不覆盖 wiki workspace；章节知识库更新由后续 `wiki-bundle` 自动收集 `runs/archive-*.json`，再通过 gated `llmwiki-sync` 写入。
 
 ### Wiki Bundle
 
 1. `NovelRuntime.wiki_bundle` 读取显式 `foundation.json`，或使用项目中最新的 `runs/foundation-*/foundation.json`。
 2. 运行 schema 必填字段校验。
 3. 写入本地 `wiki/novels/{project_slug}/` Markdown 页面包。
-4. 不调用 llmwiki、不创建远端页面、不覆盖外部知识库。
+4. 当项目存在 `runs/archive-*.json` 时，额外输出 `chapter-archive.md`、`timeline.md`、`character-state.md` 和 `chapters/{chapter}.md`，章节页包含归档事实、时间线、伏笔、人物状态、连续性问题和本地定稿正文。
+5. 不调用 llmwiki、不创建远端页面、不覆盖外部知识库。
 
 ### llmwiki Sync
 

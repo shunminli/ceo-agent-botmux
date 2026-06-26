@@ -131,7 +131,7 @@ python3 -m botmux_novel readiness --bootstrap-smoke --workflow-import-smoke --ch
 - `wiki-lint` JSON：本地 wiki Markdown 结构 lint 结果，包含 checked files 和 issues。
 - `llmwiki-mcp-config` JSON：项目级 MCP server 片段、Codex TOML、角色绑定策略和 humanGate 规则。
 - `runs/{series_run_id}/series-metrics.json`：`series` 子命令生成的连续章节质量指标。
-- `wiki/novels/{project_slug}/*.md`：`wiki-bundle` 子命令生成的本地 llmwiki 写入前审核包。
+- `wiki/novels/{project_slug}/*.md`：`wiki-bundle` 子命令生成的本地 llmwiki 写入前审核包；有章节归档时还包含 `chapter-archive.md`、`timeline.md`、`character-state.md` 和 `chapters/{chapter}.md`。
 - `workflows/*.workflow.json`：版本化的 BotMux 三 bot 协作模板，测试会校验输出契约、人类门禁和本机安装副本一致性。
 - `schemas/approval-package.schema.json`：审批包必填字段和基础类型契约，覆盖项目元数据、审核材料、humanGate 命令、llmwiki preview、MCP 策略和下一步命令。
 - `~/.botmux/workspace/{Novel-*}/AGENTS.md`：由 `botmux-assets --write` 从仓库身份文档生成的运行态 workspace 指令。
@@ -148,7 +148,7 @@ python3 -m botmux_novel readiness --bootstrap-smoke --workflow-import-smoke --ch
 - `approval-apply` 默认只重新生成同步计划；它会先按 `approval-package.schema.json` 校验审批包，只有传 `--approve` 才会按审批包写入 llmwiki workspace，并默认运行 `llmwiki reindex` 与写后 lint。若审批包已记录 `request_changes` 或 `reject`，会拒绝写入；若未记录 `approve` 但命令显式 `--approve`，会保留 warning 说明这是命令级 humanGate 信号。
 - `chapter` 从本地 `foundation.json` 继续生产章节，不重新规划 Story Bible；未传 `--chapter-goal` 时自动使用 `foundation.json` 的 `chapter_goal.objective`，自动读取早于当前章节的 `runs/archive-*.json` 作为连续性上下文，并在完成后生成下一章 handoff 命令。
 - `chapter-workflow-import` 读取已完成的 `novel-chapter-production` workflow JSON 结果，校验七个节点输出契约，只有 Director 决策和 archive plan 均通过时才写入本地 final、tracking、archive 和下一章 handoff；被 block 的章节只写 blocked run artifacts，不写 final，不写 llmwiki。
-- `wiki-bundle` 只读取本地 `foundation.json` 并写项目内 Markdown bundle，不调用 llmwiki。
+- `wiki-bundle` 读取本地 `foundation.json` 并写项目内 Markdown bundle；若存在 `runs/archive-*.json`，会把章节定稿、事实、时间线、伏笔和人物状态纳入章节归档页与聚合页。该命令不调用 llmwiki。
 - `llmwiki-sync` 默认只生成计划；只有传 `--approve` 才把审核包复制到 llmwiki workspace。传 `--lint` 后优先运行 `llmwiki lint <workspace>`；若当前 llmwiki CLI 不支持 `lint` 子命令，则自动运行本地 `wiki-lint` fallback；若 lint 检查失败则同步结果为 `failed`。它不安装 llmwiki，不调用 MCP 写工具。
 - `llmwiki-mcp-config` 只生成配置片段和角色绑定策略，不写 `~/.codex/config.toml`，默认只建议 Director 和 Validator 接入 llmwiki MCP。
 - `series` 默认连续生成 5 章、导出 wiki bundle，并统计 P0/P1、修订轮次、归档完整率和 prior context 覆盖率。

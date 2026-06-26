@@ -102,7 +102,7 @@ python3 -m botmux_novel chapter-workflow-import \
   --foundation-json /path/to/novel-project/runs/<foundation-run-id>/foundation.json
 ```
 
-该命令只写本地 `manuscript/`、`tracking/`、`runs/archive-{chapter}.json`、trace 和下一章 handoff；不写 llmwiki。章节知识库更新仍需要后续单独走 `wiki-bundle`、`llmwiki-sync` 或其他 humanGate-approved sync。
+该命令只写本地 `manuscript/`、`tracking/`、`runs/archive-{chapter}.json`、trace 和下一章 handoff；不写 llmwiki。后续再次运行 `wiki-bundle` 时会自动把已有 `runs/archive-*.json`、定稿正文、事实、时间线、伏笔和人物状态纳入本地审核包；真正写入仍需要 `llmwiki-sync --approve` 或其他 humanGate-approved sync。
 
 手动拆步流程如下：
 
@@ -122,6 +122,8 @@ python3 -m botmux_novel wiki-bundle \
   --project /path/to/novel-project \
   --project-slug shadow-clock-case
 ```
+
+如果项目已有章节归档，审核包会额外包含 `chapter-archive.md`、`timeline.md`、`character-state.md` 和 `chapters/{chapter}.md`。
 
 3. 人工审核 `wiki/novels/shadow-clock-case/` 下的 Markdown 页面。
 
