@@ -137,6 +137,28 @@ class DoubaoCliTest(unittest.TestCase):
         self.assertEqual(payload["status"], "completed")
         self.assertIn("--remote-debugging-port=9225", payload["stdout"])
 
+    def test_launch_relaunch_dry_run_prints_quit_then_cdp_command(self) -> None:
+        completed = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "botmux_doubao",
+                "launch",
+                "--dry-run",
+                "--relaunch",
+                "--json",
+            ],
+            check=True,
+            text=True,
+            capture_output=True,
+        )
+
+        payload = json.loads(completed.stdout)
+        self.assertEqual(payload["status"], "completed")
+        self.assertTrue(payload["diagnostics"]["relaunch"])
+        self.assertIn("osascript", payload["stdout"])
+        self.assertIn("--remote-debugging-port=9225", payload["stdout"])
+
     def _write_fake_runner(self, path: Path) -> Path:
         path.write_text(
             textwrap.dedent(

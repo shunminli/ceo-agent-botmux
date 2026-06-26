@@ -6,6 +6,11 @@ Updated: 2026-06-26
 
 用户可以通过 CLI 输入小说标题和一句灵感，系统会在本地项目目录中生成首章创作工作区，并完成章纲、上下文包、草稿、审稿、修订、定稿、状态归档和运行记录。
 
+BotMux 全局 workflow 也已提供 3 bot 协作入口：
+
+- `/Users/xiaochen/.botmux/workflows/novel-story-foundation.workflow.json`
+- `/Users/xiaochen/.botmux/workflows/novel-chapter-production.workflow.json`
+
 ## 触发方式
 
 ```bash
@@ -18,6 +23,13 @@ python3 -m botmux_novel run \
   --project /tmp/novel-demo \
   --title 影钟旧案 \
   --inspiration "一个背负旧案污名的少年，在巡夜钟声中发现妹妹影子会说真话。"
+
+/Users/xiaochen/.botmux/bin/botmux workflow run novel-chapter-production \
+  --param projectSlug=shadow-clock-case \
+  --param title=影钟旧案 \
+  --param storyBible="已批准的 Story Bible 或 foundation handoff" \
+  --param chapterNumber=1 \
+  --param chapterGoal=用旧书楼残页引出主角秘密能力并埋下巡夜钟伏笔
 ```
 
 ## 主要产物
@@ -35,6 +47,7 @@ python3 -m botmux_novel run \
 
 - 默认执行 `lean` 模式。
 - `foundation` 只生成开书设定资产，不写 `manuscript/draft|revised|final`。
+- `novel-chapter-production` 只输出章节定稿候选包和归档计划，不直接写项目文件或 llmwiki。
 - 质量门禁区分 `pass`、`revise` 和 `block`。
 - P0/P1 硬约束或上下文缺失会阻断定稿。
 - P2 文风问题会触发编辑 Agent 修订，并由一致性 Agent 复核。

@@ -51,6 +51,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="Path to the Doubao desktop executable.",
     )
     launch_parser.add_argument("--dry-run", action="store_true", help="Print the launch command without running it.")
+    launch_parser.add_argument(
+        "--relaunch",
+        action="store_true",
+        help="Quit an existing Doubao app instance before launching with the CDP port.",
+    )
     launch_parser.add_argument("--json", action="store_true", help="Print machine-readable JSON.")
 
     return parser
@@ -112,6 +117,7 @@ def main(argv: Optional[list[str]] = None) -> int:
                 port=args.port,
                 app_binary=Path(args.app_binary).expanduser(),
                 dry_run=args.dry_run,
+                relaunch=args.relaunch,
             )
             return _emit(result, args.json)
     except ValueError as exc:

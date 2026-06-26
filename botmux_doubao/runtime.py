@@ -4,6 +4,7 @@ import os
 import shlex
 import shutil
 import subprocess
+import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Sequence
@@ -159,19 +160,25 @@ class DoubaoRuntime:
         port: int = 9225,
         app_binary: Path = DEFAULT_DOUBAO_APP_BINARY,
         dry_run: bool = False,
+        relaunch: bool = False,
     ) -> DoubaoResult:
         command = [str(app_binary), f"--remote-debugging-port={port}"]
+        quit_command = ["osascript", "-e", 'tell application "Doubao" to quit']
         diagnostics = {
             "app_binary": str(app_binary),
             "app_binary_exists": app_binary.exists(),
             "cdp_endpoint": f"http://127.0.0.1:{port}",
+            "relaunch": relaunch,
         }
         if dry_run:
+            stdout = shlex.join(command)
+            if relaunch:
+                stdout = f"{shlex.join(quit_command)} && {stdout}"
             return DoubaoResult(
                 status="completed",
                 provider=PROVIDER_OPENCLI_APP,
                 command="launch",
-                stdout=shlex.join(command),
+                stdout=stdout,
                 diagnostics=diagnostics,
                 setup_hints=[] if app_binary.exists() else ["Install Doubao Desktop or pass --app-binary."],
             )
@@ -186,6 +193,11 @@ class DoubaoRuntime:
                     "After launch, export OPENCLI_CDP_ENDPOINT=http://127.0.0.1:9225 for OpenCLI.",
                 ],
             )
+        if relaunch:
+            quit_result = subprocess.run(quit_command, text=True, capture_output=True, check=False)
+            diagnostics["quit_returncode"] = quit_result.returncode
+            diagnostics["quit_stderr"] = quit_result.stderr.strip()
+            self._wait_for_desktop_exit(app_binary)
         process = subprocess.Popen(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         diagnostics["pid"] = process.pid
         return DoubaoResult(
@@ -196,6 +208,15 @@ class DoubaoRuntime:
             diagnostics=diagnostics,
             setup_hints=[f"export OPENCLI_CDP_ENDPOINT=http://127.0.0.1:{port}"],
         )
+
+    def _wait_for_desktop_exit(self, app_binary: Path, timeout_seconds: float = 10.0) -> None:
+        deadline = time.time() + timeout_seconds
+        pattern = str(app_binary)
+        while time.time() < deadline:
+            running = subprocess.run(["pgrep", "-f", pattern], text=True, capture_output=True, check=False)
+            if running.returncode != 0:
+                return
+            time.sleep(0.25)
 
     def _run_command(
         self,

@@ -237,6 +237,41 @@ stateDiagram-v2
 | `Approve` | `Novel-Director-Curator` | 定稿批准或升级问题。 |
 | `Archive` | `Novel-Director-Curator` | 事实快照、人物状态、伏笔、时间线、run trace、wiki sync plan。 |
 
+已落地到本机 BotMux 全局 workflow：
+
+```bash
+/Users/xiaochen/.botmux/bin/botmux workflow validate \
+  /Users/xiaochen/.botmux/workflows/novel-chapter-production.workflow.json
+```
+
+校验结果：`workflow valid: novel-chapter-production (version=1, nodes=7)`。
+
+节点设计：
+
+| 节点 id | Bot | 产物 | 依赖 | Gate |
+| --- | --- | --- | --- | --- |
+| `chapter_prepare` | `Novel-Director-Curator` | 章节上下文包、硬约束、归档目标 | - | - |
+| `chapter_blueprint` | `Novel-Creative-Architect` | 章节蓝图、场景卡、情绪曲线、结尾钩子 | `chapter_prepare` | - |
+| `chapter_draft` | `Novel-Creative-Architect` | 正文草稿、创作说明、新增事实候选 | `chapter_prepare`, `chapter_blueprint` | - |
+| `continuity_review` | `Novel-Continuity-Validator` | Gate 0-5 审查、P0/P1/P2/P3、修复建议 | `chapter_prepare`, `chapter_blueprint`, `chapter_draft` | 阻断项 |
+| `chapter_revision` | `Novel-Creative-Architect` | 修订稿、diff、未解决问题 | `chapter_prepare`, `chapter_draft`, `continuity_review` | P0/P1 不能强行通过 |
+| `director_approval_package` | `Novel-Director-Curator` | 章节定稿候选包、审批说明、剩余风险 | `chapter_prepare`, `chapter_blueprint`, `continuity_review`, `chapter_revision` | 必须确认 |
+| `archive_plan` | `Novel-Director-Curator` | 事实、时间线、伏笔、角色状态、wiki sync plan | `director_approval_package`, `continuity_review` | 写入前必须 |
+
+启动示例：
+
+```bash
+/Users/xiaochen/.botmux/bin/botmux workflow run novel-chapter-production \
+  --param projectSlug=shadow-clock-case \
+  --param title=影钟旧案 \
+  --param storyBible="已批准的 Story Bible 或 foundation handoff" \
+  --param chapterNumber=1 \
+  --param chapterGoal=用旧书楼残页引出主角秘密能力并埋下巡夜钟伏笔 \
+  --param priorContext=无 \
+  --param wordTarget=1200 \
+  --param mode=lean
+```
+
 ## 9. 项目工作区与数据模型
 
 开书和章节生产都复用当前本地运行时的文件制项目结构：
@@ -392,7 +427,7 @@ novel-project/
 3. 写 repo、写 llmwiki、发飞书消息、覆盖设定、删除页面必须加 `humanGate`。
 4. 每个节点设置 `outputSchema`，至少约束 `preview`、`handoff`、`data`、`risks`。
 5. workflow 文件写入 `$HOME/.botmux/workflows/<workflowId>.workflow.json`，写后跑 `botmux workflow validate`。
-6. 当前已生成 `novel-story-foundation.workflow.json`，并使用本地三个小说 bot 的 `larkAppId` 通过 validate。
+6. 当前已生成 `novel-story-foundation.workflow.json` 和 `novel-chapter-production.workflow.json`，并使用本地三个小说 bot 的 `larkAppId` 通过 validate。
 
 ## 14. 与现有 P0 运行时对齐
 
@@ -441,9 +476,10 @@ python3 -m botmux_novel run \
 
 ### Phase 2：章节生产 workflow
 
-- 把 Story Bible 输出喂给现有 `botmux_novel` 或新的 BotMux 写章 workflow。
-- 章节生产继续使用同一 3 bot 组织。
-- 每章结束写 run trace 和状态回写。
+- 已生成 `/Users/xiaochen/.botmux/workflows/novel-chapter-production.workflow.json`。
+- 参数只保留标量：`projectSlug`、`title`、`storyBible`、`chapterNumber`、`chapterGoal`、`priorContext`、`wordTarget`、`mode`。
+- 章节生产继续使用同一 3 bot 组织，并在 `director_approval_package` 前 humanGate。
+- workflow 只输出章节定稿候选包和 `archive_plan`，不直接写项目文件或 llmwiki；写入动作后续必须单独 gated。
 
 ### Phase 3：质量评估后再扩展
 
@@ -477,5 +513,5 @@ python3 -m botmux_novel run \
 
 1. 用真实项目参数运行 `novel-story-foundation`，产出首个 Story Bible 候选包。
 2. 在 `story_bible_package` 的 humanGate 审批关键人设、关系、剧情走势和场景设定。
-3. 根据 `wiki_sync_plan` 决定是否创建单独的 gated llmwiki 写入 workflow。
-4. 把批准后的 Story Bible 输入章节生产 workflow 或现有 `botmux_novel` 运行时。
+3. 把批准后的 Story Bible 输入 `novel-chapter-production` 或现有 `botmux_novel run`。
+4. 根据 `wiki_sync_plan` / `archive_plan` 决定是否创建单独的 gated llmwiki 写入 workflow。
