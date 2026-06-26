@@ -8,7 +8,7 @@ import unittest
 from pathlib import Path
 
 from botmux_novel import NovelApprovalCheckRequest, NovelApprovalPackageChecker, NovelBootstrapper, NovelBootstrapRequest
-from botmux_novel.schema_validation import missing_required_fields
+from botmux_novel.schema_validation import missing_required_fields, schema_validation_errors
 
 
 class NovelBootstrapTest(unittest.TestCase):
@@ -31,6 +31,59 @@ class NovelBootstrapTest(unittest.TestCase):
         self.assertIn("human_gate.approval_apply_command", missing)
         self.assertIn("llmwiki.preview.pages", missing)
         self.assertIn("next_actions.chapter_start_command", missing)
+
+    def test_approval_package_schema_reports_type_errors(self) -> None:
+        errors = schema_validation_errors(
+            "approval-package",
+            {
+                "run_id": "bootstrap-test",
+                "status": "ready_for_human_review",
+                "project": {
+                    "title": "影钟旧案",
+                    "project_slug": "shadow-clock-case",
+                    "project_path": "/tmp/project",
+                    "llmwiki_workspace_path": "/tmp/workspace",
+                },
+                "review_materials": {
+                    "foundation_json": "/tmp/project/foundation.json",
+                    "story_markdown": "/tmp/project/story.md",
+                    "wiki_bundle": "/tmp/project/wiki/novels/shadow-clock-case",
+                    "llmwiki_sync_plan": "/tmp/project/runs/sync.json",
+                    "mcp_server_name": "llmwiki-novel-shadow-clock-case",
+                },
+                "human_gate": {
+                    "decision": "approve|request_changes|reject",
+                    "must_review": [],
+                    "approved_write_command": [],
+                    "approval_decision_command": [],
+                    "approval_apply_command": "python3 -m botmux_novel approval-apply",
+                },
+                "llmwiki": {
+                    "sync_status": "planned",
+                    "approved": "false",
+                    "preview": {
+                        "target_namespace": "/wiki/novels/shadow-clock-case/",
+                        "page_count": 12,
+                        "pages": [],
+                        "action_summary": {},
+                    },
+                    "mcp_config": {
+                        "status": "ready",
+                        "project_slug": "shadow-clock-case",
+                        "workspace_path": "/tmp/workspace",
+                        "server_name": "llmwiki-novel-shadow-clock-case",
+                        "role_bindings": [],
+                        "human_gate_policy": {},
+                    },
+                    "warnings": [],
+                },
+                "next_actions": {"chapter_start_command": []},
+                "next_steps": [],
+            },
+        )
+
+        self.assertIn("human_gate.approval_apply_command expected array", errors)
+        self.assertIn("llmwiki.approved expected boolean", errors)
 
     def test_bootstrap_creates_approval_package_without_llmwiki_writes(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -242,6 +295,44 @@ class NovelBootstrapTest(unittest.TestCase):
             self.assertEqual(checks["package_json"].status, "fail")
             self.assertIn(
                 "Missing required field: human_gate.approval_apply_command",
+                checks["package_json"].data["errors"],
+            )
+
+    def test_approval_check_blocks_wrong_command_type(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            project = root / "novel-project"
+            workspace = root / "llmwiki-workspace"
+            fake_llmwiki = root / "llmwiki"
+            fake_llmwiki.write_text("#!/bin/sh\necho planned \"$@\"\n", encoding="utf-8")
+            fake_llmwiki.chmod(0o755)
+
+            result = NovelBootstrapper().bootstrap(
+                NovelBootstrapRequest(
+                    project_path=project,
+                    title="影钟旧案",
+                    inspiration="少年在旧书楼发现父亲旧案残页。",
+                    project_slug="shadow-clock-case",
+                    workspace_path=workspace,
+                    llmwiki_bin=str(fake_llmwiki),
+                )
+            )
+            package = json.loads(result.approval_package_json_path.read_text(encoding="utf-8"))
+            package["human_gate"]["approval_apply_command"] = "python3 -m botmux_novel approval-apply"
+            result.approval_package_json_path.write_text(
+                json.dumps(package, ensure_ascii=False, indent=2) + "\n",
+                encoding="utf-8",
+            )
+
+            check = NovelApprovalPackageChecker().check(
+                NovelApprovalCheckRequest(approval_package_path=result.approval_package_json_path)
+            )
+
+            self.assertEqual(check.status, "blocked")
+            checks = {item.name: item for item in check.checks}
+            self.assertEqual(checks["package_json"].status, "fail")
+            self.assertIn(
+                "human_gate.approval_apply_command expected array",
                 checks["package_json"].data["errors"],
             )
 

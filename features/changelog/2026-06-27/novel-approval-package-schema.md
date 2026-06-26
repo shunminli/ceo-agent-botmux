@@ -13,4 +13,4 @@ Added `schemas/approval-package.schema.json` and recursive required-field valida
 - `llmwiki.mcp_config.role_bindings`
 - `next_actions.chapter_start_command`
 
-The schema is intentionally dependency-free and currently enforces the repository's stable `required` contracts. Semantic checks still verify command wiring, file existence, MCP role boundaries, planned llmwiki state, and optional dry-run/chapter smoke behavior.
+The schema is intentionally dependency-free. It now enforces the repository's stable `required` contracts and basic JSON types. Semantic checks still verify command wiring, file existence, MCP role boundaries, planned llmwiki state, and optional dry-run/chapter smoke behavior.

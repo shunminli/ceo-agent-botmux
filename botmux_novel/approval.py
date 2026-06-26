@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from .schema_validation import validate_required
+from .schema_validation import validate_schema
 from .workspace import utc_now
 from .llmwiki_sync import (
     LlmwikiCommandResult,
@@ -209,7 +209,7 @@ def load_approval_package(path: Path) -> Dict[str, Any]:
     if not path.exists():
         raise ValueError(f"approval package does not exist: {path}")
     payload = json.loads(path.read_text(encoding="utf-8"))
-    validate_required("approval-package", payload)
+    validate_schema("approval-package", payload)
     if payload.get("status") != "ready_for_human_review":
         raise ValueError("approval package status must be ready_for_human_review")
     project = payload.get("project")

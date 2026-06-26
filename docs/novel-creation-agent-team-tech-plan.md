@@ -341,7 +341,7 @@ novel-project/
 | `scene-setting.schema.json` | 地点、组织、世界规则、场景功能、禁用冲突。 |
 | `foreshadowing-ledger.schema.json` | 伏笔、埋设章节、回收计划、风险等级。 |
 | `style-profile.schema.json` | 文风规则、句式偏好、禁用表达、正反例。 |
-| `approval-package.schema.json` | `novel-bootstrap` 审批包、审核材料、humanGate 命令、llmwiki preview、MCP 策略和下一步命令。 |
+| `approval-package.schema.json` | `novel-bootstrap` 审批包、审核材料、humanGate 命令、llmwiki preview、MCP 策略和下一步命令的必填字段及基础类型。 |
 
 ## 10. llmwiki 集成
 
@@ -462,7 +462,7 @@ BotMux CLI 的离线 `workflow run --bot-resolver echo` 不能作为小说 workf
 - `NovelRuntime.chapter` 从已有 `foundation.json` 继续生产章节，避免重新规划已批准 Story Bible。
 - `NovelSeriesRunner` 可连续生成默认 5 章样例并输出 Phase 3 质量指标，当前 20 章稳定性基线已通过。
 - `NovelReadinessChecker` 可检查 BotMux 资产、三个小说 bot 配置、workflow validate、workflow 模板绑定、workflow 合成契约 smoke、llmwiki 可用性、可选 bootstrap smoke、approval apply smoke、series smoke 和可选 approved llmwiki sync smoke。
-- `NovelApprovalPackageChecker` 可只读校验 `novel-bootstrap` 审批包，先用 `approval-package.schema.json` 做必填字段路径校验，再检查审核材料、humanGate 命令、llmwiki 预览、MCP 角色策略和首章启动命令；可选 dry-run 验证 `approval-apply` 不执行 approved writes。
+- `NovelApprovalPackageChecker` 可只读校验 `novel-bootstrap` 审批包，先用 `approval-package.schema.json` 做必填字段路径和基础类型校验，再检查审核材料、humanGate 命令、llmwiki 预览、MCP 角色策略和首章启动命令；可选 dry-run 验证 `approval-apply` 不执行 approved writes。
 - 本地工作区输出 `project.yaml`、`story.md`、`settings/*`、`characters/*`、`outline/*`、`tracking/*`、`runs/*`。
 - `python3 -m botmux_novel botmux-assets` 同步仓库 workflow 模板和三个小说 bot workspace `AGENTS.md`。
 - 测试覆盖首章闭环、真实 CLI 入口和门禁阻断。
@@ -542,7 +542,7 @@ python3 -m botmux_novel readiness --bootstrap-smoke --approval-apply-smoke --ser
 - 首次只做预览，不自动写 llmwiki。
 - 已新增本地 `python3 -m botmux_novel foundation`，只生成开书设定资产、foundation trace 和 SQLite run 记录，不进入正文草稿。
 - 已新增本地 `python3 -m botmux_novel novel-bootstrap`，一键生成开书设定、项目内 wiki 审核包、llmwiki dry-run sync plan、MCP 配置和 human approval package；该命令不执行 approved sync、不覆盖外部 llmwiki workspace。
-- `novel-bootstrap` 写入审批包前会按 `approval-package.schema.json` 校验必填字段；`approval-decision` 和 `approval-apply` 消费审批包时也会执行同一校验，避免畸形审批包绕过 `approval-check`。
+- `novel-bootstrap` 写入审批包前会按 `approval-package.schema.json` 校验必填字段和基础类型；`approval-decision` 和 `approval-apply` 消费审批包时也会执行同一校验，避免畸形审批包绕过 `approval-check`。
 - 本地 P0 runtime 已能写出关系图、场景设定、文风档案和带 id/status 的伏笔台账，作为 Story Bible 后续落库的数据契约基础。
 - 已新增本地 `python3 -m botmux_novel wiki-bundle`，把 foundation JSON 导出为 `/wiki/novels/{project_slug}/` Markdown 页面包；该命令不调用 llmwiki，只作为写入前审核材料。
 - 已新增本地 `python3 -m botmux_novel llmwiki-sync`，默认生成同步计划，传 `--approve` 后把审核包写入本地 llmwiki workspace，并可选 `--reindex` 和 `--lint`；当前 llmwiki CLI 不支持 lint 时自动运行本地 `wiki-lint` fallback，lint 返回非 0 时同步结果为 `failed`。

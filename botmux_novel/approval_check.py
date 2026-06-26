@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 from .approval import NovelApprovalApplier, NovelApprovalApplyRequest
-from .schema_validation import missing_required_fields
+from .schema_validation import schema_validation_errors
 
 
 @dataclass(frozen=True)
@@ -96,7 +96,7 @@ def load_package_payload(path: Path) -> Tuple[Optional[Dict[str, Any]], Approval
             data={"path": str(path)},
         )
 
-    errors = [f"Missing required field: {field}" for field in missing_required_fields("approval-package", payload)]
+    errors = schema_validation_errors("approval-package", payload)
     if payload.get("status") != "ready_for_human_review":
         errors.append("Package status must be ready_for_human_review.")
     markdown_path = path.with_suffix(".md")

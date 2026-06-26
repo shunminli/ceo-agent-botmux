@@ -10,7 +10,7 @@ from typing import Any, Dict, List, Optional
 from .llmwiki_sync import LlmwikiSyncRequest, LlmwikiSyncResult, LlmwikiSyncer
 from .mcp_config import NovelLlmwikiMcpConfigBuilder, NovelLlmwikiMcpConfigRequest, NovelLlmwikiMcpConfigResult
 from .runtime import NovelFoundationRequest, NovelFoundationResult, NovelRuntime, NovelWikiBundleResult, NovelWikiBundleRequest
-from .schema_validation import validate_required
+from .schema_validation import validate_schema
 from .workspace import utc_now
 
 
@@ -158,7 +158,7 @@ class NovelBootstrapper:
             "--foundation-json",
             str(foundation.foundation_path),
         ]
-        validate_required("approval-package", payload)
+        validate_schema("approval-package", payload)
         approval_package_json_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
         approval_package_path.write_text(render_approval_markdown(payload), encoding="utf-8")
 
