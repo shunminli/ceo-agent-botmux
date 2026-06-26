@@ -1,5 +1,11 @@
 """Local novel creation agent runtime."""
 
+from .botmux_assets import (
+    BotmuxAssetAction,
+    BotmuxAssetSyncRequest,
+    BotmuxAssetSyncResult,
+    BotmuxAssetSyncer,
+)
 from .runtime import (
     NovelFoundationRequest,
     NovelFoundationResult,
@@ -11,6 +17,10 @@ from .runtime import (
 )
 
 __all__ = [
+    "BotmuxAssetAction",
+    "BotmuxAssetSyncRequest",
+    "BotmuxAssetSyncResult",
+    "BotmuxAssetSyncer",
     "NovelFoundationRequest",
     "NovelFoundationResult",
     "NovelRunRequest",

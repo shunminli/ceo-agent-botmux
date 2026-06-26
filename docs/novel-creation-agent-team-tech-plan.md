@@ -438,6 +438,7 @@ novel-project/
 4. 每个节点设置 `outputSchema`，至少约束 `preview`、`handoff`、`data`、`risks`。
 5. workflow 文件写入 `$HOME/.botmux/workflows/<workflowId>.workflow.json`，写后跑 `botmux workflow validate`。
 6. 当前已生成 `novel-story-foundation.workflow.json` 和 `novel-chapter-production.workflow.json`，并使用本地三个小说 bot 的 `larkAppId` 通过 validate。
+7. 仓库和本机 BotMux 运行资产用 `python3 -m botmux_novel botmux-assets --write` 同步；默认不带 `--write` 时只做 dry-run。
 
 ## 14. 与现有 P0 运行时对齐
 
@@ -445,6 +446,7 @@ novel-project/
 
 - `NovelRuntime.run` 串行执行 Intake、Plan、RetrieveContext、Generate、Review、Revise、Approve、Archive。
 - 本地工作区输出 `project.yaml`、`story.md`、`settings/*`、`characters/*`、`outline/*`、`tracking/*`、`runs/*`。
+- `python3 -m botmux_novel botmux-assets` 同步仓库 workflow 模板和三个小说 bot workspace `AGENTS.md`。
 - 测试覆盖首章闭环、真实 CLI 入口和门禁阻断。
 
 当前 P0 入口：
@@ -463,6 +465,7 @@ python3 -m botmux_novel run \
 | 开书设定 workflow | 已落地为仓库 workflow 模板和本机 BotMux 全局 workflow，并提供本地 `python3 -m botmux_novel foundation` 子命令 | BotMux 用于多 bot 协作和 humanGate，本地 CLI 用于无外部依赖的开书资产 smoke。 |
 | 人物关系 / 场景 / 伏笔 / 文风 schema | 已落地为独立 schema，并由本地 runtime 写出结构化产物 | 后续接入真实模型时保持字段契约稳定。 |
 | llmwiki sync | 已有本地 `wiki-bundle` 导出和 [llmwiki 接入 runbook](novel-llmwiki-setup.md)，真实 llmwiki 写入仍未接入 | 先人工审核本地 Markdown bundle，后续封装 gated llmwiki write adapter。 |
+| BotMux 资产同步 | 已落地 `python3 -m botmux_novel botmux-assets`，可同步 workflow 模板和三个小说 bot 的 workspace `AGENTS.md` | 后续改身份文档或 workflow 后先 dry-run，再 `--write` 更新本机 BotMux 环境。 |
 
 ## 15. 实施路线图
 
@@ -472,7 +475,7 @@ python3 -m botmux_novel run \
 - 给 `Novel-Director-Curator` 配 llmwiki MCP。
 - 给 `Novel-Continuity-Validator` 配 llmwiki 只读能力。
 - 已提供 `botmux_doubao` 本地包装层，可作为 `Novel-Creative-Architect` 的可选 Creative Assist Tool；真实调用仍依赖用户本机已安装并登录 OpenCLI / doubao-cli runner，Codex 仍需能独立完成创作节点。
-- 已把输出契约写入每个 bot 的身份提示词，并同步到本仓库 `agents/*.identity.md`。
+- 已把输出契约写入每个 bot 的身份提示词，并同步到本仓库 `agents/*.identity.md`；本机 BotMux workspace `AGENTS.md` 可由 `botmux-assets --write` 重新生成。
 - 准备小说项目 llmwiki workspace 和 `/wiki/novels/` 页面结构。
 
 ### Phase 1：开书设定 workflow

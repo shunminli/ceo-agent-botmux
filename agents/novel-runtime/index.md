@@ -9,6 +9,7 @@ Updated: 2026-06-26
 - 提供 CLI 入口 `python -m botmux_novel run`。
 - 提供开书资产入口 `python -m botmux_novel foundation`，不生成正文。
 - 提供本地 wiki 审核包入口 `python -m botmux_novel wiki-bundle`，不调用 llmwiki。
+- 提供 BotMux 资产同步入口 `python -m botmux_novel botmux-assets`，用于同步 workflow 模板和三个小说 bot 的 workspace `AGENTS.md`。
 - 配套版本化 BotMux workflow：`workflows/novel-story-foundation.workflow.json` 和 `workflows/novel-chapter-production.workflow.json`，用于三 bot 协作、humanGate 和归档计划。
 - 在本地小说项目目录中创建方案文档约定的文件工作区。
 - 串行编排 6 个 MVP Agent：总导演、章纲、正文写手、编辑、一致性检查、归档记忆。
@@ -22,6 +23,7 @@ Updated: 2026-06-26
 - 输出是本地 Markdown/YAML/JSON/SQLite 文件，不涉及生产发布、云同步或多用户权限。
 - `wiki-bundle` 写本地 `wiki/novels/{project_slug}/` Markdown 页面包，用于人工审核或后续 gated llmwiki 写入。
 - BotMux workflow 只生成候选包和计划；项目文件或 llmwiki 写入必须走单独 gated 节点或人工确认。
+- `botmux-assets` 默认 dry-run；只有传 `--write` 才会写入 `~/.botmux`，覆盖已有 workspace `AGENTS.md` 前会保留 `.bak-<timestamp>` 备份。
 
 ## 主流程
 
@@ -53,6 +55,13 @@ Updated: 2026-06-26
 3. 写入本地 `wiki/novels/{project_slug}/` Markdown 页面包。
 4. 不调用 llmwiki、不创建远端页面、不覆盖外部知识库。
 
+### BotMux Assets
+
+1. `python -m botmux_novel botmux-assets` 比较仓库模板和本机 BotMux 资产，不写文件。
+2. `python -m botmux_novel botmux-assets --write` 同步 `workflows/*.workflow.json` 到 `~/.botmux/workflows/`。
+3. 同步三个小说 bot 的 `~/.botmux/workspace/{bot}/AGENTS.md`，内容由仓库 `agents/*.identity.md` 加 BotMux workspace 说明和开发闭环原则生成。
+4. 已存在且内容不同的 workspace 文件会先备份为 `AGENTS.md.bak-<timestamp>`。
+
 ## 数据模型
 
 - `relationship-map.schema.json`：约束 `characters/relationships.json`，包含人物关系边、关系类型、压力和秘密。
@@ -66,6 +75,8 @@ Updated: 2026-06-26
 - `botmux_novel/agents.py`：确定性 MVP Agent 行为。
 - `botmux_novel/workspace.py`：文件工作区、YAML 渲染和 SQLite 记录。
 - `botmux_novel/cli.py`：命令行入口。
+- `botmux_novel/botmux_assets.py`：BotMux workflow 和 workspace AGENTS 同步。
+- `tests/test_botmux_assets.py`：BotMux 资产 dry-run、写入、CLI 和本机 workspace 同步测试。
 - `tests/test_novel_runtime.py`：端到端验证和门禁阻断测试。
 - `tests/test_novel_workflows.py`：workflow 模板、bot id、humanGate 和本机安装副本一致性测试。
 - `docs/novel-llmwiki-setup.md`：llmwiki 本地 workspace、MCP 权限和 humanGate 接入 runbook。

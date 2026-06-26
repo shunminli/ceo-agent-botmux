@@ -47,6 +47,8 @@ python3 -m botmux_novel run \
 BotMux workflow 模板已纳入仓库，并同步安装到本机 BotMux 全局目录：
 
 ```bash
+python3 -m botmux_novel botmux-assets
+python3 -m botmux_novel botmux-assets --write
 /Users/xiaochen/.botmux/bin/botmux workflow validate workflows/novel-story-foundation.workflow.json
 /Users/xiaochen/.botmux/bin/botmux workflow validate workflows/novel-chapter-production.workflow.json
 ```
