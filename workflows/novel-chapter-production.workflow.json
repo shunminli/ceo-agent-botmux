@@ -1,0 +1,387 @@
+{
+  "workflowId": "novel-chapter-production",
+  "version": 1,
+  "params": {
+    "projectSlug": {
+      "type": "string",
+      "required": true,
+      "description": "Stable project identifier, for example shadow-clock-case."
+    },
+    "title": {
+      "type": "string",
+      "required": true,
+      "description": "Novel working title."
+    },
+    "storyBible": {
+      "type": "string",
+      "required": true,
+      "description": "Approved Story Bible or compressed foundation handoff text."
+    },
+    "chapterNumber": {
+      "type": "number",
+      "required": true,
+      "description": "Chapter number to produce."
+    },
+    "chapterGoal": {
+      "type": "string",
+      "required": true,
+      "description": "Chapter objective, required scenes, and reader promise."
+    },
+    "priorContext": {
+      "type": "string",
+      "required": false,
+      "default": "无",
+      "description": "Prior chapter facts, character state, timeline, foreshadowing, and user feedback."
+    },
+    "wordTarget": {
+      "type": "number",
+      "required": false,
+      "default": 1200,
+      "description": "Target chapter length."
+    },
+    "mode": {
+      "type": "string",
+      "required": false,
+      "default": "lean",
+      "description": "lean or full. lean keeps the workflow concise; full asks for deeper revision notes."
+    }
+  },
+  "defaults": {
+    "retryPolicy": {
+      "maxAttempts": 1,
+      "backoff": "fixed",
+      "baseMs": 1000
+    },
+    "timeoutMs": 1200000,
+    "maxOutputBytes": 131072
+  },
+  "nodes": {
+    "chapter_prepare": {
+      "type": "subagent",
+      "bot": "cli_aab42d6152f89be8",
+      "prompt": "你是 Novel-Director-Curator。为小说章节生产准备上下文包，不写正文，不写入项目文件或 llmwiki。\n\n项目：${params.projectSlug}；题名：${params.title}；章节：${params.chapterNumber}；目标字数：${params.wordTarget}；模式：${params.mode}\n\n已批准 Story Bible：${params.storyBible}\n\n本章目标：${params.chapterGoal}\n\n前文上下文：${params.priorContext}\n\n目标：整理本章可执行上下文包，包含本章目标、必须包含、禁用事项、视角/文风约束、已确认事实、角色状态、时间线、伏笔和需要检索/归档的 wiki_refs。不要写正文，不执行外部写入。\n\n输出必须只包含 JSON，字段：preview(string)、handoff(string, 给下游节点的完整上下文包文本)、data(object, 包含 story_bible_summary/chapter_brief/context_refs/hard_constraints/style_rules/archive_targets)、open_questions(array)、risks(array)、wiki_refs(array)、change_declarations(array)。",
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "preview",
+          "handoff",
+          "data",
+          "open_questions",
+          "risks",
+          "wiki_refs",
+          "change_declarations"
+        ],
+        "properties": {
+          "preview": {
+            "type": "string"
+          },
+          "handoff": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object"
+          },
+          "open_questions": {
+            "type": "array"
+          },
+          "risks": {
+            "type": "array"
+          },
+          "wiki_refs": {
+            "type": "array"
+          },
+          "change_declarations": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": true
+      },
+      "description": "Director prepares the chapter context package from the approved Story Bible and prior state."
+    },
+    "chapter_blueprint": {
+      "type": "subagent",
+      "bot": "cli_aab42e1c87385bfc",
+      "depends": [
+        "chapter_prepare"
+      ],
+      "prompt": "你是 Novel-Creative-Architect。基于导演上下文包生成本章蓝图和场景卡，不写正文，不写入项目文件或 llmwiki。\n\n上下文包：${chapter_prepare.output.handoff}\n\n要求：给出章节目标、场景列表、每场冲突、信息反转、情绪曲线、结尾钩子、必须出现信息、禁用事项和潜在豆包 Creative Assist 使用建议。若建议使用豆包 CLI，只写用途和候选方向，不实际调用外部工具。\n\n输出必须只包含 JSON，字段：preview(string)、handoff(string, 给正文草稿节点的完整章纲文本)、data(object, 包含 chapter_id/title/objective/scenes/emotion_curve/must_include/forbidden/doubao_assist_plan)、open_questions(array)、risks(array)、wiki_refs(array)、change_declarations(array)。",
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "preview",
+          "handoff",
+          "data",
+          "open_questions",
+          "risks",
+          "wiki_refs",
+          "change_declarations"
+        ],
+        "properties": {
+          "preview": {
+            "type": "string"
+          },
+          "handoff": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object"
+          },
+          "open_questions": {
+            "type": "array"
+          },
+          "risks": {
+            "type": "array"
+          },
+          "wiki_refs": {
+            "type": "array"
+          },
+          "change_declarations": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": true
+      },
+      "description": "Creative Architect turns context into a writable chapter blueprint."
+    },
+    "chapter_draft": {
+      "type": "subagent",
+      "bot": "cli_aab42e1c87385bfc",
+      "depends": [
+        "chapter_prepare",
+        "chapter_blueprint"
+      ],
+      "prompt": "你是 Novel-Creative-Architect。基于上下文包和章纲生成本章正文草稿。不要写入项目文件或 llmwiki；只返回草稿和创作说明。\n\n上下文包：${chapter_prepare.output.handoff}\n\n章纲：${chapter_blueprint.output.handoff}\n\n目标字数：${params.wordTarget}\n\n要求：遵守硬约束和禁用事项；每个场景必须有动作、冲突、信息推进和情绪变化；不要把候选设定写成已确认事实；如需新增事实，必须进入 change_declarations 并标注 proposed。\n\n输出必须只包含 JSON，字段：preview(string, 草稿摘要和风险)、handoff(string, 完整草稿文本和创作说明)、data(object, 包含 draft_text/author_notes/used_context/new_facts/proposed_changes)、open_questions(array)、risks(array)、wiki_refs(array)、change_declarations(array)。",
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "preview",
+          "handoff",
+          "data",
+          "open_questions",
+          "risks",
+          "wiki_refs",
+          "change_declarations"
+        ],
+        "properties": {
+          "preview": {
+            "type": "string"
+          },
+          "handoff": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object"
+          },
+          "open_questions": {
+            "type": "array"
+          },
+          "risks": {
+            "type": "array"
+          },
+          "wiki_refs": {
+            "type": "array"
+          },
+          "change_declarations": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": true
+      },
+      "description": "Creative Architect drafts the chapter while keeping all output in workflow memory."
+    },
+    "continuity_review": {
+      "type": "subagent",
+      "bot": "cli_aab42e443bf89bde",
+      "depends": [
+        "chapter_prepare",
+        "chapter_blueprint",
+        "chapter_draft"
+      ],
+      "prompt": "你是 Novel-Continuity-Validator。审查本章草稿的输入完整性、硬约束、人物状态、时间线、地点、道具、世界规则、伏笔、因果、节奏和文风。不要直接改写正文，不写入项目文件或 llmwiki。\n\n上下文包：${chapter_prepare.output.handoff}\n\n章纲：${chapter_blueprint.output.handoff}\n\n草稿：${chapter_draft.output.handoff}\n\n要求：P0/P1 必须阻断；P2 给出可执行修订建议；P3 记录优化建议。检查豆包候选或 proposed 设定是否造成事实漂移。\n\n输出必须只包含 JSON，字段：preview(string)、handoff(string, 给修订节点的审查报告)、data(object, 包含 decision(pass|revise|block)/issues/gate_results/required_fixes/optional_suggestions/archive_checks)、open_questions(array)、risks(array)、wiki_refs(array)、change_declarations(array)。",
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "preview",
+          "handoff",
+          "data",
+          "open_questions",
+          "risks",
+          "wiki_refs",
+          "change_declarations"
+        ],
+        "properties": {
+          "preview": {
+            "type": "string"
+          },
+          "handoff": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object"
+          },
+          "open_questions": {
+            "type": "array"
+          },
+          "risks": {
+            "type": "array"
+          },
+          "wiki_refs": {
+            "type": "array"
+          },
+          "change_declarations": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": true
+      },
+      "description": "Validator independently reviews the draft before revision or approval."
+    },
+    "chapter_revision": {
+      "type": "subagent",
+      "bot": "cli_aab42e1c87385bfc",
+      "depends": [
+        "chapter_prepare",
+        "chapter_draft",
+        "continuity_review"
+      ],
+      "prompt": "你是 Novel-Creative-Architect。根据连续性审查结果修订本章草稿。不要写入项目文件或 llmwiki。\n\n上下文包：${chapter_prepare.output.handoff}\n\n原草稿：${chapter_draft.output.handoff}\n\n审查报告：${continuity_review.output.handoff}\n\n要求：若审查 decision=pass，则只做最小整理并说明未改事实；若 revise，则修复 P2 和可修复问题；若 block，则不要强行通过，输出阻断摘要和需要用户/总导演决策的问题。任何事实变化必须进入 change_declarations。\n\n输出必须只包含 JSON，字段：preview(string)、handoff(string, 修订稿或阻断摘要)、data(object, 包含 revised_text/diff_notes/resolved_issues/unresolved_issues/fact_changes)、open_questions(array)、risks(array)、wiki_refs(array)、change_declarations(array)。",
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "preview",
+          "handoff",
+          "data",
+          "open_questions",
+          "risks",
+          "wiki_refs",
+          "change_declarations"
+        ],
+        "properties": {
+          "preview": {
+            "type": "string"
+          },
+          "handoff": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object"
+          },
+          "open_questions": {
+            "type": "array"
+          },
+          "risks": {
+            "type": "array"
+          },
+          "wiki_refs": {
+            "type": "array"
+          },
+          "change_declarations": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": true
+      },
+      "description": "Creative Architect revises after validation without bypassing P0/P1 blockers."
+    },
+    "director_approval_package": {
+      "type": "subagent",
+      "bot": "cli_aab42d6152f89be8",
+      "depends": [
+        "chapter_prepare",
+        "chapter_blueprint",
+        "continuity_review",
+        "chapter_revision"
+      ],
+      "humanGate": {
+        "stage": "before",
+        "prompt": "请审批章节候选稿。本节点通过后只会生成章节定稿包和归档计划，不写入项目文件或 llmwiki。\n\n修订摘要：${chapter_revision.output.preview}\n\n验证摘要：${continuity_review.output.preview}",
+        "deadlineMs": 86400000,
+        "onTimeout": "fail"
+      },
+      "prompt": "你是 Novel-Director-Curator。把上下文包、章纲、审查报告和修订稿汇总为章节定稿候选包。不要写入项目文件或 llmwiki。\n\n上下文包：${chapter_prepare.output.handoff}\n\n章纲：${chapter_blueprint.output.handoff}\n\n审查报告：${continuity_review.output.handoff}\n\n修订稿：${chapter_revision.output.handoff}\n\n要求：判断是否可进入归档计划；如果仍有 P0/P1 或用户拍板项，明确 block；否则输出 final_text、审批说明、变更声明和剩余风险。\n\n输出必须只包含 JSON，字段：preview(string)、handoff(string, 给归档计划节点的完整章节定稿包)、data(object, 包含 decision(pass|block)/final_text/approval_notes/change_summary/residual_risks)、open_questions(array)、risks(array)、wiki_refs(array)、change_declarations(array)。",
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "preview",
+          "handoff",
+          "data",
+          "open_questions",
+          "risks",
+          "wiki_refs",
+          "change_declarations"
+        ],
+        "properties": {
+          "preview": {
+            "type": "string"
+          },
+          "handoff": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object"
+          },
+          "open_questions": {
+            "type": "array"
+          },
+          "risks": {
+            "type": "array"
+          },
+          "wiki_refs": {
+            "type": "array"
+          },
+          "change_declarations": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": true
+      },
+      "description": "Director packages the approved chapter candidate after human review."
+    },
+    "archive_plan": {
+      "type": "subagent",
+      "bot": "cli_aab42d6152f89be8",
+      "depends": [
+        "director_approval_package",
+        "continuity_review"
+      ],
+      "prompt": "你是 Novel-Director-Curator。基于章节定稿候选包生成归档和 llmwiki 同步计划。只输出计划，不写项目文件，不写 llmwiki。\n\n章节定稿包：${director_approval_package.output.handoff}\n\n验证报告：${continuity_review.output.handoff}\n\n目标：提取事实快照、角色状态变化、时间线事件、伏笔新增/兑现/变更、连续性问题、风格反馈、wiki 页面更新顺序、人工确认点和回滚策略。若章节被 block，只输出阻断归档和重跑建议。\n\n输出必须只包含 JSON，字段：preview(string)、handoff(string, 可交给后续写入 workflow 或人工操作的归档计划)、data(object, 包含 archive_decision/facts/timeline/foreshadowing/character_state/continuity_issues/style_feedback/wiki_sync_plan/rollback_plan)、open_questions(array)、risks(array)、wiki_refs(array)、change_declarations(array)。",
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "preview",
+          "handoff",
+          "data",
+          "open_questions",
+          "risks",
+          "wiki_refs",
+          "change_declarations"
+        ],
+        "properties": {
+          "preview": {
+            "type": "string"
+          },
+          "handoff": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object"
+          },
+          "open_questions": {
+            "type": "array"
+          },
+          "risks": {
+            "type": "array"
+          },
+          "wiki_refs": {
+            "type": "array"
+          },
+          "change_declarations": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": true
+      },
+      "description": "Director converts the approved chapter package into a safe archive/wiki sync plan."
+    }
+  }
+}

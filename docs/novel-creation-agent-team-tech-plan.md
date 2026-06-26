@@ -187,11 +187,14 @@ flowchart LR
 | `story_bible_package` | `Novel-Director-Curator` | Story Bible、角色表、关系图、剧情走势、场景设定、伏笔表 | `foundation_revision` | 必须确认 |
 | `wiki_sync_plan` | `Novel-Director-Curator` | llmwiki 写入计划、页面清单、覆盖风险 | `story_bible_package` | 写入前必须 |
 
-已落地到本机 BotMux 全局 workflow：
+已落地为仓库模板并安装到本机 BotMux 全局 workflow：
+
+- `workflows/novel-story-foundation.workflow.json`
+- `/Users/xiaochen/.botmux/workflows/novel-story-foundation.workflow.json`
 
 ```bash
 /Users/xiaochen/.botmux/bin/botmux workflow validate \
-  /Users/xiaochen/.botmux/workflows/novel-story-foundation.workflow.json
+  workflows/novel-story-foundation.workflow.json
 ```
 
 校验结果：`workflow valid: novel-story-foundation (version=1, nodes=7)`。
@@ -237,11 +240,14 @@ stateDiagram-v2
 | `Approve` | `Novel-Director-Curator` | 定稿批准或升级问题。 |
 | `Archive` | `Novel-Director-Curator` | 事实快照、人物状态、伏笔、时间线、run trace、wiki sync plan。 |
 
-已落地到本机 BotMux 全局 workflow：
+已落地为仓库模板并安装到本机 BotMux 全局 workflow：
+
+- `workflows/novel-chapter-production.workflow.json`
+- `/Users/xiaochen/.botmux/workflows/novel-chapter-production.workflow.json`
 
 ```bash
 /Users/xiaochen/.botmux/bin/botmux workflow validate \
-  /Users/xiaochen/.botmux/workflows/novel-chapter-production.workflow.json
+  workflows/novel-chapter-production.workflow.json
 ```
 
 校验结果：`workflow valid: novel-chapter-production (version=1, nodes=7)`。
@@ -453,7 +459,7 @@ python3 -m botmux_novel run \
 
 | 需求 | 当前状态 | 建议 |
 | --- | --- | --- |
-| 开书设定 workflow | 已落地为 BotMux workflow，并提供本地 `python3 -m botmux_novel foundation` 子命令 | BotMux 用于多 bot 协作和 humanGate，本地 CLI 用于无外部依赖的开书资产 smoke。 |
+| 开书设定 workflow | 已落地为仓库 workflow 模板和本机 BotMux 全局 workflow，并提供本地 `python3 -m botmux_novel foundation` 子命令 | BotMux 用于多 bot 协作和 humanGate，本地 CLI 用于无外部依赖的开书资产 smoke。 |
 | 人物关系 / 场景 / 伏笔 / 文风 schema | 已落地为独立 schema，并由本地 runtime 写出结构化产物 | 后续接入真实模型时保持字段契约稳定。 |
 | llmwiki sync | 已有本地 `wiki-bundle` 导出，真实 llmwiki 写入仍未接入 | 先人工审核本地 Markdown bundle，后续封装 gated llmwiki write adapter。 |
 
@@ -470,7 +476,7 @@ python3 -m botmux_novel run \
 
 ### Phase 1：开书设定 workflow
 
-- 已生成 `/Users/xiaochen/.botmux/workflows/novel-story-foundation.workflow.json`。
+- 已生成 `workflows/novel-story-foundation.workflow.json`，并同步安装到 `/Users/xiaochen/.botmux/workflows/novel-story-foundation.workflow.json`。
 - 参数只保留标量：`projectSlug`、`title`、`inspiration`、`genre`、`targetLength`、`mode`。
 - 输出 Story Bible、角色、关系、剧情走势、场景设定和 wiki sync plan。
 - 首次只做预览，不自动写 llmwiki。
@@ -480,7 +486,7 @@ python3 -m botmux_novel run \
 
 ### Phase 2：章节生产 workflow
 
-- 已生成 `/Users/xiaochen/.botmux/workflows/novel-chapter-production.workflow.json`。
+- 已生成 `workflows/novel-chapter-production.workflow.json`，并同步安装到 `/Users/xiaochen/.botmux/workflows/novel-chapter-production.workflow.json`。
 - 参数只保留标量：`projectSlug`、`title`、`storyBible`、`chapterNumber`、`chapterGoal`、`priorContext`、`wordTarget`、`mode`。
 - 章节生产继续使用同一 3 bot 组织，并在 `director_approval_package` 前 humanGate。
 - workflow 只输出章节定稿候选包和 `archive_plan`，不直接写项目文件或 llmwiki；写入动作后续必须单独 gated。

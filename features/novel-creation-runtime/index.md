@@ -6,8 +6,10 @@ Updated: 2026-06-26
 
 用户可以通过 CLI 输入小说标题和一句灵感，系统会在本地项目目录中生成首章创作工作区，并完成章纲、上下文包、草稿、审稿、修订、定稿、状态归档和运行记录。
 
-BotMux 全局 workflow 也已提供 3 bot 协作入口：
+BotMux workflow 已提供 3 bot 协作入口；仓库模板与本机全局安装副本保持一致：
 
+- `workflows/novel-story-foundation.workflow.json`
+- `workflows/novel-chapter-production.workflow.json`
 - `/Users/xiaochen/.botmux/workflows/novel-story-foundation.workflow.json`
 - `/Users/xiaochen/.botmux/workflows/novel-chapter-production.workflow.json`
 
@@ -47,6 +49,7 @@ python3 -m botmux_novel run \
 - `runs/{run_id}/trace.json` 和 `runs/runs.sqlite`：可观察 run 记录和可查询索引。
 - `runs/{foundation_run_id}/foundation.json`：`foundation` 子命令生成的开书设定包。
 - `wiki/novels/{project_slug}/*.md`：`wiki-bundle` 子命令生成的本地 llmwiki 写入前审核包。
+- `workflows/*.workflow.json`：版本化的 BotMux 三 bot 协作模板，测试会校验输出契约、人类门禁和本机安装副本一致性。
 
 ## 规则与状态
 

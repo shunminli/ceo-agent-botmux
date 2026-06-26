@@ -20,6 +20,8 @@ An AI agent team built with BotMux to coordinate coding agents through chat.
 - [Doubao CLI 逻辑记忆](agents/doubao-cli/index.md)
 - [Novel Creation Runtime 功能记忆](features/novel-creation-runtime/index.md)
 - [Doubao Creative Assist CLI 功能记忆](features/doubao-cli/index.md)
+- [Novel Story Foundation Workflow](workflows/novel-story-foundation.workflow.json)
+- [Novel Chapter Production Workflow](workflows/novel-chapter-production.workflow.json)
 
 ## Local Novel Runtime
 
@@ -39,6 +41,13 @@ python3 -m botmux_novel run \
   --project /tmp/novel-demo \
   --title 影钟旧案 \
   --inspiration "一个背负旧案污名的少年，在巡夜钟声中发现妹妹影子会说真话。"
+```
+
+BotMux workflow 模板已纳入仓库，并同步安装到本机 BotMux 全局目录：
+
+```bash
+/Users/xiaochen/.botmux/bin/botmux workflow validate workflows/novel-story-foundation.workflow.json
+/Users/xiaochen/.botmux/bin/botmux workflow validate workflows/novel-chapter-production.workflow.json
 ```
 
 验证入口：

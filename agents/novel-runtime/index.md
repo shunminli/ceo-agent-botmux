@@ -9,7 +9,7 @@ Updated: 2026-06-26
 - 提供 CLI 入口 `python -m botmux_novel run`。
 - 提供开书资产入口 `python -m botmux_novel foundation`，不生成正文。
 - 提供本地 wiki 审核包入口 `python -m botmux_novel wiki-bundle`，不调用 llmwiki。
-- 配套 BotMux workflow：`novel-story-foundation` 和 `novel-chapter-production`，用于三 bot 协作、humanGate 和归档计划。
+- 配套版本化 BotMux workflow：`workflows/novel-story-foundation.workflow.json` 和 `workflows/novel-chapter-production.workflow.json`，用于三 bot 协作、humanGate 和归档计划。
 - 在本地小说项目目录中创建方案文档约定的文件工作区。
 - 串行编排 6 个 MVP Agent：总导演、章纲、正文写手、编辑、一致性检查、归档记忆。
 - 产出关系图、场景设定、文风档案和伏笔台账，给后续 Story Bible / llmwiki 同步使用。
@@ -67,8 +67,10 @@ Updated: 2026-06-26
 - `botmux_novel/workspace.py`：文件工作区、YAML 渲染和 SQLite 记录。
 - `botmux_novel/cli.py`：命令行入口。
 - `tests/test_novel_runtime.py`：端到端验证和门禁阻断测试。
+- `tests/test_novel_workflows.py`：workflow 模板、bot id、humanGate 和本机安装副本一致性测试。
 
 ## BotMux Workflow
 
 - `novel-story-foundation`：开书设定、Story Bible 候选和 wiki sync plan。
 - `novel-chapter-production`：章节上下文、蓝图、草稿、验证、修订、定稿候选和 archive plan。
+- 仓库模板保存在 `workflows/`；本机运行副本保存在 `/Users/xiaochen/.botmux/workflows/`。

@@ -1,0 +1,376 @@
+{
+  "workflowId": "novel-story-foundation",
+  "version": 1,
+  "params": {
+    "projectSlug": {
+      "type": "string",
+      "required": true,
+      "description": "Stable project identifier, for example shadow-clock-case."
+    },
+    "title": {
+      "type": "string",
+      "required": true,
+      "description": "Novel working title."
+    },
+    "inspiration": {
+      "type": "string",
+      "required": true,
+      "description": "Raw premise, reference direction, or seed brief from the user."
+    },
+    "genre": {
+      "type": "string",
+      "required": false,
+      "default": "未指定",
+      "description": "Genre or shelf positioning."
+    },
+    "targetLength": {
+      "type": "string",
+      "required": false,
+      "default": "长篇",
+      "description": "Expected length or serialization scale."
+    },
+    "mode": {
+      "type": "string",
+      "required": false,
+      "default": "lean",
+      "description": "lean or full. lean keeps the foundation compact; full expands relationships and scene bible depth."
+    }
+  },
+  "defaults": {
+    "retryPolicy": {
+      "maxAttempts": 1,
+      "backoff": "fixed",
+      "baseMs": 1000
+    },
+    "timeoutMs": 900000,
+    "maxOutputBytes": 65536
+  },
+  "nodes": {
+    "intake_brief": {
+      "type": "subagent",
+      "bot": "cli_aab42d6152f89be8",
+      "prompt": "你是 Novel-Director-Curator。为小说项目建立开书需求 brief，不创作正文。项目：${params.projectSlug}；题名：${params.title}；类型：${params.genre}；篇幅：${params.targetLength}；模式：${params.mode}；用户灵感：${params.inspiration}\n\n目标：把用户灵感整理成可交给团队开发的开书简报，明确题材承诺、目标读者、叙事边界、不可碰红线、缺口问题和后续节点输入。不要写入 llmwiki，不调用外部写接口。\n\n输出必须只包含 JSON，字段：preview(string, 给人看的 8-15 行摘要)、handoff(string, 给下游节点的完整文本输入，只能是字符串)、data(object, 结构化简报)、open_questions(array)、risks(array)、wiki_refs(array)、change_declarations(array)。",
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "preview",
+          "handoff",
+          "data",
+          "open_questions",
+          "risks",
+          "wiki_refs",
+          "change_declarations"
+        ],
+        "properties": {
+          "preview": {
+            "type": "string"
+          },
+          "handoff": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object"
+          },
+          "open_questions": {
+            "type": "array"
+          },
+          "risks": {
+            "type": "array"
+          },
+          "wiki_refs": {
+            "type": "array"
+          },
+          "change_declarations": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": true
+      },
+      "description": "Director owns intake and defines the shared creative contract before specialist generation starts."
+    },
+    "context_scan": {
+      "type": "subagent",
+      "bot": "cli_aab42d6152f89be8",
+      "depends": [
+        "intake_brief"
+      ],
+      "prompt": "你是 Novel-Director-Curator。基于开书简报做项目上下文扫描和 llmwiki 使用计划，但不要写入任何外部系统。\n\n上游简报：${intake_brief.output.handoff}\n\n目标：识别本项目需要沉淀到知识库的对象类型、命名规范、目录结构、检索标签和后续同步策略；如本地没有已有 wiki 内容，就输出待创建计划；如果需要调用 llmwiki，也仅说明命令/对象设计，不实际执行。\n\n输出必须只包含 JSON，字段：preview(string)、handoff(string)、data(object, 包含 namespace_plan/entity_types/file_or_page_plan/index_strategy)、open_questions(array)、risks(array)、wiki_refs(array)、change_declarations(array)。",
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "preview",
+          "handoff",
+          "data",
+          "open_questions",
+          "risks",
+          "wiki_refs",
+          "change_declarations"
+        ],
+        "properties": {
+          "preview": {
+            "type": "string"
+          },
+          "handoff": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object"
+          },
+          "open_questions": {
+            "type": "array"
+          },
+          "risks": {
+            "type": "array"
+          },
+          "wiki_refs": {
+            "type": "array"
+          },
+          "change_declarations": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": true
+      },
+      "description": "Director prepares continuity storage semantics without producing side effects."
+    },
+    "creative_foundation": {
+      "type": "subagent",
+      "bot": "cli_aab42e1c87385bfc",
+      "depends": [
+        "intake_brief",
+        "context_scan"
+      ],
+      "prompt": "你是 Novel-Creative-Architect。基于导演简报和知识库计划，开发小说的人物设定、关键剧情走势、人物关系、场景设定和核心戏剧引擎。不要写正文，不写入 llmwiki。\n\n导演简报：${intake_brief.output.handoff}\n\n知识库计划：${context_scan.output.handoff}\n\n要求：保留 2-3 个可选创意分支，但必须给出推荐方案；角色要有欲望、秘密、误判、关系压力和可持续冲突；关键剧情走势要覆盖开局钩子、第一转折、中段反转、低谷、终局压力；场景设定要能制造情节，不只是背景说明。如需要豆包 CLI 进行口味备选，可在 data.doubao_assist_plan 中写出建议，但本节点不要执行外部工具。\n\n输出必须只包含 JSON，字段：preview(string)、handoff(string, 给校验和修订节点的完整设定包)、data(object, 包含 characters/key_plot_beats/relationships/settings/theme_engine/options/recommendation)、open_questions(array)、risks(array)、wiki_refs(array)、change_declarations(array)。",
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "preview",
+          "handoff",
+          "data",
+          "open_questions",
+          "risks",
+          "wiki_refs",
+          "change_declarations"
+        ],
+        "properties": {
+          "preview": {
+            "type": "string"
+          },
+          "handoff": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object"
+          },
+          "open_questions": {
+            "type": "array"
+          },
+          "risks": {
+            "type": "array"
+          },
+          "wiki_refs": {
+            "type": "array"
+          },
+          "change_declarations": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": true
+      },
+      "description": "Creative Architect produces the first integrated story foundation from the approved role design."
+    },
+    "continuity_review": {
+      "type": "subagent",
+      "bot": "cli_aab42e443bf89bde",
+      "depends": [
+        "creative_foundation",
+        "context_scan"
+      ],
+      "prompt": "你是 Novel-Continuity-Validator。审查创意设定包的连续性、因果链、人物动机、时间线、关系图、场景规则和知识库可追踪性。不要重写成品，不写正文，不写入 llmwiki。\n\n创意设定包：${creative_foundation.output.handoff}\n\n知识库计划：${context_scan.output.handoff}\n\n目标：找出硬性矛盾、弱因果、动机不闭合、角色功能重复、场景规则不可执行、伏笔无回收路径、后续写作容易遗忘的事实。给出优先级和最小修复建议。\n\n输出必须只包含 JSON，字段：preview(string)、handoff(string, 给修订节点的审查意见)、data(object, 包含 blocking_issues/important_issues/minor_issues/timeline_checks/relationship_checks/wiki_tracking_checks/recommended_fixes)、open_questions(array)、risks(array)、wiki_refs(array)、change_declarations(array)。",
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "preview",
+          "handoff",
+          "data",
+          "open_questions",
+          "risks",
+          "wiki_refs",
+          "change_declarations"
+        ],
+        "properties": {
+          "preview": {
+            "type": "string"
+          },
+          "handoff": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object"
+          },
+          "open_questions": {
+            "type": "array"
+          },
+          "risks": {
+            "type": "array"
+          },
+          "wiki_refs": {
+            "type": "array"
+          },
+          "change_declarations": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": true
+      },
+      "description": "Validator gates the foundation before the creative role consolidates it."
+    },
+    "foundation_revision": {
+      "type": "subagent",
+      "bot": "cli_aab42e1c87385bfc",
+      "depends": [
+        "creative_foundation",
+        "continuity_review",
+        "context_scan"
+      ],
+      "prompt": "你是 Novel-Creative-Architect。根据连续性审查结果修订设定包，保留创意张力，同时修复硬矛盾和弱因果。不要写正文，不写入 llmwiki。\n\n原始设定包：${creative_foundation.output.handoff}\n\n审查意见：${continuity_review.output.handoff}\n\n知识库计划：${context_scan.output.handoff}\n\n要求：明确采纳/拒绝每条关键审查意见及理由；输出一个可进入 Story Bible 汇总的修订版；对未解决问题标注为 open_questions，不能假装解决。\n\n输出必须只包含 JSON，字段：preview(string)、handoff(string, 修订后的完整设定包)、data(object, 包含 revised_characters/revised_plot_beats/revised_relationships/revised_settings/adopted_fixes/rejected_fixes/unresolved_questions/wiki_entity_drafts)、open_questions(array)、risks(array)、wiki_refs(array)、change_declarations(array)。",
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "preview",
+          "handoff",
+          "data",
+          "open_questions",
+          "risks",
+          "wiki_refs",
+          "change_declarations"
+        ],
+        "properties": {
+          "preview": {
+            "type": "string"
+          },
+          "handoff": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object"
+          },
+          "open_questions": {
+            "type": "array"
+          },
+          "risks": {
+            "type": "array"
+          },
+          "wiki_refs": {
+            "type": "array"
+          },
+          "change_declarations": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": true
+      },
+      "description": "Creative Architect owns the creative revision after validation, keeping the team minimal."
+    },
+    "story_bible_package": {
+      "type": "subagent",
+      "bot": "cli_aab42d6152f89be8",
+      "depends": [
+        "intake_brief",
+        "context_scan",
+        "foundation_revision",
+        "continuity_review"
+      ],
+      "humanGate": {
+        "stage": "before",
+        "prompt": "请审批小说开书设定包候选。本节点通过后只会汇总 Story Bible 草案，不写入 llmwiki 或外部系统。\n\n修订摘要：${foundation_revision.output.preview}\n\n连续性审查摘要：${continuity_review.output.preview}",
+        "deadlineMs": 86400000,
+        "onTimeout": "fail"
+      },
+      "prompt": "你是 Novel-Director-Curator。把修订后的设定包、连续性审查和知识库计划汇总为可供人类确认的 Story Bible 草案。不要写正文，不写入 llmwiki。\n\n开书简报：${intake_brief.output.handoff}\n\n知识库计划：${context_scan.output.handoff}\n\n修订设定包：${foundation_revision.output.handoff}\n\n连续性审查：${continuity_review.output.handoff}\n\n输出必须只包含 JSON，字段：preview(string, 给用户的最终摘要)、handoff(string, 给 wiki_sync_plan 的完整 Story Bible 文本)、data(object, 包含 story_promise/characters/plot_arc/relationships/settings/rules/timeline/open_threads/wiki_entities/approval_notes)、open_questions(array)、risks(array)、wiki_refs(array)、change_declarations(array)。",
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "preview",
+          "handoff",
+          "data",
+          "open_questions",
+          "risks",
+          "wiki_refs",
+          "change_declarations"
+        ],
+        "properties": {
+          "preview": {
+            "type": "string"
+          },
+          "handoff": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object"
+          },
+          "open_questions": {
+            "type": "array"
+          },
+          "risks": {
+            "type": "array"
+          },
+          "wiki_refs": {
+            "type": "array"
+          },
+          "change_declarations": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": true
+      },
+      "description": "Director performs the final editorial packaging after human approval of the foundation candidate."
+    },
+    "wiki_sync_plan": {
+      "type": "subagent",
+      "bot": "cli_aab42d6152f89be8",
+      "depends": [
+        "story_bible_package",
+        "context_scan"
+      ],
+      "prompt": "你是 Novel-Director-Curator。基于 Story Bible 草案和上下文计划，生成后续 llmwiki 同步计划；只输出计划，不执行写入。\n\nStory Bible：${story_bible_package.output.handoff}\n\n上下文计划：${context_scan.output.handoff}\n\n目标：列出应创建或更新的 wiki 页面/实体、字段、双向链接、命名、标签、写入顺序、人工确认点和回滚策略。不要写入任何文件或外部系统。\n\n输出必须只包含 JSON，字段：preview(string)、handoff(string, 可交给后续执行 workflow 或人工操作的计划)、data(object, 包含 write_plan/entities/pages/links/order/validation_checks/rollback_plan)、open_questions(array)、risks(array)、wiki_refs(array)、change_declarations(array)。",
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "preview",
+          "handoff",
+          "data",
+          "open_questions",
+          "risks",
+          "wiki_refs",
+          "change_declarations"
+        ],
+        "properties": {
+          "preview": {
+            "type": "string"
+          },
+          "handoff": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object"
+          },
+          "open_questions": {
+            "type": "array"
+          },
+          "risks": {
+            "type": "array"
+          },
+          "wiki_refs": {
+            "type": "array"
+          },
+          "change_declarations": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": true
+      },
+      "description": "Director turns the approved Story Bible draft into a safe llmwiki synchronization plan without side effects."
+    }
+  }
+}
