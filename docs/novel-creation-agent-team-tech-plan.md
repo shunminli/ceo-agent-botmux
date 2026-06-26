@@ -415,7 +415,7 @@ python3 -m botmux_novel run \
 
 | 需求 | 当前状态 | 建议 |
 | --- | --- | --- |
-| 开书设定 workflow | 已落地为 BotMux workflow，尚未抽出本地 CLI 子命令 | 先用 `novel-story-foundation` 作为开书入口，后续按需新增 `foundation` CLI 子命令。 |
+| 开书设定 workflow | 已落地为 BotMux workflow，并提供本地 `python3 -m botmux_novel foundation` 子命令 | BotMux 用于多 bot 协作和 humanGate，本地 CLI 用于无外部依赖的开书资产 smoke。 |
 | 人物关系 / 场景 / 伏笔 / 文风 schema | 已落地为独立 schema，并由本地 runtime 写出结构化产物 | 后续接入真实模型时保持字段契约稳定。 |
 | llmwiki sync | 未集成 | 先用 bot workflow 处理，后续封装 adapter。 |
 
@@ -436,6 +436,7 @@ python3 -m botmux_novel run \
 - 参数只保留标量：`projectSlug`、`title`、`inspiration`、`genre`、`targetLength`、`mode`。
 - 输出 Story Bible、角色、关系、剧情走势、场景设定和 wiki sync plan。
 - 首次只做预览，不自动写 llmwiki。
+- 已新增本地 `python3 -m botmux_novel foundation`，只生成开书设定资产、foundation trace 和 SQLite run 记录，不进入正文草稿。
 - 本地 P0 runtime 已能写出关系图、场景设定、文风档案和带 id/status 的伏笔台账，作为 Story Bible 后续落库的数据契约基础。
 
 ### Phase 2：章节生产 workflow

@@ -8,11 +8,37 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from botmux_novel import NovelRunRequest, NovelRuntime
+from botmux_novel import NovelFoundationRequest, NovelRunRequest, NovelRuntime
 from botmux_novel.agents import BlueprintAgent, ConsistencyAgent, ContextPackBuilder, DirectorAgent
 
 
 class NovelRuntimeTest(unittest.TestCase):
+    def test_foundation_creates_opening_assets_without_manuscript(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            project = Path(tmpdir) / "foundation-novel"
+            result = NovelRuntime().foundation(
+                NovelFoundationRequest(
+                    project_path=project,
+                    title="影钟旧案",
+                    inspiration="一个背负旧案污名的少年，在巡夜钟声中发现妹妹影子会说真话。",
+                )
+            )
+
+            self.assertEqual(result.status, "completed")
+            self.assertTrue((project / "story.md").exists())
+            self.assertTrue((project / "characters/relationships.json").exists())
+            self.assertTrue((project / "settings/scenes.json").exists())
+            self.assertTrue((project / "settings/style-profile.json").exists())
+            self.assertTrue(result.foundation_path.exists())
+            self.assertTrue(result.trace_path.exists())
+            self.assertTrue(result.sqlite_path.exists())
+            self.assertFalse((project / "manuscript/draft/ch-001.md").exists())
+            self.assertFalse((project / "manuscript/final/ch-001.md").exists())
+
+            trace = json.loads(result.trace_path.read_text(encoding="utf-8"))
+            self.assertEqual(trace["status"], "completed")
+            self.assertEqual([step["stage"] for step in trace["steps"]], ["Foundation"])
+
     def test_runtime_creates_full_chapter_workspace_and_trace(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             project = Path(tmpdir) / "demo-novel"
@@ -101,6 +127,32 @@ class NovelRuntimeTest(unittest.TestCase):
             self.assertEqual(payload["status"], "completed")
             self.assertTrue(Path(payload["final_path"]).exists())
             self.assertTrue(Path(payload["trace_path"]).exists())
+
+    def test_cli_foundation_uses_real_entrypoint(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            project = Path(tmpdir) / "cli-foundation"
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "botmux_novel",
+                    "foundation",
+                    "--project",
+                    str(project),
+                    "--title",
+                    "影钟旧案",
+                    "--inspiration",
+                    "少年在旧书楼发现父亲旧案残页。",
+                ],
+                check=True,
+                text=True,
+                capture_output=True,
+            )
+            payload = json.loads(completed.stdout)
+            self.assertEqual(payload["status"], "completed")
+            self.assertTrue(Path(payload["foundation_path"]).exists())
+            self.assertTrue((project / "characters/relationships.json").exists())
+            self.assertFalse((project / "manuscript/final/ch-001.md").exists())
 
     def test_gate_blocks_missing_required_context(self) -> None:
         plan = DirectorAgent().plan_project(

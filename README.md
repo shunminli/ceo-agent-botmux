@@ -26,6 +26,11 @@ An AI agent team built with BotMux to coordinate coding agents through chat.
 P0 已提供一个标准库 Python CLI，用于验证小说创作 Agent Team 的本地闭环：从一句灵感生成首章章纲、上下文包、草稿、审稿、修订、定稿、关系图、场景设定、文风档案、伏笔台账、状态归档、JSON trace 和 SQLite run 记录。
 
 ```bash
+python3 -m botmux_novel foundation \
+  --project /tmp/novel-demo \
+  --title 影钟旧案 \
+  --inspiration "一个背负旧案污名的少年，在巡夜钟声中发现妹妹影子会说真话。"
+
 python3 -m botmux_novel run \
   --project /tmp/novel-demo \
   --title 影钟旧案 \

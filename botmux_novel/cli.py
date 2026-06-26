@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 from typing import Optional
 
-from .runtime import NovelRunRequest, NovelRuntime
+from .runtime import NovelFoundationRequest, NovelRunRequest, NovelRuntime
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -19,6 +19,17 @@ def build_parser() -> argparse.ArgumentParser:
     run_parser.add_argument("--chapter-number", type=int, default=1, help="Chapter number to generate.")
     run_parser.add_argument("--mode", choices=["full", "lean", "solo"], default="lean", help="Agent execution mode.")
     run_parser.add_argument("--word-target", type=int, default=1200, help="Target chapter length.")
+
+    foundation_parser = subparsers.add_parser(
+        "foundation",
+        help="Create only the opening story foundation assets without drafting a chapter.",
+    )
+    foundation_parser.add_argument("--project", required=True, help="Target novel project directory.")
+    foundation_parser.add_argument("--title", required=True, help="Novel project title.")
+    foundation_parser.add_argument("--inspiration", required=True, help="One-sentence story inspiration.")
+    foundation_parser.add_argument("--chapter-number", type=int, default=1, help="Initial chapter number for planning.")
+    foundation_parser.add_argument("--mode", choices=["full", "lean", "solo"], default="lean", help="Agent execution mode.")
+    foundation_parser.add_argument("--word-target", type=int, default=1200, help="Target chapter length for planning.")
     return parser
 
 
@@ -36,6 +47,19 @@ def main(argv: Optional[list[str]] = None) -> int:
             word_target=args.word_target,
         )
         result = NovelRuntime().run(request)
+        print(json.dumps(result.to_dict(), ensure_ascii=False, indent=2))
+        return 0 if result.status == "completed" else 2
+
+    if args.command == "foundation":
+        request = NovelFoundationRequest(
+            project_path=Path(args.project).expanduser().resolve(),
+            title=args.title,
+            inspiration=args.inspiration,
+            chapter_number=args.chapter_number,
+            mode=args.mode,
+            word_target=args.word_target,
+        )
+        result = NovelRuntime().foundation(request)
         print(json.dumps(result.to_dict(), ensure_ascii=False, indent=2))
         return 0 if result.status == "completed" else 2
 

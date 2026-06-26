@@ -9,6 +9,11 @@ Updated: 2026-06-26
 ## 触发方式
 
 ```bash
+python3 -m botmux_novel foundation \
+  --project /tmp/novel-demo \
+  --title 影钟旧案 \
+  --inspiration "一个背负旧案污名的少年，在巡夜钟声中发现妹妹影子会说真话。"
+
 python3 -m botmux_novel run \
   --project /tmp/novel-demo \
   --title 影钟旧案 \
@@ -24,10 +29,12 @@ python3 -m botmux_novel run \
 - `manuscript/draft|revised|final/ch-001.md`：首章草稿、修订稿和定稿。
 - `tracking/facts.yaml`、`timeline.yaml`、`foreshadowing.yaml`、`character-state.yaml`、`continuity-issues.yaml`：章节归档状态；伏笔台账包含 id、状态、埋设章节、回收计划和风险等级。
 - `runs/{run_id}/trace.json` 和 `runs/runs.sqlite`：可观察 run 记录和可查询索引。
+- `runs/{foundation_run_id}/foundation.json`：`foundation` 子命令生成的开书设定包。
 
 ## 规则与状态
 
 - 默认执行 `lean` 模式。
+- `foundation` 只生成开书设定资产，不写 `manuscript/draft|revised|final`。
 - 质量门禁区分 `pass`、`revise` 和 `block`。
 - P0/P1 硬约束或上下文缺失会阻断定稿。
 - P2 文风问题会触发编辑 Agent 修订，并由一致性 Agent 复核。

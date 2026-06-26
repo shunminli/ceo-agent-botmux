@@ -29,6 +29,16 @@ class NovelRunRequest:
 
 
 @dataclass(frozen=True)
+class NovelFoundationRequest:
+    project_path: Path
+    title: str
+    inspiration: str
+    chapter_number: int = 1
+    mode: str = "lean"
+    word_target: int = 1200
+
+
+@dataclass(frozen=True)
 class NovelRunResult:
     run_id: str
     status: str
@@ -52,8 +62,34 @@ class NovelRunResult:
         }
 
 
+@dataclass(frozen=True)
+class NovelFoundationResult:
+    run_id: str
+    status: str
+    project_path: Path
+    chapter_id: str
+    story_path: Path
+    foundation_path: Path
+    trace_path: Path
+    sqlite_path: Path
+    artifacts: List[Path]
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "run_id": self.run_id,
+            "status": self.status,
+            "project_path": str(self.project_path),
+            "chapter_id": self.chapter_id,
+            "story_path": str(self.story_path),
+            "foundation_path": str(self.foundation_path),
+            "trace_path": str(self.trace_path),
+            "sqlite_path": str(self.sqlite_path),
+            "artifacts": [str(path) for path in self.artifacts],
+        }
+
+
 class RunTrace:
-    def __init__(self, *, run_id: str, request: NovelRunRequest, started_at: str):
+    def __init__(self, *, run_id: str, request: Any, started_at: str):
         self.payload: Dict[str, Any] = {
             "run_id": run_id,
             "started_at": started_at,
@@ -101,6 +137,71 @@ class NovelRuntime:
         self.editor = EditorAgent()
         self.archive_agent = ArchiveMemoryAgent()
 
+    def foundation(self, request: NovelFoundationRequest) -> NovelFoundationResult:
+        self._validate_request(request)
+        workspace = NovelWorkspace(request.project_path)
+        workspace.ensure_layout()
+
+        started_at = utc_now()
+        run_id = f"foundation-{started_at.replace(':', '').replace('-', '')}-{uuid.uuid4().hex[:8]}"
+        trace = RunTrace(run_id=run_id, request=request, started_at=started_at)
+        artifacts: List[Path] = []
+
+        plan_output = self.director.plan_project(
+            title=request.title,
+            inspiration=request.inspiration,
+            mode=request.mode,
+            chapter_number=request.chapter_number,
+            word_target=request.word_target,
+        )
+        plan = plan_output.data
+        self._validate_plan(plan)
+        trace.add_step("Foundation", plan_output.name, "pass", plan_output.summary, plan)
+        artifacts.extend(self._write_project_assets(workspace, plan, request))
+
+        foundation_path = workspace.write_json(f"runs/{run_id}/foundation.json", plan)
+        artifacts.append(foundation_path)
+        story_path = workspace.path("story.md")
+
+        ended_at = utc_now()
+        trace_payload = trace.finish(status="completed", ended_at=ended_at)
+        validate_required("run-trace", trace_payload)
+        trace_path = workspace.write_json(f"runs/{run_id}/trace.json", trace_payload)
+        artifacts.append(trace_path)
+        for artifact in artifacts:
+            trace.add_artifact(artifact, workspace.root)
+        trace_payload = trace.finish(status="completed", ended_at=ended_at)
+        validate_required("run-trace", trace_payload)
+        trace_path = workspace.write_json(f"runs/{run_id}/trace.json", trace_payload)
+        expected_sqlite_path = workspace.path("runs/runs.sqlite")
+        sqlite_path = workspace.record_run(
+            run_id=run_id,
+            project_title=request.title,
+            chapter_id=plan["chapter_goal"]["chapter_id"],
+            mode=request.mode,
+            status="completed",
+            started_at=started_at,
+            ended_at=ended_at,
+            trace_path=trace_path,
+            artifacts=[*artifacts, expected_sqlite_path],
+        )
+        artifacts.append(sqlite_path)
+        trace.add_artifact(sqlite_path, workspace.root)
+        trace_payload = trace.finish(status="completed", ended_at=ended_at)
+        validate_required("run-trace", trace_payload)
+        trace_path = workspace.write_json(f"runs/{run_id}/trace.json", trace_payload)
+        return NovelFoundationResult(
+            run_id=run_id,
+            status="completed",
+            project_path=workspace.root,
+            chapter_id=plan["chapter_goal"]["chapter_id"],
+            story_path=story_path,
+            foundation_path=foundation_path,
+            trace_path=trace_path,
+            sqlite_path=sqlite_path,
+            artifacts=artifacts,
+        )
+
     def run(self, request: NovelRunRequest) -> NovelRunResult:
         self._validate_request(request)
         workspace = NovelWorkspace(request.project_path)
@@ -119,12 +220,7 @@ class NovelRuntime:
             word_target=request.word_target,
         )
         plan = plan_output.data
-        validate_required("project-state", plan["project"])
-        validate_required("story-bible", plan["story_bible"])
-        validate_required("relationship-map", plan["relationships"])
-        validate_required("style-profile", plan["style_profile"])
-        for scene_setting in plan["scene_settings"]:
-            validate_required("scene-setting", scene_setting)
+        self._validate_plan(plan)
         trace.add_step("Intake", plan_output.name, "pass", plan_output.summary, plan)
         artifacts.extend(self._write_project_assets(workspace, plan, request))
 
@@ -291,7 +387,7 @@ class NovelRuntime:
             artifacts=artifacts,
         )
 
-    def _write_project_assets(self, workspace: NovelWorkspace, plan: Dict[str, Any], request: NovelRunRequest) -> List[Path]:
+    def _write_project_assets(self, workspace: NovelWorkspace, plan: Dict[str, Any], request: Any) -> List[Path]:
         artifacts = [
             workspace.write_yaml("project.yaml", plan["project"]),
             workspace.write_text("story.md", self._story_markdown(plan)),
@@ -317,6 +413,14 @@ class NovelRuntime:
         for character in plan["characters"]:
             artifacts.append(workspace.write_text(f"characters/{character['id']}.md", self._character_markdown(character)))
         return artifacts
+
+    def _validate_plan(self, plan: Dict[str, Any]) -> None:
+        validate_required("project-state", plan["project"])
+        validate_required("story-bible", plan["story_bible"])
+        validate_required("relationship-map", plan["relationships"])
+        validate_required("style-profile", plan["style_profile"])
+        for scene_setting in plan["scene_settings"]:
+            validate_required("scene-setting", scene_setting)
 
     def _write_archive_assets(self, workspace: NovelWorkspace, archive: Dict[str, Any], chapter: str) -> List[Path]:
         return [

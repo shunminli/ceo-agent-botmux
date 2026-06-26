@@ -7,6 +7,7 @@ Updated: 2026-06-26
 ## 职责
 
 - 提供 CLI 入口 `python -m botmux_novel run`。
+- 提供开书资产入口 `python -m botmux_novel foundation`，不生成正文。
 - 在本地小说项目目录中创建方案文档约定的文件工作区。
 - 串行编排 6 个 MVP Agent：总导演、章纲、正文写手、编辑、一致性检查、归档记忆。
 - 产出关系图、场景设定、文风档案和伏笔台账，给后续 Story Bible / llmwiki 同步使用。
@@ -19,6 +20,16 @@ Updated: 2026-06-26
 - 输出是本地 Markdown/YAML/JSON/SQLite 文件，不涉及生产发布、云同步或多用户权限。
 
 ## 主流程
+
+### Foundation
+
+1. `NovelRuntime.foundation` 校验 `NovelFoundationRequest` 并创建工作区目录。
+2. `DirectorAgent` 生成项目状态、故事圣经、题材、世界观、角色、人物关系、场景设定、文风档案和首章目标。
+3. 运行 schema 必填字段校验并写入开书资产。
+4. 写入 `runs/{run_id}/foundation.json`、trace 和 SQLite run 表。
+5. 不写 `manuscript/draft|revised|final`。
+
+### Chapter Run
 
 1. `NovelRuntime.run` 校验 `NovelRunRequest` 并创建工作区目录。
 2. `DirectorAgent` 生成项目状态、故事圣经、题材、世界观、角色、人物关系、场景设定、文风档案和首章目标。

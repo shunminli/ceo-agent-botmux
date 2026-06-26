@@ -1,5 +1,11 @@
 """Local novel creation agent runtime."""
 
-from .runtime import NovelRunRequest, NovelRuntime
+from .runtime import NovelFoundationRequest, NovelFoundationResult, NovelRunRequest, NovelRunResult, NovelRuntime
 
-__all__ = ["NovelRunRequest", "NovelRuntime"]
+__all__ = [
+    "NovelFoundationRequest",
+    "NovelFoundationResult",
+    "NovelRunRequest",
+    "NovelRunResult",
+    "NovelRuntime",
+]
