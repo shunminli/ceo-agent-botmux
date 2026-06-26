@@ -11,6 +11,7 @@ Updated: 2026-06-27
 - 提供章节生产入口 `python -m botmux_novel chapter`，从已有 `foundation.json` 继续生成章节，不重新规划 Story Bible。
 - 提供本地 wiki 审核包入口 `python -m botmux_novel wiki-bundle`，不调用 llmwiki。
 - 提供 gated llmwiki 本地 workspace 同步入口 `python -m botmux_novel llmwiki-sync`，把已审批 Markdown bundle 写入 llmwiki source-of-truth 文件树，并可选运行 `llmwiki reindex`。
+- 提供项目级 MCP 配置生成入口 `python -m botmux_novel llmwiki-mcp-config`，输出 Codex TOML、标准 MCP JSON、角色绑定和 humanGate 策略，不改全局配置。
 - 提供连续章节样例入口 `python -m botmux_novel series`，默认生成 5 章并统计 Phase 3 质量指标。
 - 提供本地就绪检查入口 `python -m botmux_novel readiness`，检查 BotMux 配置、workflow validate、workflow 模板绑定、workspace 身份、llmwiki 可用性、可选 series smoke 和可选 approved llmwiki sync smoke。
 - 提供 BotMux 资产同步入口 `python -m botmux_novel botmux-assets`，用于同步 workflow 模板和三个小说 bot 的 workspace `AGENTS.md`。
@@ -27,6 +28,7 @@ Updated: 2026-06-27
 - 输出是本地 Markdown/YAML/JSON/SQLite 文件，不涉及生产发布、云同步或多用户权限。
 - `wiki-bundle` 写本地 `wiki/novels/{project_slug}/` Markdown 页面包，用于人工审核或后续 gated llmwiki 写入。
 - `llmwiki-sync` 只同步本地 Markdown workspace，不安装 llmwiki，不调用 MCP `create/edit/append`，也不绕过 `--approve` 门禁。
+- `llmwiki-mcp-config` 只生成配置片段；MCP 工具 ACL 不由片段强制执行，角色边界仍由身份文档和 workflow gate 约束。
 - `series` 是本地确定性 smoke 和指标采样，不代表真实模型文学质量，也不能替代人类 Story Bible 审批。
 - `readiness` 不写 BotMux 配置；它只读本机状态并返回 `ready`、`ready_with_warnings` 或 `blocked`。
 - BotMux workflow 只生成候选包和计划；项目文件或 llmwiki 写入必须走单独 gated 节点或人工确认。
@@ -80,6 +82,14 @@ Updated: 2026-06-27
 4. 覆盖已有目标页前保留 `.bak-{timestamp}` 备份，除非传 `--no-backup`。
 5. 传 `--reindex` 且本机有 `llmwiki` 时运行 `llmwiki reindex <workspace>`；没有 llmwiki 时同步文件并返回 warning。
 
+### llmwiki MCP Config
+
+1. `NovelLlmwikiMcpConfigBuilder` 校验 `project_slug`、workspace 路径和 MCP server name。
+2. 解析 `llmwiki` 可执行文件；缺失时返回 `ready_with_warnings`，仍输出可检查的配置片段。
+3. 输出标准 `mcpServers` JSON，命令形状为 `llmwiki mcp <workspace>`。
+4. 输出 Codex `[mcp_servers.<server>]` TOML 片段，适合人工加入 bot harness 配置。
+5. 输出角色绑定策略：Director 接入读写但写入必须 humanGate，Validator 接入只读，Creative 不直接接入 llmwiki MCP。
+
 ### Series
 
 1. `NovelSeriesRunner` 先运行 `foundation`，再按章节号连续调用 `chapter`。
@@ -119,6 +129,7 @@ Updated: 2026-06-27
 - `botmux_novel/workspace.py`：文件工作区、YAML 渲染和 SQLite 记录。
 - `botmux_novel/cli.py`：命令行入口。
 - `botmux_novel/llmwiki_sync.py`：gated llmwiki 本地 workspace 同步、备份、reindex 调用和同步计划。
+- `botmux_novel/mcp_config.py`：项目级 llmwiki MCP 配置片段、Codex TOML、角色绑定和 humanGate 策略生成。
 - `botmux_novel/series.py`：连续章节样例运行和质量指标采集。
 - `botmux_novel/readiness.py`：小说生产本地就绪检查、workflow 绑定静态校验、可选 series smoke 和可选 llmwiki write/reindex smoke。
 - `botmux_novel/botmux_assets.py`：BotMux workflow 和 workspace AGENTS 同步。

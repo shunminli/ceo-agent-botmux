@@ -92,18 +92,28 @@ python3 -m botmux_novel llmwiki-sync \
 llmwiki open /path/to/novel-project
 ```
 
-7. 生成 MCP 配置，并把该 workspace 暴露给需要读写的 bot harness。
+7. 生成项目级 MCP 配置片段和角色绑定策略。推荐先用仓库命令输出 Codex TOML、标准 MCP JSON、角色权限和 humanGate 规则；该命令不会修改全局配置。
+
+```bash
+python3 -m botmux_novel llmwiki-mcp-config \
+  --workspace /path/to/novel-project \
+  --project-slug shadow-clock-case
+```
+
+输出中的 `codex_toml` 适合加入 Codex `mcp_servers.*` 配置；`mcp_json` 与官方 `llmwiki mcp-config` 的结构一致，适合其他 MCP client。
+
+8. 如需核对官方 llmwiki 输出，可运行：
 
 ```bash
 llmwiki mcp-config /path/to/novel-project
 ```
 
-8. 给 bot 分配权限。
+9. 给 bot 分配权限。
 
 | Bot | llmwiki 权限 | 规则 |
 | --- | --- | --- |
 | `Novel-Director-Curator` | read/search/create/edit/append/lint | 写入前必须 humanGate，写后必须 lint。 |
-| `Novel-Creative-Architect` | 无直接写权限；必要时由总导演提供引用摘要 | 豆包或创作候选不能直接进入长期事实。 |
+| `Novel-Creative-Architect` | 不直接配置 llmwiki MCP；必要时由总导演提供引用摘要 | 豆包或创作候选不能直接进入长期事实。 |
 | `Novel-Continuity-Validator` | read/search | 只读校验，不改页面，不重写 Story Bible。 |
 
 ## 写入门禁
@@ -134,6 +144,7 @@ python3 -m unittest discover -s tests -v
 llmwiki --help
 python3 -m botmux_novel readiness --series-smoke --smoke-chapter-count 20
 python3 -m botmux_novel readiness --llmwiki-smoke
+python3 -m botmux_novel llmwiki-mcp-config --workspace /path/to/novel-project --project-slug <slug>
 ```
 
 再用真实小说项目执行一次：

@@ -127,7 +127,7 @@ flowchart LR
 | Bot | Harness | 是否接 llmwiki | 职责 |
 | --- | --- | --- | --- |
 | `Novel-Director-Curator` | Codex CLI | 是 | 对人接口、任务拆解、上下文检索、Story Bible 汇总、项目文件写入、llmwiki 写入计划、审批摘要。 |
-| `Novel-Creative-Architect` | Codex CLI + 豆包 Creative Assist Tool | 只读 | 人物、剧情、关系、场景、章纲、正文草稿、修订建议；Codex 管结构，豆包只产出候选创意。 |
+| `Novel-Creative-Architect` | Codex CLI + 豆包 Creative Assist Tool | 否，由 Director 提供引用摘要 | 人物、剧情、关系、场景、章纲、正文草稿、修订建议；Codex 管结构，豆包只产出候选创意。 |
 | `Novel-Continuity-Validator` | Codex CLI | 只读 | 事实一致性、人物动机、时间线、世界规则、伏笔、硬约束和质量门禁。 |
 
 当前本地 BotMux 绑定：
@@ -381,9 +381,19 @@ novel-project/
 | `create/edit/append` | `Novel-Director-Curator` | 必须 humanGate 后写入。 |
 | `lint` | `Novel-Director-Curator` | 写入后运行，错误必须修。 |
 
+项目级 MCP 配置不直接手写。先为目标小说 workspace 生成配置和角色绑定策略：
+
+```bash
+python3 -m botmux_novel llmwiki-mcp-config \
+  --workspace /path/to/novel-project \
+  --project-slug shadow-clock-case
+```
+
+该命令只输出 Codex TOML 片段、标准 MCP JSON 片段和角色绑定策略，不修改 `~/.codex/config.toml` 或 BotMux 全局配置。配置到 bot harness 时，只给 `Novel-Director-Curator` 和 `Novel-Continuity-Validator` 接入该 server；`Novel-Creative-Architect` 不直接接 llmwiki MCP，避免候选创意污染长期事实。
+
 ### 10.3 边界
 
-- 不让创作角色直接写 llmwiki，避免草稿污染永久设定。
+- 不让创作角色直接接入或写入 llmwiki，避免草稿和候选创意污染永久设定。
 - 不让创作建议自动成为事实，必须通过 `Novel-Continuity-Validator` 和 `Novel-Director-Curator`。
 - 不把对标作品的具体表达写入 Story Bible，只抽象结构、节奏和方法。
 - llmwiki 是知识层，不替代本地项目文件；项目文件仍是生产运行时的主要输入输出。

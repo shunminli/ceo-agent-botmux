@@ -30,6 +30,10 @@ python3 -m botmux_novel llmwiki-sync \
   --project-slug shadow-clock-case \
   --approve
 
+python3 -m botmux_novel llmwiki-mcp-config \
+  --workspace /tmp/novel-demo \
+  --project-slug shadow-clock-case
+
 python3 -m botmux_novel chapter \
   --project /tmp/novel-demo \
   --chapter-number 2 \
@@ -74,6 +78,7 @@ python3 -m botmux_novel readiness --llmwiki-smoke
 - `runs/{chapter_run_id}/source-foundation.json`：`chapter` 子命令使用的 Story Bible 来源快照。
 - `runs/{chapter_run_id}/prior-context.json`：`chapter` 子命令自动汇总的前文章节归档上下文。
 - `runs/llmwiki-sync-{project_slug}-{timestamp}.json`：`llmwiki-sync` 子命令生成的写入门禁计划、影响面、回滚计划和命令结果。
+- `llmwiki-mcp-config` JSON：项目级 MCP server 片段、Codex TOML、角色绑定策略和 humanGate 规则。
 - `runs/{series_run_id}/series-metrics.json`：`series` 子命令生成的连续章节质量指标。
 - `wiki/novels/{project_slug}/*.md`：`wiki-bundle` 子命令生成的本地 llmwiki 写入前审核包。
 - `workflows/*.workflow.json`：版本化的 BotMux 三 bot 协作模板，测试会校验输出契约、人类门禁和本机安装副本一致性。
@@ -87,6 +92,7 @@ python3 -m botmux_novel readiness --llmwiki-smoke
 - `chapter` 从本地 `foundation.json` 继续生产章节，不重新规划 Story Bible，并自动读取早于当前章节的 `runs/archive-*.json` 作为连续性上下文。
 - `wiki-bundle` 只读取本地 `foundation.json` 并写项目内 Markdown bundle，不调用 llmwiki。
 - `llmwiki-sync` 默认只生成计划；只有传 `--approve` 才把审核包复制到 llmwiki workspace。它不安装 llmwiki，不调用 MCP 写工具。
+- `llmwiki-mcp-config` 只生成配置片段和角色绑定策略，不写 `~/.codex/config.toml`，默认只建议 Director 和 Validator 接入 llmwiki MCP。
 - `series` 默认连续生成 5 章、导出 wiki bundle，并统计 P0/P1、修订轮次、归档完整率和 prior context 覆盖率。
 - `readiness` 只读检查本机状态；缺少 llmwiki 时返回 `ready_with_warnings`，BotMux 配置、workflow validate、workflow 绑定校验或显式请求的 smoke 失败时返回 `blocked`。
 - `botmux-assets` 默认只报告差异；传 `--write` 后才同步本机 BotMux 资产，并为被替换的 `AGENTS.md` 创建备份。

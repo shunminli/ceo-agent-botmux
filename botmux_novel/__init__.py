@@ -13,6 +13,7 @@ from .llmwiki_sync import (
     LlmwikiSyncResult,
     LlmwikiSyncer,
 )
+from .mcp_config import NovelLlmwikiMcpConfigBuilder, NovelLlmwikiMcpConfigRequest, NovelLlmwikiMcpConfigResult
 from .readiness import NovelReadinessChecker, NovelReadinessRequest, NovelReadinessResult, ReadinessCheck
 from .runtime import (
     NovelChapterRequest,
@@ -36,6 +37,9 @@ __all__ = [
     "LlmwikiSyncRequest",
     "LlmwikiSyncResult",
     "LlmwikiSyncer",
+    "NovelLlmwikiMcpConfigBuilder",
+    "NovelLlmwikiMcpConfigRequest",
+    "NovelLlmwikiMcpConfigResult",
     "NovelReadinessChecker",
     "NovelReadinessRequest",
     "NovelReadinessResult",

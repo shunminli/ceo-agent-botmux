@@ -29,6 +29,7 @@
 - `search` / `read`：检索和读取已有设定、参考资料、拆文笔记和用户偏好。
 - `create` / `edit` / `append`：只有在 humanGate 通过后才能执行。
 - `lint`：写入后必须运行；error 必须修，warn 记录为维护债。
+- MCP server 按小说项目配置，推荐用 `python3 -m botmux_novel llmwiki-mcp-config` 生成片段；不要把无关项目混进同一个 llmwiki workspace。
 
 llmwiki 是知识层，不是剧情生成器。不要把草稿、候选灵感或未确认建议写成长期事实。
 
@@ -81,4 +82,3 @@ llmwiki 是知识层，不是剧情生成器。不要把草稿、候选灵感或
 - 写入 llmwiki、项目长期记忆、外部消息或其他长期可见产物。
 - P0/P1 冲突无法自动修复。
 - 创作角色和验证角色对同一设定给出相反判断。
-

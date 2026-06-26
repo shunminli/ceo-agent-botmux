@@ -7,6 +7,7 @@ from typing import Optional
 
 from .botmux_assets import BotmuxAssetSyncRequest, BotmuxAssetSyncer
 from .llmwiki_sync import LlmwikiSyncRequest, LlmwikiSyncer
+from .mcp_config import NovelLlmwikiMcpConfigBuilder, NovelLlmwikiMcpConfigRequest
 from .readiness import NovelReadinessChecker, NovelReadinessRequest
 from .runtime import NovelChapterRequest, NovelFoundationRequest, NovelRunRequest, NovelRuntime, NovelWikiBundleRequest
 from .series import NovelSeriesRequest, NovelSeriesRunner
@@ -65,6 +66,16 @@ def build_parser() -> argparse.ArgumentParser:
     llmwiki_parser.add_argument("--no-backup", action="store_true", help="Do not create .bak files before replacing target pages.")
     llmwiki_parser.add_argument("--llmwiki-bin", default="llmwiki", help="llmwiki executable to use for optional commands.")
     llmwiki_parser.add_argument("--reindex", action="store_true", help="Run `llmwiki reindex <workspace>` after approved writes when llmwiki is available.")
+
+    mcp_parser = subparsers.add_parser(
+        "llmwiki-mcp-config",
+        help="Generate per-project llmwiki MCP snippets and role binding policy without editing global config.",
+    )
+    mcp_parser.add_argument("--workspace", required=True, help="llmwiki workspace directory for this novel project.")
+    mcp_parser.add_argument("--project-slug", required=True, help="Target wiki namespace slug.")
+    mcp_parser.add_argument("--server-name", help="Optional MCP server name. Defaults to llmwiki-novel-<project-slug>.")
+    mcp_parser.add_argument("--llmwiki-bin", default="llmwiki", help="llmwiki executable to place in generated MCP config.")
+    mcp_parser.add_argument("--codex-startup-timeout-sec", type=int, default=20, help="startup_timeout_sec for the Codex TOML snippet.")
 
     series_parser = subparsers.add_parser(
         "series",
@@ -176,6 +187,18 @@ def main(argv: Optional[list[str]] = None) -> int:
         result = LlmwikiSyncer().sync(request)
         print(json.dumps(result.to_dict(), ensure_ascii=False, indent=2))
         return 0 if result.status in {"planned", "completed", "completed_with_warnings"} else 2
+
+    if args.command == "llmwiki-mcp-config":
+        request = NovelLlmwikiMcpConfigRequest(
+            workspace_path=Path(args.workspace).expanduser().resolve(),
+            project_slug=args.project_slug,
+            server_name=args.server_name,
+            llmwiki_bin=args.llmwiki_bin,
+            codex_startup_timeout_sec=args.codex_startup_timeout_sec,
+        )
+        result = NovelLlmwikiMcpConfigBuilder().build(request)
+        print(json.dumps(result.to_dict(), ensure_ascii=False, indent=2))
+        return 0 if result.status in {"ready", "ready_with_warnings"} else 2
 
     if args.command == "series":
         request = NovelSeriesRequest(

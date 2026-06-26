@@ -43,6 +43,10 @@ python3 -m botmux_novel llmwiki-sync \
   --project-slug shadow-clock-case \
   --approve
 
+python3 -m botmux_novel llmwiki-mcp-config \
+  --workspace /tmp/novel-demo \
+  --project-slug shadow-clock-case
+
 python3 -m botmux_novel chapter \
   --project /tmp/novel-demo \
   --chapter-number 2 \
@@ -77,6 +81,7 @@ python3 -m botmux_novel readiness --series-smoke
 ```bash
 python3 -m unittest discover -s tests -v
 python3 -m botmux_novel readiness --series-smoke
+python3 -m botmux_novel readiness --series-smoke --smoke-chapter-count 20 --llmwiki-smoke
 ```
 
 ## Local Doubao CLI

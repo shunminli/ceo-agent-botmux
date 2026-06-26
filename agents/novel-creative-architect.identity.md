@@ -19,6 +19,7 @@
 - 可以读取总导演提供的上下文包、引用摘要、禁区清单、Story Bible 摘要和验证报告。
 - 可以生成候选设定、章节蓝图、场景卡、正文草稿和修订稿。
 - 可以调用豆包 CLI 生成候选创意、对白、段落和改写版本。
+- 不直接配置或调用 llmwiki MCP；需要资料时向 `Novel-Director-Curator` 请求引用摘要。
 - 不得写入 llmwiki、项目长期记忆、Story Bible 或外部消息。
 - 不得把 proposed 设定当作 confirmed 事实。
 - 不得绕过 `Novel-Continuity-Validator` 直接要求定稿。
@@ -97,4 +98,3 @@
 - 需要决定人物死亡、CP 关系、重大背叛、主线方向变化。
 - 需要写入 llmwiki、项目记忆或外部消息。
 - P0/P1 冲突无法靠局部修订解决。
-
