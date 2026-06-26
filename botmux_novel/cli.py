@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Optional
 
 from .botmux_assets import BotmuxAssetSyncRequest, BotmuxAssetSyncer
+from .llmwiki_sync import LlmwikiSyncRequest, LlmwikiSyncer
 from .runtime import NovelChapterRequest, NovelFoundationRequest, NovelRunRequest, NovelRuntime, NovelWikiBundleRequest
 
 
@@ -50,6 +51,18 @@ def build_parser() -> argparse.ArgumentParser:
     wiki_parser.add_argument("--project", required=True, help="Target novel project directory.")
     wiki_parser.add_argument("--project-slug", required=True, help="Target wiki namespace slug.")
     wiki_parser.add_argument("--foundation-json", help="Optional explicit foundation.json path.")
+
+    llmwiki_parser = subparsers.add_parser(
+        "llmwiki-sync",
+        help="Gate and sync an approved local wiki bundle into an llmwiki workspace.",
+    )
+    llmwiki_parser.add_argument("--project", required=True, help="Novel project directory containing wiki/novels/<slug>.")
+    llmwiki_parser.add_argument("--project-slug", required=True, help="Target wiki namespace slug.")
+    llmwiki_parser.add_argument("--workspace", help="llmwiki workspace directory. Defaults to --project.")
+    llmwiki_parser.add_argument("--approve", action="store_true", help="Apply file writes. Without this flag, only writes a local sync plan.")
+    llmwiki_parser.add_argument("--no-backup", action="store_true", help="Do not create .bak files before replacing target pages.")
+    llmwiki_parser.add_argument("--llmwiki-bin", default="llmwiki", help="llmwiki executable to use for optional commands.")
+    llmwiki_parser.add_argument("--reindex", action="store_true", help="Run `llmwiki reindex <workspace>` after approved writes when llmwiki is available.")
 
     assets_parser = subparsers.add_parser(
         "botmux-assets",
@@ -114,6 +127,20 @@ def main(argv: Optional[list[str]] = None) -> int:
         result = NovelRuntime().wiki_bundle(request)
         print(json.dumps(result.to_dict(), ensure_ascii=False, indent=2))
         return 0 if result.status == "completed" else 2
+
+    if args.command == "llmwiki-sync":
+        request = LlmwikiSyncRequest(
+            project_path=Path(args.project).expanduser().resolve(),
+            project_slug=args.project_slug,
+            workspace_path=Path(args.workspace).expanduser().resolve() if args.workspace else None,
+            approve=args.approve,
+            backup=not args.no_backup,
+            llmwiki_bin=args.llmwiki_bin,
+            reindex=args.reindex,
+        )
+        result = LlmwikiSyncer().sync(request)
+        print(json.dumps(result.to_dict(), ensure_ascii=False, indent=2))
+        return 0 if result.status in {"planned", "completed", "completed_with_warnings"} else 2
 
     if args.command == "botmux-assets":
         request = BotmuxAssetSyncRequest(

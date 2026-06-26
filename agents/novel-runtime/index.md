@@ -10,6 +10,7 @@ Updated: 2026-06-27
 - 提供开书资产入口 `python -m botmux_novel foundation`，不生成正文。
 - 提供章节生产入口 `python -m botmux_novel chapter`，从已有 `foundation.json` 继续生成章节，不重新规划 Story Bible。
 - 提供本地 wiki 审核包入口 `python -m botmux_novel wiki-bundle`，不调用 llmwiki。
+- 提供 gated llmwiki 本地 workspace 同步入口 `python -m botmux_novel llmwiki-sync`，把已审批 Markdown bundle 写入 llmwiki source-of-truth 文件树，并可选运行 `llmwiki reindex`。
 - 提供 BotMux 资产同步入口 `python -m botmux_novel botmux-assets`，用于同步 workflow 模板和三个小说 bot 的 workspace `AGENTS.md`。
 - 配套版本化 BotMux workflow：`workflows/novel-story-foundation.workflow.json` 和 `workflows/novel-chapter-production.workflow.json`，用于三 bot 协作、humanGate 和归档计划。
 - 在本地小说项目目录中创建方案文档约定的文件工作区。
@@ -23,6 +24,7 @@ Updated: 2026-06-27
 - 当前覆盖单项目的开书和连续章节 smoke；真实模型 provider、Web UI 和向量检索属于后续迭代。
 - 输出是本地 Markdown/YAML/JSON/SQLite 文件，不涉及生产发布、云同步或多用户权限。
 - `wiki-bundle` 写本地 `wiki/novels/{project_slug}/` Markdown 页面包，用于人工审核或后续 gated llmwiki 写入。
+- `llmwiki-sync` 只同步本地 Markdown workspace，不安装 llmwiki，不调用 MCP `create/edit/append`，也不绕过 `--approve` 门禁。
 - BotMux workflow 只生成候选包和计划；项目文件或 llmwiki 写入必须走单独 gated 节点或人工确认。
 - `botmux-assets` 默认 dry-run；只有传 `--write` 才会写入 `~/.botmux`，覆盖已有 workspace `AGENTS.md` 前会保留 `.bak-<timestamp>` 备份。
 
@@ -66,6 +68,14 @@ Updated: 2026-06-27
 3. 写入本地 `wiki/novels/{project_slug}/` Markdown 页面包。
 4. 不调用 llmwiki、不创建远端页面、不覆盖外部知识库。
 
+### llmwiki Sync
+
+1. `LlmwikiSyncer` 读取已存在的 `wiki/novels/{project_slug}/` Markdown 审核包。
+2. 未传 `--approve` 时只写 `runs/llmwiki-sync-{project_slug}-{timestamp}.json` 计划，不复制页面。
+3. 传 `--approve` 后把页面同步到 `--workspace/wiki/novels/{project_slug}/`；默认 workspace 是项目目录。
+4. 覆盖已有目标页前保留 `.bak-{timestamp}` 备份，除非传 `--no-backup`。
+5. 传 `--reindex` 且本机有 `llmwiki` 时运行 `llmwiki reindex <workspace>`；没有 llmwiki 时同步文件并返回 warning。
+
 ### BotMux Assets
 
 1. `python -m botmux_novel botmux-assets` 比较仓库模板和本机 BotMux 资产，不写文件。
@@ -86,6 +96,7 @@ Updated: 2026-06-27
 - `botmux_novel/agents.py`：确定性 MVP Agent 行为。
 - `botmux_novel/workspace.py`：文件工作区、YAML 渲染和 SQLite 记录。
 - `botmux_novel/cli.py`：命令行入口。
+- `botmux_novel/llmwiki_sync.py`：gated llmwiki 本地 workspace 同步、备份、reindex 调用和同步计划。
 - `botmux_novel/botmux_assets.py`：BotMux workflow 和 workspace AGENTS 同步。
 - `tests/test_botmux_assets.py`：BotMux 资产 dry-run、写入、CLI 和本机 workspace 同步测试。
 - `tests/test_novel_runtime.py`：端到端验证和门禁阻断测试。

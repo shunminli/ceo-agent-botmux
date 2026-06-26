@@ -5,6 +5,7 @@
 ## 当前边界
 
 - `python3 -m botmux_novel wiki-bundle` 只写本地 Markdown 审核包：`wiki/novels/{project_slug}/`。
+- `python3 -m botmux_novel llmwiki-sync` 默认只生成同步计划；传 `--approve` 后才把审核包写入 llmwiki workspace 的 Markdown source-of-truth 文件树。
 - 仓库内 workflow 只生成 Story Bible 候选包、章节候选包和同步计划。
 - 真实 llmwiki 写入前必须经过 `Novel-Director-Curator` preview、影响面说明和 humanGate。
 - `Novel-Creative-Architect` 不直接写 llmwiki；`Novel-Continuity-Validator` 只读检索和校验。
@@ -58,19 +59,37 @@ python3 -m botmux_novel wiki-bundle \
 
 3. 人工审核 `wiki/novels/shadow-clock-case/` 下的 Markdown 页面。
 
-4. 用 llmwiki 打开小说项目目录。
+4. 生成同步计划，确认页面清单、影响面和回滚策略。
+
+```bash
+python3 -m botmux_novel llmwiki-sync \
+  --project /path/to/novel-project \
+  --project-slug shadow-clock-case
+```
+
+5. 审批后把 Markdown bundle 写入 llmwiki workspace。若 workspace 就是小说项目目录，可省略 `--workspace`。
+
+```bash
+python3 -m botmux_novel llmwiki-sync \
+  --project /path/to/novel-project \
+  --project-slug shadow-clock-case \
+  --workspace /path/to/novel-project \
+  --approve
+```
+
+6. 用 llmwiki 打开小说项目目录。
 
 ```bash
 llmwiki open /path/to/novel-project
 ```
 
-5. 生成 MCP 配置，并把该 workspace 暴露给需要读写的 bot harness。
+7. 生成 MCP 配置，并把该 workspace 暴露给需要读写的 bot harness。
 
 ```bash
 llmwiki mcp-config /path/to/novel-project
 ```
 
-6. 给 bot 分配权限。
+8. 给 bot 分配权限。
 
 | Bot | llmwiki 权限 | 规则 |
 | --- | --- | --- |
@@ -110,6 +129,7 @@ python3 -m unittest discover -s tests -v
 ```bash
 python3 -m botmux_novel foundation --project /path/to/novel-project --title <title> --inspiration <brief>
 python3 -m botmux_novel wiki-bundle --project /path/to/novel-project --project-slug <slug>
+python3 -m botmux_novel llmwiki-sync --project /path/to/novel-project --project-slug <slug>
 llmwiki open /path/to/novel-project
 ```
 
@@ -117,6 +137,6 @@ llmwiki open /path/to/novel-project
 
 ## 尚未自动化
 
-- 本仓库还没有直接调用 llmwiki `create/edit/append` 的 write adapter。
 - 本仓库还没有自动安装 llmwiki 或创建 llmwiki workspace。
-- 首次真实写入必须由用户审批 Story Bible 和 wiki 页面清单后再执行。
+- 本仓库不直接调用 llmwiki MCP `create/edit/append`；`llmwiki-sync` 只写本地 workspace Markdown 文件树，MCP 写工具仍需由 `Novel-Director-Curator` 在 humanGate 后调用。
+- 首次真实写入必须由用户审批 Story Bible 和 wiki 页面清单后再执行；CLI 层用 `--approve` 表示这个审批已经完成。

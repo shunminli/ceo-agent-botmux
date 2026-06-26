@@ -6,6 +6,13 @@ from .botmux_assets import (
     BotmuxAssetSyncResult,
     BotmuxAssetSyncer,
 )
+from .llmwiki_sync import (
+    LlmwikiCommandResult,
+    LlmwikiSyncAction,
+    LlmwikiSyncRequest,
+    LlmwikiSyncResult,
+    LlmwikiSyncer,
+)
 from .runtime import (
     NovelChapterRequest,
     NovelFoundationRequest,
@@ -22,6 +29,11 @@ __all__ = [
     "BotmuxAssetSyncRequest",
     "BotmuxAssetSyncResult",
     "BotmuxAssetSyncer",
+    "LlmwikiCommandResult",
+    "LlmwikiSyncAction",
+    "LlmwikiSyncRequest",
+    "LlmwikiSyncResult",
+    "LlmwikiSyncer",
     "NovelChapterRequest",
     "NovelFoundationRequest",
     "NovelFoundationResult",

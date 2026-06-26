@@ -8,7 +8,15 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from botmux_novel import NovelChapterRequest, NovelFoundationRequest, NovelRunRequest, NovelRuntime, NovelWikiBundleRequest
+from botmux_novel import (
+    LlmwikiSyncRequest,
+    LlmwikiSyncer,
+    NovelChapterRequest,
+    NovelFoundationRequest,
+    NovelRunRequest,
+    NovelRuntime,
+    NovelWikiBundleRequest,
+)
 from botmux_novel.agents import BlueprintAgent, ConsistencyAgent, ContextPackBuilder, DirectorAgent
 
 
@@ -369,6 +377,190 @@ class NovelRuntimeTest(unittest.TestCase):
             self.assertEqual(payload["status"], "completed")
             self.assertTrue((bundle_path / "overview.md").exists())
             self.assertTrue((bundle_path / "chapter-index.md").exists())
+
+    def test_llmwiki_sync_dry_run_writes_plan_without_workspace_copy(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            project = Path(tmpdir) / "llmwiki-project"
+            workspace = Path(tmpdir) / "llmwiki-workspace"
+            runtime = NovelRuntime()
+            foundation = runtime.foundation(
+                NovelFoundationRequest(
+                    project_path=project,
+                    title="影钟旧案",
+                    inspiration="少年在旧书楼发现父亲旧案残页。",
+                )
+            )
+            runtime.wiki_bundle(
+                NovelWikiBundleRequest(
+                    project_path=project,
+                    project_slug="shadow-clock-case",
+                    foundation_path=foundation.foundation_path,
+                )
+            )
+
+            result = LlmwikiSyncer().sync(
+                LlmwikiSyncRequest(
+                    project_path=project,
+                    project_slug="shadow-clock-case",
+                    workspace_path=workspace,
+                    approve=False,
+                )
+            )
+
+            self.assertEqual(result.status, "planned")
+            self.assertFalse(result.approved)
+            self.assertTrue(result.plan_path.exists())
+            self.assertFalse((workspace / "wiki/novels/shadow-clock-case/overview.md").exists())
+            self.assertIn("would_create", {action.status for action in result.actions})
+            plan = json.loads(result.plan_path.read_text(encoding="utf-8"))
+            self.assertFalse(plan["approved"])
+            self.assertEqual(plan["preview"]["target_namespace"], "/wiki/novels/shadow-clock-case/")
+
+    def test_llmwiki_sync_approved_copies_bundle_and_backs_up_changed_pages(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            project = Path(tmpdir) / "llmwiki-project"
+            workspace = Path(tmpdir) / "llmwiki-workspace"
+            runtime = NovelRuntime()
+            foundation = runtime.foundation(
+                NovelFoundationRequest(
+                    project_path=project,
+                    title="影钟旧案",
+                    inspiration="少年在旧书楼发现父亲旧案残页。",
+                )
+            )
+            runtime.wiki_bundle(
+                NovelWikiBundleRequest(
+                    project_path=project,
+                    project_slug="shadow-clock-case",
+                    foundation_path=foundation.foundation_path,
+                )
+            )
+            target_overview = workspace / "wiki/novels/shadow-clock-case/overview.md"
+            target_overview.parent.mkdir(parents=True)
+            target_overview.write_text("# stale\n", encoding="utf-8")
+
+            result = LlmwikiSyncer().sync(
+                LlmwikiSyncRequest(
+                    project_path=project,
+                    project_slug="shadow-clock-case",
+                    workspace_path=workspace,
+                    approve=True,
+                    llmwiki_bin="llmwiki-missing-for-test",
+                    reindex=True,
+                )
+            )
+
+            self.assertEqual(result.status, "completed_with_warnings")
+            self.assertTrue(target_overview.read_text(encoding="utf-8").startswith("# 影钟旧案"))
+            updated = [action for action in result.actions if action.target_path == target_overview.resolve()]
+            self.assertEqual(len(updated), 1)
+            self.assertEqual(updated[0].status, "updated")
+            self.assertIsNotNone(updated[0].backup_path)
+            self.assertTrue(updated[0].backup_path.exists())
+            self.assertTrue(any(command.status == "skipped" for command in result.commands))
+
+    def test_llmwiki_sync_reindex_uses_configured_llmwiki_binary(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            project = Path(tmpdir) / "llmwiki-project"
+            workspace = Path(tmpdir) / "llmwiki-workspace"
+            fake_llmwiki = Path(tmpdir) / "llmwiki"
+            fake_llmwiki.write_text("#!/bin/sh\necho reindexed \"$@\"\n", encoding="utf-8")
+            fake_llmwiki.chmod(0o755)
+            runtime = NovelRuntime()
+            foundation = runtime.foundation(
+                NovelFoundationRequest(
+                    project_path=project,
+                    title="影钟旧案",
+                    inspiration="少年在旧书楼发现父亲旧案残页。",
+                )
+            )
+            runtime.wiki_bundle(
+                NovelWikiBundleRequest(
+                    project_path=project,
+                    project_slug="shadow-clock-case",
+                    foundation_path=foundation.foundation_path,
+                )
+            )
+
+            result = LlmwikiSyncer().sync(
+                LlmwikiSyncRequest(
+                    project_path=project,
+                    project_slug="shadow-clock-case",
+                    workspace_path=workspace,
+                    approve=True,
+                    llmwiki_bin=str(fake_llmwiki),
+                    reindex=True,
+                )
+            )
+
+            self.assertEqual(result.status, "completed")
+            self.assertTrue(result.llmwiki_available)
+            self.assertEqual(result.commands[0].status, "succeeded")
+            self.assertIn("reindexed reindex", result.commands[0].stdout)
+
+    def test_cli_llmwiki_sync_uses_real_entrypoint(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            project = Path(tmpdir) / "cli-llmwiki-project"
+            workspace = Path(tmpdir) / "cli-llmwiki-workspace"
+            foundation = subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "botmux_novel",
+                    "foundation",
+                    "--project",
+                    str(project),
+                    "--title",
+                    "影钟旧案",
+                    "--inspiration",
+                    "少年在旧书楼发现父亲旧案残页。",
+                ],
+                check=True,
+                text=True,
+                capture_output=True,
+            )
+            foundation_payload = json.loads(foundation.stdout)
+            subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "botmux_novel",
+                    "wiki-bundle",
+                    "--project",
+                    str(project),
+                    "--project-slug",
+                    "shadow-clock-case",
+                    "--foundation-json",
+                    foundation_payload["foundation_path"],
+                ],
+                check=True,
+                text=True,
+                capture_output=True,
+            )
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "botmux_novel",
+                    "llmwiki-sync",
+                    "--project",
+                    str(project),
+                    "--project-slug",
+                    "shadow-clock-case",
+                    "--workspace",
+                    str(workspace),
+                    "--approve",
+                    "--no-backup",
+                ],
+                check=True,
+                text=True,
+                capture_output=True,
+            )
+
+            payload = json.loads(completed.stdout)
+            self.assertEqual(payload["status"], "completed")
+            self.assertTrue(Path(payload["plan_path"]).exists())
+            self.assertTrue((workspace / "wiki/novels/shadow-clock-case/overview.md").exists())
 
     def test_gate_blocks_missing_required_context(self) -> None:
         plan = DirectorAgent().plan_project(

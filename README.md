@@ -38,6 +38,11 @@ python3 -m botmux_novel wiki-bundle \
   --project /tmp/novel-demo \
   --project-slug shadow-clock-case
 
+python3 -m botmux_novel llmwiki-sync \
+  --project /tmp/novel-demo \
+  --project-slug shadow-clock-case \
+  --approve
+
 python3 -m botmux_novel chapter \
   --project /tmp/novel-demo \
   --chapter-number 2 \
