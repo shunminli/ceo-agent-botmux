@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.local/ceo-agent-botmux/relationship-map.schema.json",
+  "title": "RelationshipMap",
+  "type": "object",
+  "required": ["project_title", "edges"],
+  "properties": {
+    "project_title": {"type": "string"},
+    "edges": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["source", "target", "type", "pressure"],
+        "properties": {
+          "source": {"type": "string"},
+          "target": {"type": "string"},
+          "type": {"type": "string"},
+          "pressure": {"type": "string"},
+          "secret": {"type": "string"}
+        }
+      }
+    }
+  }
+}

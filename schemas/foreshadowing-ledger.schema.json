@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.local/ceo-agent-botmux/foreshadowing-ledger.schema.json",
+  "title": "ForeshadowingLedgerItem",
+  "type": "object",
+  "required": ["id", "chapter_id", "item", "introduced_in", "planned_payoff", "status", "risk"],
+  "properties": {
+    "id": {"type": "string"},
+    "chapter_id": {"type": "string"},
+    "item": {"type": "string"},
+    "introduced_in": {"type": "string"},
+    "planned_payoff": {"type": "string"},
+    "status": {"type": "string", "enum": ["open", "paid_off", "changed", "dropped"]},
+    "risk": {"type": "string", "enum": ["P0", "P1", "P2", "P3"]}
+  }
+}

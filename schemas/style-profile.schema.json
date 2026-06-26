@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.local/ceo-agent-botmux/style-profile.schema.json",
+  "title": "StyleProfile",
+  "type": "object",
+  "required": ["id", "tone", "rules", "forbidden_expressions", "positive_examples", "negative_examples"],
+  "properties": {
+    "id": {"type": "string"},
+    "tone": {"type": "string"},
+    "rules": {"type": "array", "items": {"type": "string"}},
+    "forbidden_expressions": {"type": "array", "items": {"type": "string"}},
+    "positive_examples": {"type": "array", "items": {"type": "string"}},
+    "negative_examples": {"type": "array", "items": {"type": "string"}}
+  }
+}

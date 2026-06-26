@@ -1,4 +1,4 @@
-Commit: 8595e9722336d27913d3139befa1914d8db316a3
+Updated: 2026-06-26
 
 # Novel Runtime
 
@@ -9,6 +9,7 @@ Commit: 8595e9722336d27913d3139befa1914d8db316a3
 - 提供 CLI 入口 `python -m botmux_novel run`。
 - 在本地小说项目目录中创建方案文档约定的文件工作区。
 - 串行编排 6 个 MVP Agent：总导演、章纲、正文写手、编辑、一致性检查、归档记忆。
+- 产出关系图、场景设定、文风档案和伏笔台账，给后续 Story Bible / llmwiki 同步使用。
 - 记录每次 run 的 JSON trace 和 SQLite run 表。
 
 ## 边界
@@ -20,15 +21,22 @@ Commit: 8595e9722336d27913d3139befa1914d8db316a3
 ## 主流程
 
 1. `NovelRuntime.run` 校验 `NovelRunRequest` 并创建工作区目录。
-2. `DirectorAgent` 生成项目状态、故事圣经、题材、世界观、角色和首章目标。
+2. `DirectorAgent` 生成项目状态、故事圣经、题材、世界观、角色、人物关系、场景设定、文风档案和首章目标。
 3. `BlueprintAgent` 生成章节蓝图和场景卡。
 4. `ContextPackBuilder` 组装章节上下文包。
 5. `DraftWriterAgent` 生成草稿。
 6. `ConsistencyAgent` 执行 Gate 0-4，发现 P2 文风问题时进入修订。
 7. `EditorAgent` 去除模板化表达并保留剧情事实。
 8. `ConsistencyAgent` 复核通过后由总导演批准定稿。
-9. `ArchiveMemoryAgent` 写入事实、时间线、伏笔、角色状态和冲突记录。
+9. `ArchiveMemoryAgent` 写入事实、时间线、带 id/status 的伏笔台账、角色状态和冲突记录。
 10. `NovelWorkspace.record_run` 写入 SQLite run 表和 artifact 索引。
+
+## 数据模型
+
+- `relationship-map.schema.json`：约束 `characters/relationships.json`，包含人物关系边、关系类型、压力和秘密。
+- `scene-setting.schema.json`：约束 `settings/scenes.json` 中的单个场景或世界规则节点。
+- `style-profile.schema.json`：约束 `settings/style-profile.json`，包含语气、规则、禁用表达和正反例。
+- `foreshadowing-ledger.schema.json`：约束 `tracking/foreshadowing.yaml` 和 `runs/archive-{chapter}.json` 中的伏笔条目。
 
 ## 代码锚点
 

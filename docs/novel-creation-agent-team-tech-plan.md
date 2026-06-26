@@ -248,10 +248,13 @@ novel-project/
   settings/
     genre.yaml
     world.yaml
+    scenes.json
     style.md
+    style-profile.json
     constraints.yaml
   characters/
     index.yaml
+    relationships.json
     {character_id}.md
   outline/
     global-outline.md
@@ -289,11 +292,6 @@ novel-project/
 | `fact-snapshot.schema.json` | 章节事实快照。 |
 | `character-state.schema.json` | 角色状态和已知信息。 |
 | `run-trace.schema.json` | run 输入、步骤、状态和产物路径。 |
-
-建议新增 schema：
-
-| Schema | 用途 |
-| --- | --- |
 | `relationship-map.schema.json` | 人物关系、冲突边、情感边、利益边、秘密边。 |
 | `scene-setting.schema.json` | 地点、组织、世界规则、场景功能、禁用冲突。 |
 | `foreshadowing-ledger.schema.json` | 伏笔、埋设章节、回收计划、风险等级。 |
@@ -418,9 +416,7 @@ python3 -m botmux_novel run \
 | 需求 | 当前状态 | 建议 |
 | --- | --- | --- |
 | 开书设定 workflow | 已落地为 BotMux workflow，尚未抽出本地 CLI 子命令 | 先用 `novel-story-foundation` 作为开书入口，后续按需新增 `foundation` CLI 子命令。 |
-| 人物关系 schema | 未独立建模 | 新增 `relationship-map.schema.json`。 |
-| 场景设定 schema | 未独立建模 | 新增 `scene-setting.schema.json`。 |
-| 伏笔台账 schema | 只在归档数据里出现 | 新增 `foreshadowing-ledger.schema.json`。 |
+| 人物关系 / 场景 / 伏笔 / 文风 schema | 已落地为独立 schema，并由本地 runtime 写出结构化产物 | 后续接入真实模型时保持字段契约稳定。 |
 | llmwiki sync | 未集成 | 先用 bot workflow 处理，后续封装 adapter。 |
 
 ## 15. 实施路线图
@@ -430,7 +426,7 @@ python3 -m botmux_novel run \
 - 已创建 3 个小说 bot：`Novel-Director-Curator`、`Novel-Creative-Architect`、`Novel-Continuity-Validator`。
 - 给 `Novel-Director-Curator` 配 llmwiki MCP。
 - 给 `Novel-Continuity-Validator` 配 llmwiki 只读能力。
-- 给 `Novel-Creative-Architect` 配豆包 CLI 作为可选 Creative Assist Tool；如果豆包 CLI 未就绪，Codex 仍需独立完成创作节点。
+- 已提供 `botmux_doubao` 本地包装层，可作为 `Novel-Creative-Architect` 的可选 Creative Assist Tool；真实调用仍依赖用户本机已安装并登录 OpenCLI / doubao-cli runner，Codex 仍需能独立完成创作节点。
 - 已把输出契约写入每个 bot 的身份提示词，并同步到本仓库 `agents/*.identity.md`。
 - 准备小说项目 llmwiki workspace 和 `/wiki/novels/` 页面结构。
 
@@ -440,6 +436,7 @@ python3 -m botmux_novel run \
 - 参数只保留标量：`projectSlug`、`title`、`inspiration`、`genre`、`targetLength`、`mode`。
 - 输出 Story Bible、角色、关系、剧情走势、场景设定和 wiki sync plan。
 - 首次只做预览，不自动写 llmwiki。
+- 本地 P0 runtime 已能写出关系图、场景设定、文风档案和带 id/status 的伏笔台账，作为 Story Bible 后续落库的数据契约基础。
 
 ### Phase 2：章节生产 workflow
 

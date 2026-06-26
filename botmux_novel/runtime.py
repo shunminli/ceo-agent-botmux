@@ -121,6 +121,10 @@ class NovelRuntime:
         plan = plan_output.data
         validate_required("project-state", plan["project"])
         validate_required("story-bible", plan["story_bible"])
+        validate_required("relationship-map", plan["relationships"])
+        validate_required("style-profile", plan["style_profile"])
+        for scene_setting in plan["scene_settings"]:
+            validate_required("scene-setting", scene_setting)
         trace.add_step("Intake", plan_output.name, "pass", plan_output.summary, plan)
         artifacts.extend(self._write_project_assets(workspace, plan, request))
 
@@ -189,6 +193,8 @@ class NovelRuntime:
         archive = archive_output.data
         for fact in archive["facts"]:
             validate_required("fact-snapshot", fact)
+        for foreshadowing in archive["foreshadowing"]:
+            validate_required("foreshadowing-ledger", foreshadowing)
         for character_state in archive["character_state"]:
             validate_required("character-state", character_state)
         trace.add_step("Archive", archive_output.name, archive["archive_decision"], archive_output.summary, archive)
@@ -291,6 +297,8 @@ class NovelRuntime:
             workspace.write_text("story.md", self._story_markdown(plan)),
             workspace.write_yaml("settings/genre.yaml", plan["genre"]),
             workspace.write_yaml("settings/world.yaml", plan["world"]),
+            workspace.write_json("settings/scenes.json", {"scene_settings": plan["scene_settings"]}),
+            workspace.write_json("settings/style-profile.json", plan["style_profile"]),
             workspace.write_text(
                 "settings/style.md",
                 "# Style Profile\n\n- 减少解释性总结。\n- 对话保留潜台词。\n- 用动作和场景承载情绪。\n",
@@ -300,6 +308,7 @@ class NovelRuntime:
                 {"mode": request.mode, "hard_constraints": plan["world"]["forbidden"] + plan["chapter_goal"]["forbidden"]},
             ),
             workspace.write_yaml("characters/index.yaml", {"characters": plan["characters"]}),
+            workspace.write_json("characters/relationships.json", plan["relationships"]),
             workspace.write_text("outline/global-outline.md", self._global_outline(plan)),
             workspace.write_text("outline/volume-001.md", self._volume_outline(plan["volume_outline"])),
             workspace.write_text("memory/session.md", f"# Session Memory\n\n- 初始灵感：{request.inspiration}\n"),

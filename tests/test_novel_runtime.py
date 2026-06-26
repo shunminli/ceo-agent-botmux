@@ -26,6 +26,9 @@ class NovelRuntimeTest(unittest.TestCase):
 
             self.assertEqual(result.status, "completed")
             self.assertTrue((project / "project.yaml").exists())
+            self.assertTrue((project / "characters/relationships.json").exists())
+            self.assertTrue((project / "settings/scenes.json").exists())
+            self.assertTrue((project / "settings/style-profile.json").exists())
             self.assertTrue((project / "outline/chapter-blueprints/ch-001.json").exists())
             self.assertTrue((project / "manuscript/draft/ch-001.md").exists())
             self.assertTrue((project / "manuscript/revised/ch-001.md").exists())
@@ -40,6 +43,19 @@ class NovelRuntimeTest(unittest.TestCase):
             self.assertIn("巡夜钟", final_text)
             self.assertIn("妹妹", final_text)
             self.assertNotIn("感到无比震惊", final_text)
+
+            relationships = json.loads((project / "characters/relationships.json").read_text(encoding="utf-8"))
+            self.assertGreaterEqual(len(relationships["edges"]), 3)
+            self.assertTrue(any(edge["type"] == "conflict" for edge in relationships["edges"]))
+
+            scene_settings = json.loads((project / "settings/scenes.json").read_text(encoding="utf-8"))
+            self.assertTrue(any(scene["id"] == "patrol-bell" for scene in scene_settings["scene_settings"]))
+
+            style_profile = json.loads((project / "settings/style-profile.json").read_text(encoding="utf-8"))
+            self.assertIn("感到无比震惊", style_profile["forbidden_expressions"])
+
+            archive = json.loads((project / "runs/archive-ch-001.json").read_text(encoding="utf-8"))
+            self.assertTrue(all("id" in item and item["status"] == "open" for item in archive["foreshadowing"]))
 
             trace = json.loads(result.trace_path.read_text(encoding="utf-8"))
             self.assertEqual(trace["status"], "completed")

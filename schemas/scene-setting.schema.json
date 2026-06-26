@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.local/ceo-agent-botmux/scene-setting.schema.json",
+  "title": "SceneSetting",
+  "type": "object",
+  "required": ["id", "name", "kind", "function", "conflict_pressure", "rules", "reuse_value"],
+  "properties": {
+    "id": {"type": "string"},
+    "name": {"type": "string"},
+    "kind": {"type": "string"},
+    "function": {"type": "string"},
+    "conflict_pressure": {"type": "string"},
+    "rules": {"type": "array", "items": {"type": "string"}},
+    "reuse_value": {"type": "string"}
+  }
+}

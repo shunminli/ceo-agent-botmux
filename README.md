@@ -17,11 +17,13 @@ An AI agent team built with BotMux to coordinate coding agents through chat.
 - [Team Operating Contract](agents/team-operating-contract.md)
 - [小说生产 Agent Team 技术方案](docs/novel-creation-agent-team-tech-plan.md)
 - [Novel Runtime 逻辑记忆](agents/novel-runtime/index.md)
+- [Doubao CLI 逻辑记忆](agents/doubao-cli/index.md)
 - [Novel Creation Runtime 功能记忆](features/novel-creation-runtime/index.md)
+- [Doubao Creative Assist CLI 功能记忆](features/doubao-cli/index.md)
 
 ## Local Novel Runtime
 
-P0 已提供一个标准库 Python CLI，用于验证小说创作 Agent Team 的本地闭环：从一句灵感生成首章章纲、上下文包、草稿、审稿、修订、定稿、状态归档、JSON trace 和 SQLite run 记录。
+P0 已提供一个标准库 Python CLI，用于验证小说创作 Agent Team 的本地闭环：从一句灵感生成首章章纲、上下文包、草稿、审稿、修订、定稿、关系图、场景设定、文风档案、伏笔台账、状态归档、JSON trace 和 SQLite run 记录。
 
 ```bash
 python3 -m botmux_novel run \
@@ -35,6 +37,23 @@ python3 -m botmux_novel run \
 ```bash
 python3 -m unittest discover -s tests -v
 ```
+
+## Local Doubao CLI
+
+本仓库提供一个轻量豆包包装层，用于把豆包桌面端或网页版自动化 runner 暴露成稳定 CLI。默认推荐 OpenCLI 的桌面端适配器；前置 runner 可用 `npm install -g @jackwener/opencli` 安装（需要 Node.js >= 20）：
+
+```bash
+python3 -m botmux_doubao launch --dry-run
+/Applications/Doubao.app/Contents/MacOS/Doubao --remote-debugging-port=9225
+export OPENCLI_CDP_ENDPOINT=http://127.0.0.1:9225
+
+python3 -m botmux_doubao ask \
+  --provider opencli-app \
+  --purpose creative \
+  "给这个主角生成三个可选内心冲突。"
+```
+
+也可以把 `--provider doubao-cli` 指向基于浏览器会话的第三方 `doubao-cli` runner。所有模式都只使用本机已登录的豆包桌面端或 Web 会话，不保存账号凭证。
 
 ## Collaboration Model
 

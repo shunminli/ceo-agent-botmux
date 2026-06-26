@@ -4,6 +4,9 @@ version = "0.1.0"
 description = "BotMux-style local agent team prototypes for one-person-company workflows."
 requires-python = ">=3.9"
 
+[project.scripts]
+botmux-doubao = "botmux_doubao.cli:main"
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
