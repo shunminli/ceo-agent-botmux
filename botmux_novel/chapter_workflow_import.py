@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from .chapter_goals import chapter_goal_for
 from .schema_validation import validate_required
 from .workspace import NovelWorkspace, markdown_list, utc_now
 from .workflow_import import AGENT_OUTPUT_FIELDS, load_workflow_result, workflow_params
@@ -193,6 +194,7 @@ class NovelChapterWorkflowImporter:
                 title=title,
                 current_chapter=chapter,
                 current_chapter_number=chapter_number,
+                archive=archive,
                 params=params,
                 request=request,
             )
@@ -502,11 +504,16 @@ def next_chapter_handoff(
     title: str,
     current_chapter: str,
     current_chapter_number: int,
+    archive: Dict[str, Any],
     params: Dict[str, Any],
     request: NovelChapterWorkflowImportRequest,
 ) -> Dict[str, Any]:
     next_number = current_chapter_number + 1
+    next_goal = chapter_goal_for(next_number)
     story_bible = first_text(params.get("storyBible"), default="Use the approved Story Bible and latest archive context.")
+    prior_context = render_prior_context_for_handoff(current_chapter=current_chapter, archive=archive)
+    word_target = int_or_default(params.get("wordTarget"), request.word_target)
+    mode = first_text(params.get("mode"), request.mode, default=request.mode)
     command = [
         "botmux",
         "workflow",
@@ -521,7 +528,13 @@ def next_chapter_handoff(
         "--param",
         f"chapterNumber={next_number}",
         "--param",
-        "chapterGoal=Review prior archive and set the next approved chapter goal.",
+        f"chapterGoal={next_goal}",
+        "--param",
+        f"priorContext={prior_context}",
+        "--param",
+        f"wordTarget={word_target}",
+        "--param",
+        f"mode={mode}",
     ]
     local_command: List[str] = []
     if request.foundation_path is not None:
@@ -534,6 +547,8 @@ def next_chapter_handoff(
             str(project_path),
             "--chapter-number",
             str(next_number),
+            "--chapter-goal",
+            next_goal,
             "--foundation-json",
             str(request.foundation_path.expanduser().resolve()),
         ]
@@ -543,6 +558,10 @@ def next_chapter_handoff(
         "current_chapter_id": current_chapter,
         "next_chapter_id": chapter_id(next_number),
         "next_chapter_number": next_number,
+        "chapter_goal": next_goal,
+        "prior_context": prior_context,
+        "word_target": word_target,
+        "mode": mode,
         "workflow_command": command,
         "workflow_command_text": shlex.join(command),
         "local_command": local_command,
@@ -554,12 +573,59 @@ def next_chapter_handoff(
     }
 
 
+def render_prior_context_for_handoff(*, current_chapter: str, archive: Dict[str, Any]) -> str:
+    sections = [
+        f"Source chapter: {current_chapter}",
+        render_archive_items("Facts", archive.get("facts", []), ["fact", "summary", "value"]),
+        render_archive_items("Timeline", archive.get("timeline", []), ["event", "summary", "value"]),
+        render_archive_items("Foreshadowing", archive.get("foreshadowing", []), ["item", "clue", "description", "id"]),
+        render_archive_items("Character state", archive.get("character_state", []), ["state", "current_state", "summary", "value"], label_keys=["name", "id", "character_id"]),
+        render_archive_items("Continuity issues", archive.get("continuity_issues", []), ["issue", "summary", "value"]),
+    ]
+    return "\n".join(section for section in sections if section.strip())
+
+
+def render_archive_items(title: str, items: Any, preferred_keys: List[str], label_keys: Optional[List[str]] = None) -> str:
+    if not isinstance(items, list) or not items:
+        return f"{title}: none"
+    lines = [f"{title}:"]
+    for item in items:
+        if isinstance(item, dict):
+            value = first_present_text(item, preferred_keys)
+            if not value:
+                value = json.dumps(item, ensure_ascii=False, sort_keys=True)
+            label = first_present_text(item, label_keys or [])
+            detail_parts = []
+            for key in ["status", "risk", "risk_level", "planned_payoff", "payoff_plan"]:
+                if item.get(key) not in (None, ""):
+                    detail_parts.append(f"{key}={first_text(item.get(key), default='')}")
+            detail = f" ({'; '.join(detail_parts)})" if detail_parts else ""
+            prefix = f"{label}: " if label else ""
+            lines.append(f"- {prefix}{value}{detail}")
+        else:
+            lines.append(f"- {first_text(item, default='')}")
+    return "\n".join(lines)
+
+
+def first_present_text(item: Dict[str, Any], keys: List[str]) -> str:
+    for key in keys:
+        value = first_text(item.get(key), default="")
+        if value:
+            return value
+    return ""
+
+
 def render_next_chapter_markdown(payload: Dict[str, Any]) -> str:
     local_command = payload.get("local_command_text") or "Pass --foundation-json to chapter-workflow-import to enable a local chapter command."
     return f"""# Next Chapter Handoff
 
 - Current chapter: `{payload["current_chapter_id"]}`
 - Next chapter: `{payload["next_chapter_id"]}`
+- Chapter goal: {payload["chapter_goal"]}
+
+## Prior Context
+
+{payload["prior_context"]}
 
 ## BotMux Workflow
 

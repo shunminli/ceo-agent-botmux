@@ -43,7 +43,14 @@ class NovelChapterWorkflowImportTest(unittest.TestCase):
 
             next_command = json.loads((project / f"runs/{result.run_id}/next-chapter-command.json").read_text(encoding="utf-8"))
             self.assertEqual(next_command["next_chapter_id"], "ch-002")
+            self.assertEqual(next_command["chapter_goal"], "让林烬用半张残页验证巡夜钟异常，并把妹妹影子证词转成下一章追查目标。")
+            self.assertIn("妹妹的影子会在巡夜钟异常时开口。", next_command["prior_context"])
+            self.assertIn("巡夜钟提前震响", next_command["prior_context"])
             self.assertIn("novel-chapter-production", next_command["workflow_command"])
+            self.assertTrue(any(item.startswith("priorContext=") for item in next_command["workflow_command"]))
+            self.assertIn("wordTarget=1200", next_command["workflow_command"])
+            self.assertIn("mode=lean", next_command["workflow_command"])
+            self.assertIn("--chapter-goal", next_command["local_command"])
             self.assertIn("--foundation-json", next_command["local_command"])
 
             archive = json.loads((project / "runs/archive-ch-001.json").read_text(encoding="utf-8"))

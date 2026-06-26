@@ -560,7 +560,7 @@ python3 -m botmux_novel readiness --bootstrap-smoke --approval-apply-smoke --ser
 - workflow 只输出章节定稿候选包和 `archive_plan`，不直接写项目文件或 llmwiki；写入动作后续必须单独 gated。
 - 已新增本地 `python3 -m botmux_novel chapter`，可用已批准/已生成的 `foundation.json` 继续生产章节，用于无 BotMux 依赖的 Phase 2 smoke。
 - `chapter` 会自动读取早于当前章节的 `runs/archive-*.json`，生成 `runs/{chapter_run_id}/prior-context.json` 并注入上下文包，避免第二章以后丢失前文事实、伏笔和角色状态。
-- 已新增本地 `python3 -m botmux_novel chapter-workflow-import`，把真实 `novel-chapter-production` workflow 输出导入为本地 draft/revised/final、tracking 归档、SQLite run 记录和下一章 handoff；只有 Director 决策和 `archive_plan` 均通过时才写 final，被 block 的章节只写 blocked run artifacts。
+- 已新增本地 `python3 -m botmux_novel chapter-workflow-import`，把真实 `novel-chapter-production` workflow 输出导入为本地 draft/revised/final、tracking 归档、SQLite run 记录和下一章 handoff；只有 Director 决策和 `archive_plan` 均通过时才写 final，被 block 的章节只写 blocked run artifacts。成功导入后的下一章 BotMux 命令会携带本章归档摘要作为 `priorContext`，并带上下一章目标、`wordTarget` 和 `mode`。
 - `wiki-bundle` 会读取已有 `runs/archive-*.json`，把章节归档、定稿正文、聚合时间线和人物状态加入本地 llmwiki 审核包；章节知识库写入仍必须通过 `llmwiki-sync --approve` 或同等 humanGate。
 
 ### Phase 3：质量评估后再扩展
@@ -598,4 +598,4 @@ python3 -m botmux_novel readiness --bootstrap-smoke --approval-apply-smoke --ser
 2. 如需多 bot 协作口径，用相同参数运行 `novel-story-foundation`，在 `story_bible_package` 的 humanGate 审批关键人设、关系、剧情走势和场景设定；workflow 完成后把结果 JSON 交给 `python3 -m botmux_novel workflow-foundation-import --workflow-result ...`，生成同一套本地审核材料和审批包。
 3. 审批通过前可先执行 `approval-check --apply-dry-run` 确认审批包、审核材料、命令和 dry-run apply 路径完整；审批通过后执行审批包里的 `approval-decision --decision approve` 记录 reviewer、notes 和时间，再执行 `approval-apply --approve`，该路径默认运行 reindex/lint；或让 Director 在单独 humanGate workflow 中执行等价写入。
 4. 把批准后的 Story Bible 输入 `novel-chapter-production` 或 `python3 -m botmux_novel chapter` 继续章节生产；审批包会给出 `next_actions.chapter_start_command`，首章可直接运行该命令，它会从批准的 `foundation.json` 自动继承 `chapter_goal.objective`。
-5. 如果章节由真实 `novel-chapter-production` workflow 产出，完成 humanGate 后把结果 JSON 交给 `python3 -m botmux_novel chapter-workflow-import --workflow-result ... --project ...`，写入本地 final/tracking/archive 和下一章 handoff；若继续使用本地 runtime，则首章归档后优先审阅并运行 `runs/{run_id}/next-chapter-command.md|json` 里的下一章 handoff，必要时再修改 `--chapter-goal`。
+5. 如果章节由真实 `novel-chapter-production` workflow 产出，完成 humanGate 后把结果 JSON 交给 `python3 -m botmux_novel chapter-workflow-import --workflow-result ... --project ...`，写入本地 final/tracking/archive 和下一章 handoff；优先审阅并运行 `runs/{run_id}/next-chapter-command.md|json` 里的下一章 BotMux 命令，因为它已经包含 `priorContext` 归档摘要。若继续使用本地 runtime，也可运行同一 handoff 中带 `--chapter-goal` 的本地命令，必要时再修改章节目标。

@@ -102,7 +102,7 @@ python3 -m botmux_novel chapter-workflow-import \
   --foundation-json /path/to/novel-project/runs/<foundation-run-id>/foundation.json
 ```
 
-该命令只写本地 `manuscript/`、`tracking/`、`runs/archive-{chapter}.json`、trace 和下一章 handoff；不写 llmwiki。后续再次运行 `wiki-bundle` 时会自动把已有 `runs/archive-*.json`、定稿正文、事实、时间线、伏笔和人物状态纳入本地审核包；真正写入仍需要 `llmwiki-sync --approve` 或其他 humanGate-approved sync。
+该命令只写本地 `manuscript/`、`tracking/`、`runs/archive-{chapter}.json`、trace 和下一章 handoff；不写 llmwiki。下一章 handoff 里的 BotMux workflow 命令会携带本章归档摘要作为 `priorContext`，并保留 `wordTarget`、`mode` 和下一章目标；若传入 `--foundation-json`，本地 runtime 命令也会带 `--chapter-goal`。后续再次运行 `wiki-bundle` 时会自动把已有 `runs/archive-*.json`、定稿正文、事实、时间线、伏笔和人物状态纳入本地审核包；真正写入仍需要 `llmwiki-sync --approve` 或其他 humanGate-approved sync。
 
 手动拆步流程如下：
 
