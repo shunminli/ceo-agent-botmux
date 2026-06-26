@@ -117,7 +117,7 @@ python3 -m botmux_novel readiness --bootstrap-smoke --approval-apply-smoke --ser
 python3 -m botmux_novel readiness --bootstrap-smoke --approval-apply-smoke --series-smoke --smoke-chapter-count 20 --llmwiki-smoke
 ```
 
-`readiness` 默认会同时执行 workflow 绑定静态校验和本地合成契约 smoke，确认两个 BotMux workflow 的 prompt 能按依赖顺序渲染，并且每个节点都能传递 `preview/handoff/data` 等统一输出字段。
+`readiness` 默认会同时执行 workflow 绑定静态校验和本地合成契约 smoke，确认两个 BotMux workflow 的 prompt 能按依赖顺序渲染，并且每个节点都能传递 `preview/handoff/data` 等统一输出字段。传 `--llmwiki-smoke` 时会在临时项目生成一章归档，再验证 Story Bible 页面和章节归档页都能 approved sync、lint 和 reindex。
 
 `approval-check` 默认只读校验 `novel-bootstrap` 审批包；它会检查审核材料、humanGate 命令、llmwiki 预览、MCP 角色策略和首章启动命令，传 `--apply-dry-run` 时额外验证审批包能被 `approval-apply` 以 dry-run 消费且不会执行 approved writes。
 

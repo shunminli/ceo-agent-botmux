@@ -20,7 +20,7 @@ from .bootstrap import NovelBootstrapRequest, NovelBootstrapper
 from .botmux_assets import BotmuxAssetSyncRequest, BotmuxAssetSyncer
 from .chapter_workflow_import import NovelChapterWorkflowImporter, NovelChapterWorkflowImportRequest
 from .llmwiki_sync import LlmwikiSyncRequest, LlmwikiSyncer
-from .runtime import NovelFoundationRequest, NovelRuntime, NovelWikiBundleRequest
+from .runtime import NovelChapterRequest, NovelFoundationRequest, NovelRuntime, NovelWikiBundleRequest
 from .series import NovelSeriesRequest, NovelSeriesRunner
 from .workflow_import import NovelWorkflowFoundationImportRequest, NovelWorkflowFoundationImporter
 
@@ -720,6 +720,13 @@ class NovelReadinessChecker:
                         inspiration="退役巡夜人在旧书楼发现父亲旧案残页，必须在巡城司清查前保护妹妹身份并找出篡改真相的人。",
                     )
                 )
+                chapter = runtime.chapter(
+                    NovelChapterRequest(
+                        project_path=project_path,
+                        chapter_number=1,
+                        foundation_path=foundation.foundation_path,
+                    )
+                )
                 wiki_bundle = runtime.wiki_bundle(
                     NovelWikiBundleRequest(
                         project_path=project_path,
@@ -759,6 +766,8 @@ class NovelReadinessChecker:
                     )
                 )
                 target_overview = workspace_path / "wiki" / "novels" / project_slug / "overview.md"
+                target_chapter_archive = workspace_path / "wiki" / "novels" / project_slug / "chapter-archive.md"
+                target_chapter_page = workspace_path / "wiki" / "novels" / project_slug / "chapters" / "ch-001.md"
                 index_path = workspace_path / ".llmwiki" / "index.db"
                 reindex_succeeded = llmwiki_command_succeeded(sync_result.commands, "reindex")
                 lint_status = llmwiki_command_status(sync_result.commands, "lint")
@@ -770,6 +779,8 @@ class NovelReadinessChecker:
                     and reindex_succeeded
                     and (lint_succeeded or lint_skipped)
                     and target_overview.exists()
+                    and target_chapter_archive.exists()
+                    and target_chapter_page.exists()
                     and index_path.exists()
                 )
                 check_status = "pass" if passed and lint_succeeded else "warn" if passed else "fail"
@@ -788,7 +799,10 @@ class NovelReadinessChecker:
                         "project_path": str(project_path),
                         "workspace_path": str(workspace_path),
                         "bundle_path": str(wiki_bundle.bundle_path),
+                        "chapter_id": chapter.chapter_id,
                         "target_overview_exists": target_overview.exists(),
+                        "target_chapter_archive_exists": target_chapter_archive.exists(),
+                        "target_chapter_page_exists": target_chapter_page.exists(),
                         "index_exists": index_path.exists(),
                         "sync_status": sync_result.status,
                         "reindex_succeeded": reindex_succeeded,

@@ -567,7 +567,7 @@ python3 -m botmux_novel readiness --bootstrap-smoke --approval-apply-smoke --ser
 
 - 已新增本地 `python3 -m botmux_novel series`，默认可连续生成 5 章样例项目，并已通过 20 章稳定性基线。
 - `series` 会统计 P0/P1 冲突、修订轮次、归档完整率、prior context 覆盖率和用户修改点。
-- 已新增本地 `python3 -m botmux_novel readiness --bootstrap-smoke --workflow-import-smoke --chapter-import-smoke --approval-apply-smoke --series-smoke`，用于一键验收本机 BotMux/bot workspace 身份绑定/workflow validate/workflow 绑定/workflow 合成契约/llmwiki/bootstrap/foundation workflow import/chapter workflow import/approval decision/approval apply/series smoke 状态；`--llmwiki-smoke` 可额外验证底层 approved llmwiki workspace 写入、lint 和 reindex。
+- 已新增本地 `python3 -m botmux_novel readiness --bootstrap-smoke --workflow-import-smoke --chapter-import-smoke --approval-apply-smoke --series-smoke`，用于一键验收本机 BotMux/bot workspace 身份绑定/workflow validate/workflow 绑定/workflow 合成契约/llmwiki/bootstrap/foundation workflow import/chapter workflow import/approval decision/approval apply/series smoke 状态；`--llmwiki-smoke` 会额外生成一章归档并验证 Story Bible 页面、章节归档页、approved llmwiki workspace 写入、lint 和 reindex。
 - 只有当某类任务反复成为瓶颈时，才新增专职 bot。
 
 ## 16. 验收标准

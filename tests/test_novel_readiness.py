@@ -306,7 +306,10 @@ class NovelReadinessTest(unittest.TestCase):
             self.assertEqual(checks["llmwiki"].status, "pass")
             self.assertEqual(checks["llmwiki_smoke"].status, "pass")
             self.assertEqual(checks["llmwiki_smoke"].data["sync_status"], "completed")
+            self.assertEqual(checks["llmwiki_smoke"].data["chapter_id"], "ch-001")
             self.assertTrue(checks["llmwiki_smoke"].data["target_overview_exists"])
+            self.assertTrue(checks["llmwiki_smoke"].data["target_chapter_archive_exists"])
+            self.assertTrue(checks["llmwiki_smoke"].data["target_chapter_page_exists"])
             self.assertTrue(checks["llmwiki_smoke"].data["index_exists"])
             self.assertTrue(checks["llmwiki_smoke"].data["reindex_succeeded"])
             self.assertTrue(checks["llmwiki_smoke"].data["lint_succeeded"])
@@ -412,6 +415,8 @@ class NovelReadinessTest(unittest.TestCase):
             checks = {check["name"]: check for check in payload["checks"]}
             self.assertEqual(checks["llmwiki_smoke"]["status"], "pass")
             self.assertTrue(checks["llmwiki_smoke"]["data"]["lint_succeeded"])
+            self.assertTrue(checks["llmwiki_smoke"]["data"]["target_chapter_archive_exists"])
+            self.assertTrue(checks["llmwiki_smoke"]["data"]["target_chapter_page_exists"])
 
     def test_cli_readiness_can_run_bootstrap_smoke(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:

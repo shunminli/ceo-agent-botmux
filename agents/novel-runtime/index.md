@@ -181,7 +181,7 @@ Updated: 2026-06-27
 10. 传 `--chapter-import-smoke` 时用合成章节 workflow 输出跑 `chapter-workflow-import`，确认可写本地 final、archive 和下一章 handoff。
 11. 传 `--approval-apply-smoke` 时在临时目录跑 `novel-bootstrap`、`approval-decision --decision approve` 和 approved `approval-apply`，确认决策记录、workspace 自动初始化、页面写入、lint 和 reindex 可用。
 12. 传 `--series-smoke` 时在临时目录跑连续章节 smoke，并检查 Phase 3 指标阈值。
-13. 传 `--llmwiki-smoke` 时在临时目录生成 wiki bundle，初始化独立 llmwiki workspace，执行 approved `llmwiki-sync --reindex --lint`，确认页面复制、lint 和索引重建可用。
+13. 传 `--llmwiki-smoke` 时在临时目录生成 foundation 和一章归档，再导出 wiki bundle，初始化独立 llmwiki workspace，执行 approved `llmwiki-sync --reindex --lint`，确认 Story Bible 页面、章节归档页、lint 和索引重建可用。
 
 ### BotMux Assets
 
