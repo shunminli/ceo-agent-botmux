@@ -303,6 +303,7 @@ class DoubaoRuntime:
                 setup_hints=[
                     "Install OpenCLI (`npm install -g @jackwener/opencli`, Node.js >= 20) or install OpenCLIApp, then ensure `opencli` is on PATH.",
                     "Launch Doubao Desktop with `/Applications/Doubao.app/Contents/MacOS/Doubao --remote-debugging-port=9225`.",
+                    "If Doubao is already running without CDP, quit it first and relaunch with the remote debugging port.",
                     "Set `OPENCLI_CDP_ENDPOINT=http://127.0.0.1:9225` before running this wrapper.",
                 ],
             )
@@ -318,6 +319,7 @@ class DoubaoRuntime:
                 new_args=[adapter, "new"],
                 setup_hints=[
                     "Install OpenCLI (`npm install -g @jackwener/opencli`, Node.js >= 20) or install OpenCLIApp, then ensure `opencli` is on PATH.",
+                    "Install and connect the OpenCLI Browser Bridge extension for the browser profile.",
                     "Log in to Doubao Web in the browser profile used by the OpenCLI adapter.",
                     "If your OpenCLI adapter has a different name, pass --opencli-adapter.",
                 ],

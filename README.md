@@ -58,7 +58,7 @@ python3 -m botmux_doubao ask \
   "给这个主角生成三个可选内心冲突。"
 ```
 
-也可以把 `--provider doubao-cli` 指向基于浏览器会话的第三方 `doubao-cli` runner。所有模式都只使用本机已登录的豆包桌面端或 Web 会话，不保存账号凭证。
+如果豆包桌面端已经在运行但没有 CDP 端口，需要先退出豆包再用上面的 remote debugging 参数重启。也可以用 `--provider opencli-web` 调用网页版适配器，此模式需要 OpenCLI Browser Bridge extension 已连接；或把 `--provider doubao-cli` 指向基于浏览器会话的第三方 `doubao-cli` runner。所有模式都只使用本机已登录的豆包桌面端或 Web 会话，不保存账号凭证。
 
 ## Collaboration Model
 
