@@ -59,9 +59,15 @@ python3 -m botmux_novel novel-bootstrap \
   --project-slug shadow-clock-case
 ```
 
-产物在 `runs/{bootstrap_run_id}/approval-package.md` 和 `approval-package.json`。审批通过后优先执行其中的 `approval-apply --approve` 命令，它会读取审批包中的 project、slug、workspace 和 llmwiki 配置；如果目标 workspace 还没有 llmwiki index，会先初始化；底层仍调用 `llmwiki-sync --approve --reindex`。
+产物在 `runs/{bootstrap_run_id}/approval-package.md` 和 `approval-package.json`。审批通过后先执行其中的 `approval-decision --decision approve` 命令，记录 reviewer、notes、timestamp 和历史；再执行 `approval-apply --approve`。`approval-apply` 会读取审批包中的 project、slug、workspace 和 llmwiki 配置；如果目标 workspace 还没有 llmwiki index，会先初始化；底层仍调用 `llmwiki-sync --approve --reindex`。
 
 ```bash
+python3 -m botmux_novel approval-decision \
+  --approval-package /path/to/novel-project/runs/<bootstrap-run-id>/approval-package.json \
+  --decision approve \
+  --reviewer human \
+  --notes "Approved after reviewing approval-package.md and wiki bundle."
+
 python3 -m botmux_novel approval-apply \
   --approval-package /path/to/novel-project/runs/<bootstrap-run-id>/approval-package.json \
   --approve
@@ -145,6 +151,7 @@ llmwiki mcp-config /path/to/novel-project
 - `source_refs`：来自 Story Bible、章节候选包或用户批准的哪一份材料。
 - `rollback_plan`：误写后如何撤销或恢复。
 - `lint_plan`：写后运行 llmwiki lint 的方式和错误处理策略。
+- `decision_record`：通过 `approval-decision` 写入审批包的 reviewer、decision、notes 和 `decided_at`。
 
 禁止写入：
 
@@ -186,4 +193,4 @@ llmwiki mcp-config /path/to/novel-project
 
 - 本仓库还没有自动安装 llmwiki；当前安装是本机一次性环境准备。
 - 本仓库不直接调用 llmwiki MCP `create/edit/append`；`llmwiki-sync` 只写本地 workspace Markdown 文件树，MCP 写工具仍需由 `Novel-Director-Curator` 在 humanGate 后调用。
-- 首次真实写入必须由用户审批 Story Bible 和 wiki 页面清单后再执行；CLI 层用 `--approve` 表示这个审批已经完成。
+- 首次真实写入必须由用户审批 Story Bible 和 wiki 页面清单后再执行；正式 CLI 路径用 `approval-decision --decision approve` 记录审批，再用 `approval-apply --approve` 执行写入。

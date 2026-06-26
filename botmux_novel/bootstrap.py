@@ -121,6 +121,20 @@ class NovelBootstrapper:
             llmwiki_sync=llmwiki_sync,
             mcp_config=mcp_config,
         )
+        payload["human_gate"]["approval_decision_command"] = [
+            "python3",
+            "-m",
+            "botmux_novel",
+            "approval-decision",
+            "--approval-package",
+            str(approval_package_json_path),
+            "--decision",
+            "approve",
+            "--reviewer",
+            "human",
+            "--notes",
+            "Approved after reviewing approval-package.md and wiki bundle.",
+        ]
         payload["human_gate"]["approval_apply_command"] = [
             "python3",
             "-m",
@@ -216,7 +230,8 @@ def approval_payload(
         },
         "next_steps": [
             "Human reviews approval-package.md and wiki bundle pages.",
-            "If approved, run the approved_write_command or let Director execute an equivalent humanGate-approved write.",
+            "If approved, run approval_decision_command to record reviewer, decision, timestamp, and notes.",
+            "Run approval_apply_command or let Director execute an equivalent humanGate-approved write.",
             "After llmwiki sync, configure the generated MCP server for Director and Validator only.",
             "Start chapter production from the approved foundation JSON or Story Bible handoff.",
         ],
@@ -242,6 +257,7 @@ def render_approval_markdown(payload: Dict[str, Any]) -> str:
     llmwiki = payload["llmwiki"]
     preview = llmwiki.get("preview", {})
     command = shlex.join(human_gate["approved_write_command"])
+    decision_command = shlex.join(human_gate.get("approval_decision_command", []))
     apply_command = shlex.join(human_gate.get("approval_apply_command", []))
     pages = "\n".join(f"- `{page}`" for page in preview.get("pages", [])) or "- No pages found"
     must_review = "\n".join(f"- {item}" for item in human_gate["must_review"])
@@ -286,6 +302,12 @@ Warnings:
 Pages:
 
 {pages}
+
+Record approval decision command:
+
+```bash
+{decision_command}
+```
 
 Preferred approval apply command:
 

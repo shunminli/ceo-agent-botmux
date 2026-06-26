@@ -9,7 +9,12 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, Iterator, List, Optional, Set, Tuple
 
-from .approval import NovelApprovalApplier, NovelApprovalApplyRequest
+from .approval import (
+    NovelApprovalApplier,
+    NovelApprovalApplyRequest,
+    NovelApprovalDecider,
+    NovelApprovalDecisionRequest,
+)
 from .bootstrap import NovelBootstrapRequest, NovelBootstrapper
 from .botmux_assets import BotmuxAssetSyncRequest, BotmuxAssetSyncer
 from .llmwiki_sync import LlmwikiSyncRequest, LlmwikiSyncer
@@ -409,6 +414,14 @@ class NovelReadinessChecker:
                         llmwiki_bin=executable,
                     )
                 )
+                decision_result = NovelApprovalDecider().record(
+                    NovelApprovalDecisionRequest(
+                        approval_package_path=bootstrap_result.approval_package_json_path,
+                        decision="approve",
+                        reviewer="readiness-smoke",
+                        notes="Readiness smoke approval for temporary workspace sync.",
+                    )
+                )
                 apply_result = NovelApprovalApplier().apply(
                     NovelApprovalApplyRequest(
                         approval_package_path=bootstrap_result.approval_package_json_path,
@@ -440,6 +453,7 @@ class NovelReadinessChecker:
                         "project_path": str(project_path),
                         "workspace_path": str(workspace_path),
                         "approval_package_path": str(bootstrap_result.approval_package_json_path),
+                        "decision_status": decision_result.status,
                         "apply_status": apply_result.status,
                         "approved": apply_result.approved,
                         "target_overview_exists": target_overview.exists(),

@@ -5,7 +5,12 @@ import json
 from pathlib import Path
 from typing import Optional
 
-from .approval import NovelApprovalApplier, NovelApprovalApplyRequest
+from .approval import (
+    NovelApprovalApplier,
+    NovelApprovalApplyRequest,
+    NovelApprovalDecider,
+    NovelApprovalDecisionRequest,
+)
 from .bootstrap import NovelBootstrapper, NovelBootstrapRequest
 from .botmux_assets import BotmuxAssetSyncRequest, BotmuxAssetSyncer
 from .llmwiki_sync import LlmwikiSyncRequest, LlmwikiSyncer
@@ -61,6 +66,15 @@ def build_parser() -> argparse.ArgumentParser:
     approval_parser.add_argument("--no-backup", action="store_true", help="Do not create .bak files before replacing target pages.")
     approval_parser.add_argument("--llmwiki-bin", help="Optional override for the llmwiki executable recorded in the approval package.")
     approval_parser.add_argument("--no-reindex", action="store_true", help="Do not run `llmwiki reindex <workspace>` after approved writes.")
+
+    decision_parser = subparsers.add_parser(
+        "approval-decision",
+        help="Record a humanGate decision in a novel-bootstrap approval package before applying writes.",
+    )
+    decision_parser.add_argument("--approval-package", required=True, help="Path to runs/<bootstrap_run_id>/approval-package.json.")
+    decision_parser.add_argument("--decision", choices=["approve", "request_changes", "reject"], required=True, help="Human review decision to record.")
+    decision_parser.add_argument("--reviewer", default="human", help="Reviewer name or handle to store in the approval package.")
+    decision_parser.add_argument("--notes", default="", help="Optional review notes to store with the decision.")
 
     chapter_parser = subparsers.add_parser(
         "chapter",
@@ -129,7 +143,7 @@ def build_parser() -> argparse.ArgumentParser:
     readiness_parser.add_argument("--botmux-bin", default=str(Path.home() / ".botmux" / "bin" / "botmux"), help="BotMux executable.")
     readiness_parser.add_argument("--llmwiki-bin", default="llmwiki", help="llmwiki executable to check.")
     readiness_parser.add_argument("--bootstrap-smoke", action="store_true", help="Run a temporary novel-bootstrap smoke without approved llmwiki writes.")
-    readiness_parser.add_argument("--approval-apply-smoke", action="store_true", help="Run a temporary approval-apply smoke with approved llmwiki writes.")
+    readiness_parser.add_argument("--approval-apply-smoke", action="store_true", help="Run a temporary approval-decision plus approval-apply smoke with approved llmwiki writes.")
     readiness_parser.add_argument("--series-smoke", action="store_true", help="Run a temporary multi-chapter series smoke.")
     readiness_parser.add_argument("--smoke-chapter-count", type=int, default=5, help="Chapter count for --series-smoke.")
     readiness_parser.add_argument(
@@ -206,6 +220,17 @@ def main(argv: Optional[list[str]] = None) -> int:
         result = NovelApprovalApplier().apply(request)
         print(json.dumps(result.to_dict(), ensure_ascii=False, indent=2))
         return 0 if result.status in {"planned", "completed", "completed_with_warnings"} else 2
+
+    if args.command == "approval-decision":
+        request = NovelApprovalDecisionRequest(
+            approval_package_path=Path(args.approval_package).expanduser().resolve(),
+            decision=args.decision,
+            reviewer=args.reviewer,
+            notes=args.notes,
+        )
+        result = NovelApprovalDecider().record(request)
+        print(json.dumps(result.to_dict(), ensure_ascii=False, indent=2))
+        return 0 if result.status == "recorded" else 2
 
     if args.command == "chapter":
         request = NovelChapterRequest(

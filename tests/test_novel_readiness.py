@@ -226,7 +226,8 @@ class NovelReadinessTest(unittest.TestCase):
             checks = {check.name: check for check in result.checks}
             self.assertEqual(result.status, "ready")
             self.assertEqual(checks["approval_apply_smoke"].status, "pass")
-            self.assertEqual(checks["approval_apply_smoke"].data["apply_status"], "completed_with_warnings")
+            self.assertEqual(checks["approval_apply_smoke"].data["decision_status"], "recorded")
+            self.assertEqual(checks["approval_apply_smoke"].data["apply_status"], "completed")
             self.assertTrue(checks["approval_apply_smoke"].data["approved"])
             self.assertTrue(checks["approval_apply_smoke"].data["target_overview_exists"])
             self.assertTrue(checks["approval_apply_smoke"].data["index_exists"])

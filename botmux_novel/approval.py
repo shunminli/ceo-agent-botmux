@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from .workspace import utc_now
 from .llmwiki_sync import (
     LlmwikiCommandResult,
     LlmwikiSyncRequest,
@@ -22,6 +23,44 @@ class NovelApprovalApplyRequest:
     backup: bool = True
     llmwiki_bin: Optional[str] = None
     reindex: bool = True
+
+
+@dataclass(frozen=True)
+class NovelApprovalDecisionRequest:
+    approval_package_path: Path
+    decision: str
+    reviewer: str = "human"
+    notes: str = ""
+
+
+@dataclass(frozen=True)
+class NovelApprovalDecisionResult:
+    status: str
+    approval_package_path: Path
+    approval_package_markdown_path: Optional[Path]
+    markdown_updated: bool
+    decision: str
+    reviewer: str
+    decided_at: str
+    previous_decision: Optional[str]
+    notes: str
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "status": self.status,
+            "approval_package_path": str(self.approval_package_path),
+            "approval_package_markdown_path": (
+                str(self.approval_package_markdown_path)
+                if self.approval_package_markdown_path is not None
+                else None
+            ),
+            "markdown_updated": self.markdown_updated,
+            "decision": self.decision,
+            "reviewer": self.reviewer,
+            "decided_at": self.decided_at,
+            "previous_decision": self.previous_decision,
+            "notes": self.notes,
+        }
 
 
 @dataclass(frozen=True)
@@ -65,10 +104,15 @@ class NovelApprovalApplier:
 
         warnings: List[str] = []
         decision = payload.get("human_gate", {}).get("decision")
-        if request.approve and decision != "approve":
-            warnings.append(
-                "approval package decision is not set to `approve`; treating explicit --approve as the humanGate signal"
-            )
+        if request.approve:
+            if decision in {"request_changes", "reject"}:
+                raise ValueError(
+                    f"approval package decision is `{decision}`; refusing approved llmwiki sync"
+                )
+            if decision != "approve":
+                warnings.append(
+                    "approval package decision is not set to `approve`; treating explicit --approve as the humanGate signal"
+                )
 
         init_commands = ensure_workspace_initialized(
             workspace_path=workspace_path,
@@ -101,6 +145,60 @@ class NovelApprovalApplier:
             init_commands=init_commands,
             llmwiki_sync=sync_result,
             warnings=[*warnings, *sync_result.warnings],
+        )
+
+
+class NovelApprovalDecider:
+    valid_decisions = {"approve", "request_changes", "reject"}
+
+    def record(self, request: NovelApprovalDecisionRequest) -> NovelApprovalDecisionResult:
+        approval_package_path = request.approval_package_path.expanduser().resolve()
+        payload = load_approval_package(approval_package_path)
+        decision = request.decision.strip()
+        if decision not in self.valid_decisions:
+            raise ValueError(f"decision must be one of: {', '.join(sorted(self.valid_decisions))}")
+        reviewer = request.reviewer.strip() or "human"
+        notes = request.notes.strip()
+        decided_at = utc_now()
+
+        human_gate = payload.setdefault("human_gate", {})
+        if not isinstance(human_gate, dict):
+            raise ValueError("approval package human_gate must be an object")
+        previous_decision = human_gate.get("decision")
+        record = {
+            "decision": decision,
+            "reviewer": reviewer,
+            "decided_at": decided_at,
+            "notes": notes,
+            "previous_decision": previous_decision,
+        }
+        history = human_gate.setdefault("decision_history", [])
+        if not isinstance(history, list):
+            raise ValueError("approval package human_gate.decision_history must be a list")
+        history.append(record)
+        human_gate["decision"] = decision
+        human_gate["reviewer"] = reviewer
+        human_gate["decided_at"] = decided_at
+        human_gate["notes"] = notes
+        approval_package_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        markdown_path = approval_package_path.with_suffix(".md")
+        markdown_updated = False
+        if markdown_path.exists():
+            from .bootstrap import render_approval_markdown
+
+            markdown_path.write_text(render_approval_markdown(payload), encoding="utf-8")
+            markdown_updated = True
+
+        return NovelApprovalDecisionResult(
+            status="recorded",
+            approval_package_path=approval_package_path,
+            approval_package_markdown_path=markdown_path if markdown_path.exists() else None,
+            markdown_updated=markdown_updated,
+            decision=decision,
+            reviewer=reviewer,
+            decided_at=decided_at,
+            previous_decision=str(previous_decision) if previous_decision is not None else None,
+            notes=notes,
         )
 
 

@@ -1,7 +1,7 @@
 # 小说生产 Agent Team 技术方案
 
 状态：Draft  
-更新日期：2026-06-26  
+更新日期：2026-06-27
 Canonical 文档：本文件是小说生产 Agent Team 的唯一技术入口，用于后续创建小说 bot、BotMux workflow、运行时能力和 llmwiki 集成。
 
 关联文件：
@@ -479,6 +479,12 @@ python3 -m botmux_novel novel-bootstrap \
   --inspiration "一个背负旧案污名的少年，在巡夜钟声中发现妹妹影子会说真话。" \
   --project-slug shadow-clock-case
 
+python3 -m botmux_novel approval-decision \
+  --approval-package /tmp/novel-demo/runs/<bootstrap-run-id>/approval-package.json \
+  --decision approve \
+  --reviewer human \
+  --notes "Approved after reviewing approval-package.md and wiki bundle."
+
 python3 -m botmux_novel approval-apply \
   --approval-package /tmp/novel-demo/runs/<bootstrap-run-id>/approval-package.json \
   --approve
@@ -507,7 +513,7 @@ python3 -m botmux_novel readiness --bootstrap-smoke --approval-apply-smoke --ser
 | --- | --- | --- |
 | 开书设定 workflow | 已落地为仓库 workflow 模板和本机 BotMux 全局 workflow，并提供本地 `foundation` 与 `novel-bootstrap` 子命令 | BotMux 用于多 bot 协作和 humanGate，本地 CLI 用于无外部依赖的开书资产 smoke 和真实项目审批包。 |
 | 人物关系 / 场景 / 伏笔 / 文风 schema | 已落地为独立 schema，并由本地 runtime 写出结构化产物 | 后续接入真实模型时保持字段契约稳定。 |
-| llmwiki sync | 已有本地 `wiki-bundle` 导出、[llmwiki 接入 runbook](novel-llmwiki-setup.md)、`approval-apply` 和 `llmwiki-sync` gated 本地 workspace 同步 | 先人工审核审批包和 Markdown bundle，再用 `approval-apply --approve` 写入 llmwiki source-of-truth 文件树；MCP `create/edit/append` 仍只由 Director humanGate 后使用。 |
+| llmwiki sync | 已有本地 `wiki-bundle` 导出、[llmwiki 接入 runbook](novel-llmwiki-setup.md)、`approval-decision`、`approval-apply` 和 `llmwiki-sync` gated 本地 workspace 同步 | 先人工审核审批包和 Markdown bundle，再用 `approval-decision --decision approve` 记录人审，最后用 `approval-apply --approve` 写入 llmwiki source-of-truth 文件树；MCP `create/edit/append` 仍只由 Director humanGate 后使用。 |
 | BotMux 资产同步 | 已落地 `python3 -m botmux_novel botmux-assets`，可同步 workflow 模板和三个小说 bot 的 workspace `AGENTS.md` | 后续改身份文档或 workflow 后先 dry-run，再 `--write` 更新本机 BotMux 环境。 |
 
 ## 15. 实施路线图
@@ -533,6 +539,7 @@ python3 -m botmux_novel readiness --bootstrap-smoke --approval-apply-smoke --ser
 - 本地 P0 runtime 已能写出关系图、场景设定、文风档案和带 id/status 的伏笔台账，作为 Story Bible 后续落库的数据契约基础。
 - 已新增本地 `python3 -m botmux_novel wiki-bundle`，把 foundation JSON 导出为 `/wiki/novels/{project_slug}/` Markdown 页面包；该命令不调用 llmwiki，只作为写入前审核材料。
 - 已新增本地 `python3 -m botmux_novel llmwiki-sync`，默认生成同步计划，传 `--approve` 后把审核包写入本地 llmwiki workspace，并可选 `--reindex`。
+- 已新增本地 `python3 -m botmux_novel approval-decision`，把 humanGate 的 `approve`、`request_changes` 或 `reject` 写入审批包，记录 reviewer、notes、timestamp 和 `decision_history`。
 - 已新增本地 `python3 -m botmux_novel approval-apply`，读取 `novel-bootstrap` 审批包，默认 dry-run，传 `--approve` 后按包内 project/slug/workspace/llmwiki 配置执行 gated sync。
 - 已补充 `docs/novel-llmwiki-setup.md`，说明本地 workspace、MCP 权限、humanGate 和 lint 接入流程。
 
@@ -549,7 +556,7 @@ python3 -m botmux_novel readiness --bootstrap-smoke --approval-apply-smoke --ser
 
 - 已新增本地 `python3 -m botmux_novel series`，默认可连续生成 5 章样例项目，并已通过 20 章稳定性基线。
 - `series` 会统计 P0/P1 冲突、修订轮次、归档完整率、prior context 覆盖率和用户修改点。
-- 已新增本地 `python3 -m botmux_novel readiness --bootstrap-smoke --approval-apply-smoke --series-smoke`，用于一键验收本机 BotMux/workflow validate/workflow 绑定/llmwiki/bootstrap/approval apply/series smoke 状态；`--llmwiki-smoke` 可额外验证底层 approved llmwiki workspace 写入和 reindex。
+- 已新增本地 `python3 -m botmux_novel readiness --bootstrap-smoke --approval-apply-smoke --series-smoke`，用于一键验收本机 BotMux/workflow validate/workflow 绑定/llmwiki/bootstrap/approval decision/approval apply/series smoke 状态；`--llmwiki-smoke` 可额外验证底层 approved llmwiki workspace 写入和 reindex。
 - 只有当某类任务反复成为瓶颈时，才新增专职 bot。
 
 ## 16. 验收标准
@@ -578,5 +585,5 @@ python3 -m botmux_novel readiness --bootstrap-smoke --approval-apply-smoke --ser
 
 1. 拿到真实项目参数后先运行 `python3 -m botmux_novel novel-bootstrap`，产出本地 Story Bible 候选、wiki 审核包、MCP 配置和审批包。
 2. 如需多 bot 协作口径，再用相同参数运行 `novel-story-foundation`，在 `story_bible_package` 的 humanGate 审批关键人设、关系、剧情走势和场景设定。
-3. 审批通过后执行审批包里的 `approval-apply --approve`，或让 Director 在单独 humanGate workflow 中执行等价写入。
+3. 审批通过后先执行审批包里的 `approval-decision --decision approve` 记录 reviewer、notes 和时间，再执行 `approval-apply --approve`；或让 Director 在单独 humanGate workflow 中执行等价写入。
 4. 把批准后的 Story Bible 输入 `novel-chapter-production` 或 `python3 -m botmux_novel chapter` 继续章节生产。
