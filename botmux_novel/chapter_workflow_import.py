@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from .chapter_goals import chapter_goal_for
+from .handoff_commands import build_chapter_knowledge_handoff
 from .schema_validation import validate_required
 from .workspace import NovelWorkspace, markdown_list, utc_now
 from .workflow_import import AGENT_OUTPUT_FIELDS, load_workflow_result, workflow_params
@@ -529,13 +530,14 @@ def next_chapter_handoff(
     prior_context = render_prior_context_for_handoff(current_chapter=current_chapter, archive=archive)
     word_target = int_or_default(params.get("wordTarget"), request.word_target)
     mode = first_text(params.get("mode"), request.mode, default=request.mode)
+    project_slug = first_text(params.get("projectSlug"), default="project-slug")
     command = [
         "botmux",
         "workflow",
         "run",
         "novel-chapter-production",
         "--param",
-        f"projectSlug={first_text(params.get('projectSlug'), default='project-slug')}",
+        f"projectSlug={project_slug}",
         "--param",
         f"title={title}",
         "--param",
@@ -567,9 +569,19 @@ def next_chapter_handoff(
             "--foundation-json",
             str(request.foundation_path.expanduser().resolve()),
         ]
+    knowledge_handoff = build_chapter_knowledge_handoff(
+        project_path=project_path,
+        project_slug=project_slug,
+        foundation_path=(
+            request.foundation_path.expanduser().resolve()
+            if request.foundation_path is not None
+            else None
+        ),
+    )
     return {
         "status": "suggested",
         "project_path": str(project_path),
+        "project_slug": project_slug,
         "current_chapter_id": current_chapter,
         "next_chapter_id": chapter_id(next_number),
         "next_chapter_number": next_number,
@@ -581,6 +593,7 @@ def next_chapter_handoff(
         "workflow_command_text": shlex.join(command),
         "local_command": local_command,
         "local_command_text": shlex.join(local_command) if local_command else "",
+        "knowledge_handoff": knowledge_handoff,
         "source_refs": [
             f"runs/{run_id}/summary.md",
             f"runs/archive-{current_chapter}.json",
@@ -652,6 +665,26 @@ def render_next_chapter_markdown(payload: Dict[str, Any]) -> str:
 
 ```bash
 {local_command}
+```
+
+## Knowledge Update
+
+Regenerate the reviewable wiki bundle:
+
+```bash
+{payload["knowledge_handoff"]["wiki_bundle_command_text"]}
+```
+
+Create a dry-run llmwiki sync plan:
+
+```bash
+{payload["knowledge_handoff"]["llmwiki_sync_plan_command_text"]}
+```
+
+After humanGate approval only:
+
+```bash
+{payload["knowledge_handoff"]["approved_llmwiki_sync_command_text"]}
 ```
 """
 

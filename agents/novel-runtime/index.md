@@ -123,7 +123,7 @@ Updated: 2026-06-27
 5. 写入当前 Story Bible / characters / settings / outline 资产快照，并在 `runs/{run_id}/source-foundation.json` 记录本次来源。
 6. 写入 `runs/{run_id}/prior-context.json`，并把前章归档注入 `context-pack.json` 的 `prior_context`、`facts`、`character_states`、`foreshadowing` 和 `source_refs`。
 7. 复用章节状态机完成蓝图、上下文包、草稿、审稿、修订、定稿、归档、trace 和 SQLite run 记录。
-8. 完成归档后写入 `runs/{run_id}/next-chapter-command.json|md`，给出下一章建议目标、source refs、可直接审阅/执行的本地 `python3 -m botmux_novel chapter` 命令，以及携带本章 archive `priorContext` 的真实 `novel-chapter-production` BotMux workflow 命令。
+8. 完成归档后写入 `runs/{run_id}/next-chapter-command.json|md`，给出下一章建议目标、source refs、可直接审阅/执行的本地 `python3 -m botmux_novel chapter` 命令、携带本章 archive `priorContext` 的真实 `novel-chapter-production` BotMux workflow 命令，以及章节后 wiki 审核包/dry-run sync/approved sync 的知识回写命令。
 9. 不重新调用 `DirectorAgent.plan_project`，避免批准后的 Story Bible 被灵感重规划覆盖。
 
 ### Chapter Workflow Import
@@ -206,6 +206,7 @@ Updated: 2026-06-27
 - `botmux_novel/approval.py`：记录 humanGate 审批决策，并在批准后读取审批包执行 gated llmwiki sync。
 - `botmux_novel/approval_check.py`：只读校验审批包、审核材料、humanGate 命令、MCP 策略和可选 dry-run / chapter smoke。
 - `botmux_novel/bootstrap.py`：真实项目启动包、审批包、wiki dry-run sync plan 和 MCP 配置串联。
+- `botmux_novel/handoff_commands.py`：章节 handoff 中本地 wiki bundle、llmwiki sync plan 和 approved sync 命令生成。
 - `botmux_novel/workflow_import.py`：真实 BotMux 开书 workflow 输出导入、本地 foundation 规范化和审批包桥接。
 - `botmux_novel/workflow_commands.py`：Story Bible 压缩和 `novel-chapter-production` BotMux 命令生成。
 - `botmux_novel/chapter_goals.py`：本地 deterministic 章节目标模板，供 series 和下一章 handoff 复用。

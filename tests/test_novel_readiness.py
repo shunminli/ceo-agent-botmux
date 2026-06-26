@@ -350,6 +350,7 @@ class NovelReadinessTest(unittest.TestCase):
             )
             self.assertEqual(checks["bootstrap_smoke"].data["chapter_start_result"]["status"], "completed")
             self.assertTrue(checks["bootstrap_smoke"].data["chapter_start_result"]["final_path_exists"])
+            self.assertTrue(checks["bootstrap_smoke"].data["chapter_start_result"]["knowledge_handoff_valid"])
             self.assertFalse(checks["bootstrap_smoke"].data["target_overview_exists"])
 
     def test_approval_apply_smoke_runs_init_write_lint_and_reindex(self) -> None:
@@ -577,6 +578,7 @@ class NovelReadinessTest(unittest.TestCase):
             self.assertTrue(checks["chapter_import_smoke"]["data"]["final_path_exists"])
             self.assertTrue(checks["chapter_import_smoke"]["data"]["archive_path_exists"])
             self.assertTrue(checks["chapter_import_smoke"]["data"]["next_command_path_exists"])
+            self.assertTrue(checks["chapter_import_smoke"]["data"]["knowledge_handoff_valid"])
 
 
 def install_temp_botmux(botmux_home: Path) -> None:

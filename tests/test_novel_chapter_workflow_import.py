@@ -52,6 +52,13 @@ class NovelChapterWorkflowImportTest(unittest.TestCase):
             self.assertIn("mode=lean", next_command["workflow_command"])
             self.assertIn("--chapter-goal", next_command["local_command"])
             self.assertIn("--foundation-json", next_command["local_command"])
+            knowledge_handoff = next_command["knowledge_handoff"]
+            self.assertEqual(next_command["project_slug"], "shadow-clock-case")
+            self.assertIn("wiki-bundle", knowledge_handoff["wiki_bundle_command"])
+            self.assertIn("--foundation-json", knowledge_handoff["wiki_bundle_command"])
+            self.assertIn("llmwiki-sync", knowledge_handoff["llmwiki_sync_plan_command"])
+            self.assertNotIn("--approve", knowledge_handoff["llmwiki_sync_plan_command"])
+            self.assertIn("--approve", knowledge_handoff["approved_llmwiki_sync_command"])
 
             archive = json.loads((project / "runs/archive-ch-001.json").read_text(encoding="utf-8"))
             self.assertEqual(archive["archive_decision"], "archive")

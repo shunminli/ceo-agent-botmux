@@ -26,7 +26,7 @@ An AI agent team built with BotMux to coordinate coding agents through chat.
 
 ## Local Novel Runtime
 
-P0 已提供一个标准库 Python CLI，用于验证小说创作 Agent Team 的本地闭环：从一句灵感生成开书设定、章节章纲、上下文包、草稿、审稿、修订、定稿、关系图、场景设定、文风档案、伏笔台账、状态归档、JSON trace 和 SQLite run 记录。连续章节会读取前章 `runs/archive-*.json` 并生成 `prior-context.json`；从 foundation 或章节 workflow 导入生产的章节还会生成 `runs/{run_id}/next-chapter-command.md|json`，用于审阅并启动下一章，真实 BotMux 命令会携带前章归档 `priorContext`。
+P0 已提供一个标准库 Python CLI，用于验证小说创作 Agent Team 的本地闭环：从一句灵感生成开书设定、章节章纲、上下文包、草稿、审稿、修订、定稿、关系图、场景设定、文风档案、伏笔台账、状态归档、JSON trace 和 SQLite run 记录。连续章节会读取前章 `runs/archive-*.json` 并生成 `prior-context.json`；从 foundation 或章节 workflow 导入生产的章节还会生成 `runs/{run_id}/next-chapter-command.md|json`，用于审阅并启动下一章，真实 BotMux 命令会携带前章归档 `priorContext`。该 handoff 也包含重新生成 wiki 审核包、创建 dry-run llmwiki sync 计划和 humanGate 后 approved sync 的命令。
 
 真实项目优先从 `novel-bootstrap` 生成的 `approval-package.md|json` 继续；审批包会给出审批记录、approved apply、本地首章 smoke 命令和真实 BotMux 首章 workflow 命令，避免手工拼路径。
 

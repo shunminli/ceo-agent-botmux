@@ -405,6 +405,7 @@ class NovelReadinessChecker:
                     "status": None,
                     "chapter_id": None,
                     "final_path_exists": False,
+                    "knowledge_handoff_valid": False,
                 }
                 if chapter_start_command:
                     completed = subprocess.run(
@@ -418,11 +419,23 @@ class NovelReadinessChecker:
                     if completed.returncode == 0:
                         chapter_payload = json.loads(completed.stdout)
                         final_path = Path(chapter_payload["final_path"])
+                        next_command_path = (
+                            project_path
+                            / "runs"
+                            / str(chapter_payload.get("run_id"))
+                            / "next-chapter-command.json"
+                        )
+                        next_command = (
+                            json.loads(next_command_path.read_text(encoding="utf-8"))
+                            if next_command_path.exists()
+                            else {}
+                        )
                         chapter_start_result.update(
                             {
                                 "status": chapter_payload.get("status"),
                                 "chapter_id": chapter_payload.get("chapter_id"),
                                 "final_path_exists": final_path.exists(),
+                                "knowledge_handoff_valid": knowledge_handoff_valid(next_command),
                             }
                         )
                 passed = (
@@ -445,6 +458,7 @@ class NovelReadinessChecker:
                     and chapter_start_result["returncode"] == 0
                     and chapter_start_result["status"] == "completed"
                     and chapter_start_result["final_path_exists"]
+                    and chapter_start_result["knowledge_handoff_valid"]
                 )
                 if not passed:
                     status = "fail"
@@ -668,17 +682,24 @@ class NovelReadinessChecker:
                 final_path = project_path / "manuscript" / "final" / "ch-001.md"
                 archive_path = project_path / "runs" / "archive-ch-001.json"
                 next_command_path = project_path / "runs" / result.run_id / "next-chapter-command.json"
+                next_command = (
+                    json.loads(next_command_path.read_text(encoding="utf-8"))
+                    if next_command_path.exists()
+                    else {}
+                )
+                handoff_valid = knowledge_handoff_valid(next_command)
                 passed = (
                     result.status == "completed"
                     and final_path.exists()
                     and archive_path.exists()
                     and next_command_path.exists()
+                    and handoff_valid
                 )
                 return ReadinessCheck(
                     name="chapter_import_smoke",
                     status="pass" if passed else "fail",
                     summary=(
-                        "Chapter workflow import smoke wrote local final manuscript, archive, and next handoff."
+                        "Chapter workflow import smoke wrote local final manuscript, archive, next handoff, and wiki sync commands."
                         if passed
                         else "Chapter workflow import smoke did not produce the expected local artifacts."
                     ),
@@ -690,6 +711,7 @@ class NovelReadinessChecker:
                         "final_path_exists": final_path.exists(),
                         "archive_path_exists": archive_path.exists(),
                         "next_command_path_exists": next_command_path.exists(),
+                        "knowledge_handoff_valid": handoff_valid,
                         "warnings": result.warnings,
                     },
                 )
@@ -1443,6 +1465,26 @@ def validate_workflow_bindings(workflow_path: Path) -> List[Dict[str, str]]:
 
 def scan_template_refs(text: str) -> List[str]:
     return [match.group(1).strip() for match in TEMPLATE_REF_PATTERN.finditer(text)]
+
+
+def knowledge_handoff_valid(payload: Dict[str, Any]) -> bool:
+    knowledge_handoff = (
+        payload.get("knowledge_handoff", {})
+        if isinstance(payload, dict)
+        else {}
+    )
+    wiki_bundle_command = knowledge_handoff.get("wiki_bundle_command", [])
+    sync_plan_command = knowledge_handoff.get("llmwiki_sync_plan_command", [])
+    approved_sync_command = knowledge_handoff.get("approved_llmwiki_sync_command", [])
+    return (
+        isinstance(wiki_bundle_command, list)
+        and "wiki-bundle" in wiki_bundle_command
+        and isinstance(sync_plan_command, list)
+        and "llmwiki-sync" in sync_plan_command
+        and "--approve" not in sync_plan_command
+        and isinstance(approved_sync_command, list)
+        and "--approve" in approved_sync_command
+    )
 
 
 def iter_template_strings(value: Any, path: str) -> Iterator[Tuple[str, str]]:

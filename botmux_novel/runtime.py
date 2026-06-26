@@ -19,6 +19,7 @@ from .agents import (
     chapter_id as make_chapter_id,
 )
 from .chapter_goals import chapter_goal_for
+from .handoff_commands import build_chapter_knowledge_handoff
 from .schema_validation import validate_required
 from .workspace import NovelWorkspace, markdown_list, utc_now
 from .workflow_commands import build_chapter_workflow_command
@@ -1211,6 +1212,11 @@ Objective: {blueprint['objective']}
             word_target=int(plan["project"].get("word_target", 1200)),
             mode=str(plan["project"].get("mode", "lean")),
         )
+        knowledge_handoff = build_chapter_knowledge_handoff(
+            project_path=workspace.root,
+            project_slug=project_slug,
+            foundation_path=source_foundation,
+        )
 
         return {
             "status": "suggested",
@@ -1224,6 +1230,7 @@ Objective: {blueprint['objective']}
             "command_text": shlex.join(command),
             "workflow_command": workflow_command,
             "workflow_command_text": shlex.join(workflow_command),
+            "knowledge_handoff": knowledge_handoff,
             "prior_context": prior_context,
             "source_foundation": source_foundation,
             "source_refs": [
@@ -1261,6 +1268,26 @@ Objective: {blueprint['objective']}
 
 ```bash
 {handoff["workflow_command_text"]}
+```
+
+## Knowledge Update
+
+Regenerate the reviewable wiki bundle:
+
+```bash
+{handoff["knowledge_handoff"]["wiki_bundle_command_text"]}
+```
+
+Create a dry-run llmwiki sync plan:
+
+```bash
+{handoff["knowledge_handoff"]["llmwiki_sync_plan_command_text"]}
+```
+
+After humanGate approval only:
+
+```bash
+{handoff["knowledge_handoff"]["approved_llmwiki_sync_command_text"]}
 ```
 
 ## Prior Context

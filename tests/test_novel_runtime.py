@@ -385,6 +385,32 @@ class NovelRuntimeTest(unittest.TestCase):
             self.assertTrue(any(item.startswith("chapterGoal=") and "半张残页" in item for item in next_command["workflow_command"]))
             self.assertIn("Source chapter: ch-001", next_command["prior_context"])
             self.assertTrue(any(item.startswith("priorContext=") and "Source chapter: ch-001" in item for item in next_command["workflow_command"]))
+            knowledge_handoff = next_command["knowledge_handoff"]
+            self.assertIn("wiki-bundle", knowledge_handoff["wiki_bundle_command"])
+            self.assertIn("--foundation-json", knowledge_handoff["wiki_bundle_command"])
+            self.assertIn("llmwiki-sync", knowledge_handoff["llmwiki_sync_plan_command"])
+            self.assertNotIn("--approve", knowledge_handoff["llmwiki_sync_plan_command"])
+            self.assertIn("--approve", knowledge_handoff["approved_llmwiki_sync_command"])
+
+            bundle_completed = subprocess.run(
+                knowledge_handoff["wiki_bundle_command"],
+                check=True,
+                text=True,
+                capture_output=True,
+            )
+            bundle_payload = json.loads(bundle_completed.stdout)
+            self.assertEqual(bundle_payload["status"], "completed")
+            self.assertTrue((project / "wiki/novels/shadow-clock-case/chapters/ch-001.md").exists())
+
+            sync_completed = subprocess.run(
+                knowledge_handoff["llmwiki_sync_plan_command"],
+                check=True,
+                text=True,
+                capture_output=True,
+            )
+            sync_payload = json.loads(sync_completed.stdout)
+            self.assertEqual(sync_payload["status"], "planned")
+            self.assertFalse(sync_payload["approved"])
 
             completed = subprocess.run(
                 next_command["command"],
