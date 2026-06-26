@@ -88,6 +88,34 @@ class NovelChapterWorkflowImportTest(unittest.TestCase):
             self.assertTrue(Path(payload["final_path"]).exists())
             self.assertTrue((project / "runs/archive-ch-001.json").exists())
 
+    def test_chapter_workflow_import_preserves_archived_chapter_history(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            project = root / "multi-import-project"
+            first_result = root / "chapter-001-result.json"
+            second_result = root / "chapter-002-result.json"
+            first_result.write_text(json.dumps(sample_chapter_workflow_result(), ensure_ascii=False, indent=2), encoding="utf-8")
+            second_payload = sample_chapter_workflow_result()
+            second_payload["params"]["chapterNumber"] = 2
+            second_payload["params"]["chapterGoal"] = "让林烬用半张残页验证巡夜钟异常，并把妹妹影子证词转成下一章追查目标。"
+            second_result.write_text(json.dumps(second_payload, ensure_ascii=False, indent=2), encoding="utf-8")
+
+            first = NovelChapterWorkflowImporter().import_chapter(
+                NovelChapterWorkflowImportRequest(workflow_result_path=first_result, project_path=project)
+            )
+            second = NovelChapterWorkflowImporter().import_chapter(
+                NovelChapterWorkflowImportRequest(workflow_result_path=second_result, project_path=project)
+            )
+
+            self.assertEqual(first.status, "completed")
+            self.assertEqual(second.status, "completed")
+            self.assertTrue((project / "runs/archive-ch-001.json").exists())
+            self.assertTrue((project / "runs/archive-ch-002.json").exists())
+            project_yaml = (project / "project.yaml").read_text(encoding="utf-8")
+            self.assertIn("current_chapter: \"ch-002\"", project_yaml)
+            self.assertIn("- \"ch-001\"", project_yaml)
+            self.assertIn("- \"ch-002\"", project_yaml)
+
     def test_chapter_workflow_import_blocks_without_final_write(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)

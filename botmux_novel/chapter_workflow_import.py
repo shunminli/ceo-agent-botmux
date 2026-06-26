@@ -167,6 +167,7 @@ class NovelChapterWorkflowImporter:
             archive = normalize_archive(archive_data, chapter=chapter, final_text=final_text)
             validate_archive(archive)
             artifacts.extend(write_archive_assets(workspace, archive, chapter))
+            archived_chapters = archived_chapters_from_runs(workspace, chapter)
             project_path_written = workspace.write_yaml(
                 "project.yaml",
                 {
@@ -183,7 +184,7 @@ class NovelChapterWorkflowImporter:
                         "style": 8,
                     },
                     "latest_run_id": run_id,
-                    "archived_chapters": [chapter],
+                    "archived_chapters": archived_chapters,
                     "source_workflow_result": str(workflow_result_path),
                 },
             )
@@ -495,6 +496,20 @@ def write_archive_assets(workspace: NovelWorkspace, archive: Dict[str, Any], cha
         workspace.write_yaml("tracking/continuity-issues.yaml", {"issues": archive["continuity_issues"]}),
         workspace.write_json(f"runs/archive-{chapter}.json", archive),
     ]
+
+
+def archived_chapters_from_runs(workspace: NovelWorkspace, current_chapter: str) -> List[str]:
+    chapters = {current_chapter}
+    for path in workspace.root.glob("runs/archive-*.json"):
+        chapter = path.stem.removeprefix("archive-")
+        if chapter:
+            chapters.add(chapter)
+    return sorted(chapters, key=lambda value: (chapter_sort_key(value), value))
+
+
+def chapter_sort_key(value: str) -> int:
+    match = re.fullmatch(r"ch-(\d+)", value)
+    return int(match.group(1)) if match else 1_000_000
 
 
 def next_chapter_handoff(
