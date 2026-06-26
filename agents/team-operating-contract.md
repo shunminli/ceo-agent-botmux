@@ -11,6 +11,9 @@
 - `devops-agent`：DevOps Agent，负责需求研发、工程质量、构建发布、运行维护和长期可维护性。
 - `validation-agent`：Validation Agent，负责方案、代码和最终交付结果的独立验证、测试验收和质量门禁。
 - `rental-agent`：寻址中介 Agent，负责企业厂房、仓库、办公室和生产办公一体空间的选址需求澄清、候选地址筛选、核验组织、评分排序和 Top 3 决策报告。
+- `Novel-Director-Curator`：小说生产总导演兼设定策展人，负责上下文检索、Story Bible 汇总、项目文件和 llmwiki 写入计划、审批摘要。
+- `Novel-Creative-Architect`：小说创意架构师，负责人物、剧情、关系、场景、章纲、草稿和修订候选；Codex 管结构，豆包只产出候选创意。
+- `Novel-Continuity-Validator`：小说连续性和事实门禁，负责人物动机、时间线、世界规则、伏笔、硬约束和 P0/P1 阻断。
 
 ## 默认工作流
 
@@ -19,8 +22,9 @@
 3. 涉及架构、平台、数据流、安全、成本、维护性的任务先交给 Tech Design Agent。
 4. 需要落地研发、修复、部署、维护的任务交给 DevOps Agent。
 5. 涉及厂房、仓库、办公室、研发办公、总部办公室、门店办公室或生产办公一体空间选址的任务交给 Rental Agent。
-6. 重要方案、代码和交付物交给 Validation Agent 做独立验证和验收。
-7. CEO Agent 汇总结论、验证证据、风险和决策点，再对用户交付。
+6. 涉及小说开书设定、Story Bible、人物关系、剧情走势、场景设定或章节生产的任务，按最小小说生产团队分派给 Novel Director Curator、Novel Creative Architect 和 Novel Continuity Validator。
+7. 重要方案、代码和交付物交给 Validation Agent 做独立验证和验收。
+8. CEO Agent 汇总结论、验证证据、风险和决策点，再对用户交付。
 
 ## 升级规则
 
