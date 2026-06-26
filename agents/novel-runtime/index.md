@@ -23,7 +23,7 @@ Updated: 2026-06-27
 ## 边界
 
 - 当前运行时使用确定性本地 Agent，不调用真实 LLM，也不连接外部 BotMux 服务。
-- 当前覆盖单项目的开书和连续章节 smoke；真实模型 provider、Web UI 和向量检索属于后续迭代。
+- 当前覆盖单项目的开书和连续章节 smoke；已用 20 章本地稳定性基线验证归档和 prior context 持续传递。真实模型 provider、Web UI 和向量检索属于后续迭代。
 - 输出是本地 Markdown/YAML/JSON/SQLite 文件，不涉及生产发布、云同步或多用户权限。
 - `wiki-bundle` 写本地 `wiki/novels/{project_slug}/` Markdown 页面包，用于人工审核或后续 gated llmwiki 写入。
 - `llmwiki-sync` 只同步本地 Markdown workspace，不安装 llmwiki，不调用 MCP `create/edit/append`，也不绕过 `--approve` 门禁。
@@ -86,6 +86,7 @@ Updated: 2026-06-27
 2. 默认 `chapter_count=5`，每章使用可追踪的本地目标文本；第 2 章以后通过 prior archive 自动继承前文上下文。
 3. 章节完成后运行 `wiki-bundle`，可选运行 `llmwiki-sync` 生成计划或执行本地 workspace 同步。
 4. 写入 `runs/{series_run_id}/series-metrics.json`，包含完成章数、P0/P1 数量、修订轮次、归档完整率、prior context 覆盖率和用户修改点。
+5. 当前回归基线覆盖 20 章样例，要求 20/20 完成、P0/P1 为 0、归档完整率 1.0、prior context 覆盖率 1.0。
 
 ### Readiness
 

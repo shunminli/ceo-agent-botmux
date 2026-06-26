@@ -592,6 +592,31 @@ class NovelRuntimeTest(unittest.TestCase):
             self.assertTrue((project / "manuscript/final/ch-005.md").exists())
             self.assertTrue((project / "runs/archive-ch-005.json").exists())
 
+    def test_series_generates_twenty_chapters_for_stability_baseline(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            project = Path(tmpdir) / "series-twenty-project"
+
+            result = NovelSeriesRunner().run(
+                NovelSeriesRequest(
+                    project_path=project,
+                    title="影钟旧案",
+                    inspiration="少年在旧书楼发现父亲旧案残页。",
+                    project_slug="shadow-clock-case",
+                    chapter_count=20,
+                )
+            )
+
+            self.assertEqual(result.status, "completed")
+            self.assertEqual(len(result.chapters), 20)
+            self.assertEqual(result.metrics["chapter_count"], 20)
+            self.assertEqual(result.metrics["completed_chapter_count"], 20)
+            self.assertEqual(result.metrics["p0_p1_issue_count"], 0)
+            self.assertEqual(result.metrics["archive_completion_rate"], 1.0)
+            self.assertEqual(result.metrics["prior_context_rate"], 1.0)
+            self.assertTrue((project / "manuscript/final/ch-020.md").exists())
+            self.assertTrue((project / "runs/archive-ch-020.json").exists())
+            self.assertTrue((project / f"runs/{result.chapters[-1].run_id}/prior-context.json").exists())
+
     def test_cli_series_uses_real_entrypoint(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             project = Path(tmpdir) / "cli-series-project"
