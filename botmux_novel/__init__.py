@@ -1,5 +1,6 @@
 """Local novel creation agent runtime."""
 
+from .bootstrap import NovelBootstrapper, NovelBootstrapRequest, NovelBootstrapResult
 from .botmux_assets import (
     BotmuxAssetAction,
     BotmuxAssetSyncRequest,
@@ -32,6 +33,9 @@ __all__ = [
     "BotmuxAssetSyncRequest",
     "BotmuxAssetSyncResult",
     "BotmuxAssetSyncer",
+    "NovelBootstrapper",
+    "NovelBootstrapRequest",
+    "NovelBootstrapResult",
     "LlmwikiCommandResult",
     "LlmwikiSyncAction",
     "LlmwikiSyncRequest",

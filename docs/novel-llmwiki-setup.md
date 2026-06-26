@@ -49,6 +49,20 @@ novel-project/
 
 ## 建库流程
 
+推荐真实项目先走启动包。它会串联开书设定、项目内 wiki 审核包、llmwiki dry-run sync plan、MCP 配置和人工审批包。它不会执行 approved sync、不会覆盖外部 llmwiki workspace，也不会重建索引：
+
+```bash
+python3 -m botmux_novel novel-bootstrap \
+  --project /path/to/novel-project \
+  --title 影钟旧案 \
+  --inspiration "一个背负旧案污名的少年，在巡夜钟声中发现妹妹影子会说真话。" \
+  --project-slug shadow-clock-case
+```
+
+产物在 `runs/{bootstrap_run_id}/approval-package.md` 和 `approval-package.json`，审批通过后再执行其中的 `llmwiki-sync --approve --reindex` 命令。
+
+手动拆步流程如下：
+
 1. 生成或更新开书资产。
 
 ```bash

@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 from typing import Optional
 
+from .bootstrap import NovelBootstrapper, NovelBootstrapRequest
 from .botmux_assets import BotmuxAssetSyncRequest, BotmuxAssetSyncer
 from .llmwiki_sync import LlmwikiSyncRequest, LlmwikiSyncer
 from .mcp_config import NovelLlmwikiMcpConfigBuilder, NovelLlmwikiMcpConfigRequest
@@ -35,6 +36,20 @@ def build_parser() -> argparse.ArgumentParser:
     foundation_parser.add_argument("--chapter-number", type=int, default=1, help="Initial chapter number for planning.")
     foundation_parser.add_argument("--mode", choices=["full", "lean", "solo"], default="lean", help="Agent execution mode.")
     foundation_parser.add_argument("--word-target", type=int, default=1200, help="Target chapter length for planning.")
+
+    bootstrap_parser = subparsers.add_parser(
+        "novel-bootstrap",
+        help="Create an opening foundation, wiki review bundle, dry-run sync plan, MCP config, and human approval package.",
+    )
+    bootstrap_parser.add_argument("--project", required=True, help="Target novel project directory.")
+    bootstrap_parser.add_argument("--title", required=True, help="Novel project title.")
+    bootstrap_parser.add_argument("--inspiration", required=True, help="One-sentence story inspiration.")
+    bootstrap_parser.add_argument("--project-slug", required=True, help="Target wiki namespace slug.")
+    bootstrap_parser.add_argument("--workspace", help="llmwiki workspace directory. Defaults to --project.")
+    bootstrap_parser.add_argument("--chapter-number", type=int, default=1, help="Initial chapter number for planning.")
+    bootstrap_parser.add_argument("--mode", choices=["full", "lean", "solo"], default="lean", help="Agent execution mode.")
+    bootstrap_parser.add_argument("--word-target", type=int, default=1200, help="Target chapter length for planning.")
+    bootstrap_parser.add_argument("--llmwiki-bin", default="llmwiki", help="llmwiki executable to place in generated MCP config and planned reindex command.")
 
     chapter_parser = subparsers.add_parser(
         "chapter",
@@ -150,6 +165,22 @@ def main(argv: Optional[list[str]] = None) -> int:
         result = NovelRuntime().foundation(request)
         print(json.dumps(result.to_dict(), ensure_ascii=False, indent=2))
         return 0 if result.status == "completed" else 2
+
+    if args.command == "novel-bootstrap":
+        request = NovelBootstrapRequest(
+            project_path=Path(args.project).expanduser().resolve(),
+            title=args.title,
+            inspiration=args.inspiration,
+            project_slug=args.project_slug,
+            workspace_path=Path(args.workspace).expanduser().resolve() if args.workspace else None,
+            chapter_number=args.chapter_number,
+            mode=args.mode,
+            word_target=args.word_target,
+            llmwiki_bin=args.llmwiki_bin,
+        )
+        result = NovelBootstrapper().bootstrap(request)
+        print(json.dumps(result.to_dict(), ensure_ascii=False, indent=2))
+        return 0 if result.status in {"ready", "ready_with_warnings"} else 2
 
     if args.command == "chapter":
         request = NovelChapterRequest(

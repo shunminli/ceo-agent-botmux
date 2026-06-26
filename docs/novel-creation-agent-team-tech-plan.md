@@ -473,6 +473,12 @@ python3 -m botmux_novel run \
   --title 影钟旧案 \
   --inspiration "一个背负旧案污名的少年，在巡夜钟声中发现妹妹影子会说真话。"
 
+python3 -m botmux_novel novel-bootstrap \
+  --project /tmp/novel-demo \
+  --title 影钟旧案 \
+  --inspiration "一个背负旧案污名的少年，在巡夜钟声中发现妹妹影子会说真话。" \
+  --project-slug shadow-clock-case
+
 python3 -m botmux_novel chapter \
   --project /tmp/novel-demo \
   --chapter-number 2 \
@@ -494,7 +500,7 @@ python3 -m botmux_novel readiness --llmwiki-smoke
 
 | 需求 | 当前状态 | 建议 |
 | --- | --- | --- |
-| 开书设定 workflow | 已落地为仓库 workflow 模板和本机 BotMux 全局 workflow，并提供本地 `python3 -m botmux_novel foundation` 子命令 | BotMux 用于多 bot 协作和 humanGate，本地 CLI 用于无外部依赖的开书资产 smoke。 |
+| 开书设定 workflow | 已落地为仓库 workflow 模板和本机 BotMux 全局 workflow，并提供本地 `foundation` 与 `novel-bootstrap` 子命令 | BotMux 用于多 bot 协作和 humanGate，本地 CLI 用于无外部依赖的开书资产 smoke 和真实项目审批包。 |
 | 人物关系 / 场景 / 伏笔 / 文风 schema | 已落地为独立 schema，并由本地 runtime 写出结构化产物 | 后续接入真实模型时保持字段契约稳定。 |
 | llmwiki sync | 已有本地 `wiki-bundle` 导出、[llmwiki 接入 runbook](novel-llmwiki-setup.md) 和 `python3 -m botmux_novel llmwiki-sync` gated 本地 workspace 同步 | 先人工审核本地 Markdown bundle，再用 `--approve` 写入 llmwiki source-of-truth 文件树；MCP `create/edit/append` 仍只由 Director humanGate 后使用。 |
 | BotMux 资产同步 | 已落地 `python3 -m botmux_novel botmux-assets`，可同步 workflow 模板和三个小说 bot 的 workspace `AGENTS.md` | 后续改身份文档或 workflow 后先 dry-run，再 `--write` 更新本机 BotMux 环境。 |
@@ -505,11 +511,11 @@ python3 -m botmux_novel readiness --llmwiki-smoke
 
 - 已创建 3 个小说 bot：`Novel-Director-Curator`、`Novel-Creative-Architect`、`Novel-Continuity-Validator`。
 - 本机已安装 `lucasastorian/llmwiki` 到 `/Users/xiaochen/.local/opt/llmwiki`，PATH 入口为 `/Users/xiaochen/.local/bin/llmwiki`。
-- 给 `Novel-Director-Curator` 配 llmwiki MCP。
-- 给 `Novel-Continuity-Validator` 配 llmwiki 只读能力。
+- 已提供 `python3 -m botmux_novel llmwiki-mcp-config` 和 `novel-bootstrap`，真实小说 workspace 路径确定后给 `Novel-Director-Curator` 配项目级 llmwiki MCP。
+- `Novel-Continuity-Validator` 使用同一项目级 MCP server，但身份文档约束为只读能力。
 - 已提供 `botmux_doubao` 本地包装层，可作为 `Novel-Creative-Architect` 的可选 Creative Assist Tool；真实调用仍依赖用户本机已安装并登录 OpenCLI / doubao-cli runner，Codex 仍需能独立完成创作节点。
 - 已把输出契约写入每个 bot 的身份提示词，并同步到本仓库 `agents/*.identity.md`；本机 BotMux workspace `AGENTS.md` 可由 `botmux-assets --write` 重新生成。
-- 准备小说项目 llmwiki workspace 和 `/wiki/novels/` 页面结构。
+- 小说项目 llmwiki workspace 和 `/wiki/novels/` 页面结构由 `novel-bootstrap` / `wiki-bundle` 在真实项目目录中生成。
 
 ### Phase 1：开书设定 workflow
 
@@ -518,6 +524,7 @@ python3 -m botmux_novel readiness --llmwiki-smoke
 - 输出 Story Bible、角色、关系、剧情走势、场景设定和 wiki sync plan。
 - 首次只做预览，不自动写 llmwiki。
 - 已新增本地 `python3 -m botmux_novel foundation`，只生成开书设定资产、foundation trace 和 SQLite run 记录，不进入正文草稿。
+- 已新增本地 `python3 -m botmux_novel novel-bootstrap`，一键生成开书设定、项目内 wiki 审核包、llmwiki dry-run sync plan、MCP 配置和 human approval package；该命令不执行 approved sync、不覆盖外部 llmwiki workspace。
 - 本地 P0 runtime 已能写出关系图、场景设定、文风档案和带 id/status 的伏笔台账，作为 Story Bible 后续落库的数据契约基础。
 - 已新增本地 `python3 -m botmux_novel wiki-bundle`，把 foundation JSON 导出为 `/wiki/novels/{project_slug}/` Markdown 页面包；该命令不调用 llmwiki，只作为写入前审核材料。
 - 已新增本地 `python3 -m botmux_novel llmwiki-sync`，默认生成同步计划，传 `--approve` 后把审核包写入本地 llmwiki workspace，并可选 `--reindex`。
@@ -563,7 +570,7 @@ python3 -m botmux_novel readiness --llmwiki-smoke
 
 ## 18. 下一步
 
-1. 用真实项目参数运行 `novel-story-foundation`，产出首个 Story Bible 候选包。
-2. 在 `story_bible_package` 的 humanGate 审批关键人设、关系、剧情走势和场景设定。
-3. 把批准后的 Story Bible 输入 `novel-chapter-production` 或现有 `botmux_novel run`。
-4. 先用 `python3 -m botmux_novel wiki-bundle` 导出本地 wiki 页面包，审核后用 `python3 -m botmux_novel llmwiki-sync --approve` 写入本地 llmwiki workspace；若需要 MCP create/edit/append，再创建单独的 humanGate workflow。
+1. 拿到真实项目参数后先运行 `python3 -m botmux_novel novel-bootstrap`，产出本地 Story Bible 候选、wiki 审核包、MCP 配置和审批包。
+2. 如需多 bot 协作口径，再用相同参数运行 `novel-story-foundation`，在 `story_bible_package` 的 humanGate 审批关键人设、关系、剧情走势和场景设定。
+3. 审批通过后执行审批包里的 `llmwiki-sync --approve --reindex`，或让 Director 在单独 humanGate workflow 中执行等价写入。
+4. 把批准后的 Story Bible 输入 `novel-chapter-production` 或 `python3 -m botmux_novel chapter` 继续章节生产。

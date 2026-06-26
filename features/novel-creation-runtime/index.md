@@ -21,6 +21,12 @@ python3 -m botmux_novel foundation \
   --title 影钟旧案 \
   --inspiration "一个背负旧案污名的少年，在巡夜钟声中发现妹妹影子会说真话。"
 
+python3 -m botmux_novel novel-bootstrap \
+  --project /tmp/novel-demo \
+  --title 影钟旧案 \
+  --inspiration "一个背负旧案污名的少年，在巡夜钟声中发现妹妹影子会说真话。" \
+  --project-slug shadow-clock-case
+
 python3 -m botmux_novel wiki-bundle \
   --project /tmp/novel-demo \
   --project-slug shadow-clock-case
@@ -75,6 +81,7 @@ python3 -m botmux_novel readiness --llmwiki-smoke
 - `tracking/facts.yaml`、`timeline.yaml`、`foreshadowing.yaml`、`character-state.yaml`、`continuity-issues.yaml`：章节归档状态；伏笔台账包含 id、状态、埋设章节、回收计划和风险等级。
 - `runs/{run_id}/trace.json` 和 `runs/runs.sqlite`：可观察 run 记录和可查询索引。
 - `runs/{foundation_run_id}/foundation.json`：`foundation` 子命令生成的开书设定包。
+- `runs/{bootstrap_run_id}/approval-package.md|json`：`novel-bootstrap` 子命令生成的 Story Bible/wiki/MCP 人工审批包。
 - `runs/{chapter_run_id}/source-foundation.json`：`chapter` 子命令使用的 Story Bible 来源快照。
 - `runs/{chapter_run_id}/prior-context.json`：`chapter` 子命令自动汇总的前文章节归档上下文。
 - `runs/llmwiki-sync-{project_slug}-{timestamp}.json`：`llmwiki-sync` 子命令生成的写入门禁计划、影响面、回滚计划和命令结果。
@@ -89,6 +96,7 @@ python3 -m botmux_novel readiness --llmwiki-smoke
 
 - 默认执行 `lean` 模式。
 - `foundation` 只生成开书设定资产，不写 `manuscript/draft|revised|final`。
+- `novel-bootstrap` 串联开书设定、项目内 wiki bundle、llmwiki dry-run sync plan、MCP 配置和审批包；它不会执行 approved sync、覆盖外部 llmwiki workspace 或修改全局配置。
 - `chapter` 从本地 `foundation.json` 继续生产章节，不重新规划 Story Bible，并自动读取早于当前章节的 `runs/archive-*.json` 作为连续性上下文。
 - `wiki-bundle` 只读取本地 `foundation.json` 并写项目内 Markdown bundle，不调用 llmwiki。
 - `llmwiki-sync` 默认只生成计划；只有传 `--approve` 才把审核包复制到 llmwiki workspace。它不安装 llmwiki，不调用 MCP 写工具。

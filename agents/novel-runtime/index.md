@@ -8,6 +8,7 @@ Updated: 2026-06-27
 
 - 提供 CLI 入口 `python -m botmux_novel run`。
 - 提供开书资产入口 `python -m botmux_novel foundation`，不生成正文。
+- 提供真实项目启动包入口 `python -m botmux_novel novel-bootstrap`，串联 foundation、wiki bundle、llmwiki dry-run sync plan、MCP config 和 human approval package。
 - 提供章节生产入口 `python -m botmux_novel chapter`，从已有 `foundation.json` 继续生成章节，不重新规划 Story Bible。
 - 提供本地 wiki 审核包入口 `python -m botmux_novel wiki-bundle`，不调用 llmwiki。
 - 提供 gated llmwiki 本地 workspace 同步入口 `python -m botmux_novel llmwiki-sync`，把已审批 Markdown bundle 写入 llmwiki source-of-truth 文件树，并可选运行 `llmwiki reindex`。
@@ -26,6 +27,7 @@ Updated: 2026-06-27
 - 当前运行时使用确定性本地 Agent，不调用真实 LLM，也不连接外部 BotMux 服务。
 - 当前覆盖单项目的开书和连续章节 smoke；已用 20 章本地稳定性基线验证归档和 prior context 持续传递。真实模型 provider、Web UI 和向量检索属于后续迭代。
 - 输出是本地 Markdown/YAML/JSON/SQLite 文件，不涉及生产发布、云同步或多用户权限。
+- `novel-bootstrap` 会写项目内 wiki 审核包、审批包和 dry-run 计划，但不会执行 approved sync、不会覆盖外部 llmwiki workspace，也不会修改 Codex/BotMux 全局配置。
 - `wiki-bundle` 写本地 `wiki/novels/{project_slug}/` Markdown 页面包，用于人工审核或后续 gated llmwiki 写入。
 - `llmwiki-sync` 只同步本地 Markdown workspace，不安装 llmwiki，不调用 MCP `create/edit/append`，也不绕过 `--approve` 门禁。
 - `llmwiki-mcp-config` 只生成配置片段；MCP 工具 ACL 不由片段强制执行，角色边界仍由身份文档和 workflow gate 约束。
@@ -43,6 +45,14 @@ Updated: 2026-06-27
 3. 运行 schema 必填字段校验并写入开书资产。
 4. 写入 `runs/{run_id}/foundation.json`、trace 和 SQLite run 表。
 5. 不写 `manuscript/draft|revised|final`。
+
+### Novel Bootstrap
+
+1. `NovelBootstrapper` 先运行 `foundation`，生成开书设定和 `foundation.json`。
+2. 运行 `wiki-bundle`，导出 `wiki/novels/{project_slug}/` 审核页面。
+3. 运行未审批的 `llmwiki-sync`，只生成 sync plan；即使命令中带 planned reindex，也不会执行 reindex 或覆盖外部 workspace。
+4. 运行 `llmwiki-mcp-config`，生成项目级 MCP JSON、Codex TOML 和三角色绑定策略。
+5. 写入 `runs/{bootstrap_run_id}/approval-package.json` 和 `approval-package.md`，列出 humanGate 必审项、页面清单、批准后写入命令和下一步。
 
 ### Chapter Run
 
@@ -125,6 +135,7 @@ Updated: 2026-06-27
 ## 代码锚点
 
 - `botmux_novel/runtime.py`：状态机、trace 和产物写入。
+- `botmux_novel/bootstrap.py`：真实项目启动包、审批包、wiki dry-run sync plan 和 MCP 配置串联。
 - `botmux_novel/agents.py`：确定性 MVP Agent 行为。
 - `botmux_novel/workspace.py`：文件工作区、YAML 渲染和 SQLite 记录。
 - `botmux_novel/cli.py`：命令行入口。
@@ -134,6 +145,7 @@ Updated: 2026-06-27
 - `botmux_novel/readiness.py`：小说生产本地就绪检查、workflow 绑定静态校验、可选 series smoke 和可选 llmwiki write/reindex smoke。
 - `botmux_novel/botmux_assets.py`：BotMux workflow 和 workspace AGENTS 同步。
 - `tests/test_botmux_assets.py`：BotMux 资产 dry-run、写入、CLI 和本机 workspace 同步测试。
+- `tests/test_novel_bootstrap.py`：`novel-bootstrap` 审批包、dry-run sync 和 CLI 入口测试。
 - `tests/test_novel_runtime.py`：端到端验证和门禁阻断测试。
 - `tests/test_novel_workflows.py`：workflow 模板、bot id、humanGate 和本机安装副本一致性测试。
 - `docs/novel-llmwiki-setup.md`：llmwiki 本地 workspace、MCP 权限和 humanGate 接入 runbook。
