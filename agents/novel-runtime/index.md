@@ -98,7 +98,8 @@ Updated: 2026-06-27
 5. 写入当前 Story Bible / characters / settings / outline 资产快照，并在 `runs/{run_id}/source-foundation.json` 记录本次来源。
 6. 写入 `runs/{run_id}/prior-context.json`，并把前章归档注入 `context-pack.json` 的 `prior_context`、`facts`、`character_states`、`foreshadowing` 和 `source_refs`。
 7. 复用章节状态机完成蓝图、上下文包、草稿、审稿、修订、定稿、归档、trace 和 SQLite run 记录。
-8. 不重新调用 `DirectorAgent.plan_project`，避免批准后的 Story Bible 被灵感重规划覆盖。
+8. 完成归档后写入 `runs/{run_id}/next-chapter-command.json|md`，给出下一章建议目标、source refs 和可直接审阅/执行的 `python3 -m botmux_novel chapter` 命令。
+9. 不重新调用 `DirectorAgent.plan_project`，避免批准后的 Story Bible 被灵感重规划覆盖。
 
 ### Wiki Bundle
 
@@ -162,6 +163,7 @@ Updated: 2026-06-27
 - `botmux_novel/runtime.py`：状态机、trace 和产物写入。
 - `botmux_novel/approval.py`：记录 humanGate 审批决策，并在批准后读取审批包执行 gated llmwiki sync。
 - `botmux_novel/bootstrap.py`：真实项目启动包、审批包、wiki dry-run sync plan 和 MCP 配置串联。
+- `botmux_novel/chapter_goals.py`：本地 deterministic 章节目标模板，供 series 和下一章 handoff 复用。
 - `botmux_novel/agents.py`：确定性 MVP Agent 行为。
 - `botmux_novel/workspace.py`：文件工作区、YAML 渲染和 SQLite 记录。
 - `botmux_novel/cli.py`：命令行入口。

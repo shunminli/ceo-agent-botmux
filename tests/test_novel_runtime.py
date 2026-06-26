@@ -241,18 +241,24 @@ class NovelRuntimeTest(unittest.TestCase):
                 )
             )
             self.assertEqual(first_chapter.status, "completed")
+            next_command_path = project / f"runs/{first_chapter.run_id}/next-chapter-command.json"
+            self.assertTrue(next_command_path.exists())
+            next_command = json.loads(next_command_path.read_text(encoding="utf-8"))
+            self.assertEqual(next_command["next_chapter_id"], "ch-002")
+            self.assertIn("--foundation-json", next_command["command"])
 
-            second_chapter = runtime.chapter(
-                NovelChapterRequest(
-                    project_path=project,
-                    chapter_number=2,
-                    chapter_goal="让林烬用半张残页验证巡夜钟异常，并把妹妹影子证词转成下一章追查目标。",
-                    foundation_path=foundation.foundation_path,
-                )
+            completed = subprocess.run(
+                next_command["command"],
+                check=True,
+                text=True,
+                capture_output=True,
             )
+            second_payload = json.loads(completed.stdout)
+            self.assertEqual(second_payload["status"], "completed")
+            self.assertEqual(second_payload["chapter_id"], "ch-002")
 
-            prior_context_path = project / f"runs/{second_chapter.run_id}/prior-context.json"
-            context_pack_path = project / f"runs/{second_chapter.run_id}/context-pack.json"
+            prior_context_path = project / f"runs/{second_payload['run_id']}/prior-context.json"
+            context_pack_path = project / f"runs/{second_payload['run_id']}/context-pack.json"
             self.assertTrue(prior_context_path.exists())
             self.assertTrue(context_pack_path.exists())
 
@@ -266,8 +272,9 @@ class NovelRuntimeTest(unittest.TestCase):
             self.assertIn("ch-001", context_pack["prior_context"]["source_chapters"])
             self.assertTrue(any("妹妹的影子" in fact for fact in context_pack["facts"]))
 
-            trace = json.loads(second_chapter.trace_path.read_text(encoding="utf-8"))
+            trace = json.loads(Path(second_payload["trace_path"]).read_text(encoding="utf-8"))
             self.assertEqual([step["stage"] for step in trace["steps"][:3]], ["LoadFoundation", "LoadPriorContext", "Plan"])
+            self.assertIn("NextChapterHandoff", [step["stage"] for step in trace["steps"]])
 
     def test_cli_run_uses_real_entrypoint(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -664,6 +671,7 @@ class NovelRuntimeTest(unittest.TestCase):
             self.assertEqual(result.metrics["llmwiki_sync_status"], "planned")
             self.assertTrue((project / "manuscript/final/ch-005.md").exists())
             self.assertTrue((project / "runs/archive-ch-005.json").exists())
+            self.assertTrue((project / f"runs/{result.chapters[0].run_id}/next-chapter-command.json").exists())
 
     def test_series_generates_twenty_chapters_for_stability_baseline(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:

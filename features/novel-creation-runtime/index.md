@@ -102,6 +102,7 @@ python3 -m botmux_novel readiness --bootstrap-smoke --approval-apply-smoke --ser
 - `approval-apply` JSON：审批包执行结果，包含是否 approved、实际 `llmwiki-sync` 状态、warnings 和产物路径。
 - `runs/{chapter_run_id}/source-foundation.json`：`chapter` 子命令使用的 Story Bible 来源快照。
 - `runs/{chapter_run_id}/prior-context.json`：`chapter` 子命令自动汇总的前文章节归档上下文。
+- `runs/{chapter_run_id}/next-chapter-command.md|json`：从 foundation 生产的章节完成后生成的下一章 handoff，包含建议目标、来源引用和可审阅执行的命令。
 - `runs/llmwiki-sync-{project_slug}-{timestamp}.json`：`llmwiki-sync` 子命令生成的写入门禁计划、影响面、回滚计划和命令结果。
 - `llmwiki-mcp-config` JSON：项目级 MCP server 片段、Codex TOML、角色绑定策略和 humanGate 规则。
 - `runs/{series_run_id}/series-metrics.json`：`series` 子命令生成的连续章节质量指标。
@@ -117,7 +118,7 @@ python3 -m botmux_novel readiness --bootstrap-smoke --approval-apply-smoke --ser
 - `novel-bootstrap` 串联开书设定、项目内 wiki bundle、llmwiki dry-run sync plan、MCP 配置和审批包；审批包会包含 `next_actions.chapter_start_command`，用于在审批和写入后从批准的 foundation 直接启动首章；它不会执行 approved sync、覆盖外部 llmwiki workspace 或修改全局配置。
 - `approval-decision` 只把 humanGate 决策写入审批包 JSON，并在同目录 `approval-package.md` 存在时重渲染 Markdown 审批包；它不执行 llmwiki 写入，正式批准路径应先记录 `--decision approve`。
 - `approval-apply` 默认只重新生成同步计划；只有传 `--approve` 才会按审批包写入 llmwiki workspace。若审批包已记录 `request_changes` 或 `reject`，会拒绝写入；若未记录 `approve` 但命令显式 `--approve`，会保留 warning 说明这是命令级 humanGate 信号。
-- `chapter` 从本地 `foundation.json` 继续生产章节，不重新规划 Story Bible；未传 `--chapter-goal` 时自动使用 `foundation.json` 的 `chapter_goal.objective`，并自动读取早于当前章节的 `runs/archive-*.json` 作为连续性上下文。
+- `chapter` 从本地 `foundation.json` 继续生产章节，不重新规划 Story Bible；未传 `--chapter-goal` 时自动使用 `foundation.json` 的 `chapter_goal.objective`，自动读取早于当前章节的 `runs/archive-*.json` 作为连续性上下文，并在完成后生成下一章 handoff 命令。
 - `wiki-bundle` 只读取本地 `foundation.json` 并写项目内 Markdown bundle，不调用 llmwiki。
 - `llmwiki-sync` 默认只生成计划；只有传 `--approve` 才把审核包复制到 llmwiki workspace。它不安装 llmwiki，不调用 MCP 写工具。
 - `llmwiki-mcp-config` 只生成配置片段和角色绑定策略，不写 `~/.codex/config.toml`，默认只建议 Director 和 Validator 接入 llmwiki MCP。

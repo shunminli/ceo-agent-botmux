@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import re
+import shlex
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
@@ -17,6 +18,7 @@ from .agents import (
     EditorAgent,
     chapter_id as make_chapter_id,
 )
+from .chapter_goals import chapter_goal_for
 from .schema_validation import validate_required
 from .workspace import NovelWorkspace, markdown_list, utc_now
 
@@ -481,6 +483,17 @@ class NovelRuntime:
         if updated_project_path not in artifacts:
             artifacts.append(updated_project_path)
         artifacts.extend(self._write_archive_assets(workspace, archive, blueprint["chapter_id"]))
+        if plan["project"].get("source_foundation"):
+            next_handoff = self._next_chapter_handoff(
+                workspace=workspace,
+                run_id=run_id,
+                plan=plan,
+                blueprint=blueprint,
+                archive=archive,
+            )
+            trace.add_step("NextChapterHandoff", "director", "pass", "生成下一章启动命令。", next_handoff)
+            artifacts.append(workspace.write_json(f"runs/{run_id}/next-chapter-command.json", next_handoff))
+            artifacts.append(workspace.write_text(f"runs/{run_id}/next-chapter-command.md", self._next_chapter_markdown(next_handoff)))
 
         ended_at = utc_now()
         trace_payload = trace.finish(status="completed", ended_at=ended_at)
@@ -920,6 +933,77 @@ Objective: {blueprint['objective']}
 - Archive: {archive['archive_decision']}
 - Final character count: {archive['final_word_count']}
 - Continuity issues: {len(archive['continuity_issues'])}
+"""
+
+    def _next_chapter_handoff(
+        self,
+        *,
+        workspace: NovelWorkspace,
+        run_id: str,
+        plan: Dict[str, Any],
+        blueprint: Dict[str, Any],
+        archive: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        current_number = int(str(blueprint["chapter_id"]).split("-")[-1])
+        next_number = current_number + 1
+        next_goal = chapter_goal_for(next_number)
+        command = [
+            "python3",
+            "-m",
+            "botmux_novel",
+            "chapter",
+            "--project",
+            str(workspace.root),
+            "--chapter-number",
+            str(next_number),
+            "--chapter-goal",
+            next_goal,
+        ]
+        source_foundation = plan["project"].get("source_foundation")
+        if source_foundation:
+            command.extend(["--foundation-json", str(source_foundation)])
+
+        return {
+            "status": "suggested",
+            "project_path": str(workspace.root),
+            "current_chapter_id": blueprint["chapter_id"],
+            "next_chapter_id": make_chapter_id(next_number),
+            "next_chapter_number": next_number,
+            "chapter_goal": next_goal,
+            "command": command,
+            "command_text": shlex.join(command),
+            "source_foundation": source_foundation,
+            "source_refs": [
+                f"runs/{run_id}/summary.md",
+                f"runs/archive-{blueprint['chapter_id']}.json",
+            ],
+            "handoff": (
+                f"下一章 {make_chapter_id(next_number)} 建议目标：{next_goal} "
+                f"请先审阅 runs/archive-{blueprint['chapter_id']}.json 的事实、伏笔和人物状态；"
+                "如目标不符合人类主创意图，先修改 --chapter-goal 再运行。"
+            ),
+            "archive_snapshot": {
+                "fact_count": len(archive.get("facts", [])),
+                "foreshadowing_count": len(archive.get("foreshadowing", [])),
+                "character_state_count": len(archive.get("character_state", [])),
+            },
+        }
+
+    def _next_chapter_markdown(self, handoff: Dict[str, Any]) -> str:
+        return f"""# Next Chapter Command
+
+- Current chapter: `{handoff["current_chapter_id"]}`
+- Next chapter: `{handoff["next_chapter_id"]}`
+- Suggested goal: {handoff["chapter_goal"]}
+- Source foundation: `{handoff.get("source_foundation")}`
+
+```bash
+{handoff["command_text"]}
+```
+
+## Handoff
+
+{handoff["handoff"]}
 """
 
     def _validate_request(self, request: NovelRunRequest) -> None:
