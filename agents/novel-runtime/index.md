@@ -12,7 +12,7 @@ Updated: 2026-06-27
 - 提供本地 wiki 审核包入口 `python -m botmux_novel wiki-bundle`，不调用 llmwiki。
 - 提供 gated llmwiki 本地 workspace 同步入口 `python -m botmux_novel llmwiki-sync`，把已审批 Markdown bundle 写入 llmwiki source-of-truth 文件树，并可选运行 `llmwiki reindex`。
 - 提供连续章节样例入口 `python -m botmux_novel series`，默认生成 5 章并统计 Phase 3 质量指标。
-- 提供本地就绪检查入口 `python -m botmux_novel readiness`，检查 BotMux 配置、workflow validate、workspace 身份、llmwiki 可用性和可选 series smoke。
+- 提供本地就绪检查入口 `python -m botmux_novel readiness`，检查 BotMux 配置、workflow validate、workflow 模板绑定、workspace 身份、llmwiki 可用性和可选 series smoke。
 - 提供 BotMux 资产同步入口 `python -m botmux_novel botmux-assets`，用于同步 workflow 模板和三个小说 bot 的 workspace `AGENTS.md`。
 - 配套版本化 BotMux workflow：`workflows/novel-story-foundation.workflow.json` 和 `workflows/novel-chapter-production.workflow.json`，用于三 bot 协作、humanGate 和归档计划。
 - 在本地小说项目目录中创建方案文档约定的文件工作区。
@@ -92,8 +92,9 @@ Updated: 2026-06-27
 1. `NovelReadinessChecker` 用 `botmux-assets` dry-run 确认本机 workflow 和三个小说 bot workspace `AGENTS.md` 未漂移。
 2. 读取 `~/.botmux/bots.json`，确认三个小说 bot 的 appId 和工作目录存在；不会输出 app secret。
 3. 运行 `botmux workflow validate` 校验两个 workflow 模板。
-4. 检查 `llmwiki` 是否在 PATH；缺失是 warning，不阻断本地文件同步。
-5. 传 `--series-smoke` 时在临时目录跑连续章节 smoke，并检查 Phase 3 指标阈值。
+4. 静态校验 workflow 模板中的 `${params.*}` 和 `${node.output.*}` 绑定，确认参数、上游节点、依赖闭包和输出字段都存在。
+5. 检查 `llmwiki` 是否在 PATH；缺失是 warning，不阻断本地文件同步。
+6. 传 `--series-smoke` 时在临时目录跑连续章节 smoke，并检查 Phase 3 指标阈值。
 
 ### BotMux Assets
 
@@ -117,7 +118,7 @@ Updated: 2026-06-27
 - `botmux_novel/cli.py`：命令行入口。
 - `botmux_novel/llmwiki_sync.py`：gated llmwiki 本地 workspace 同步、备份、reindex 调用和同步计划。
 - `botmux_novel/series.py`：连续章节样例运行和质量指标采集。
-- `botmux_novel/readiness.py`：小说生产本地就绪检查和可选 series smoke。
+- `botmux_novel/readiness.py`：小说生产本地就绪检查、workflow 绑定静态校验和可选 series smoke。
 - `botmux_novel/botmux_assets.py`：BotMux workflow 和 workspace AGENTS 同步。
 - `tests/test_botmux_assets.py`：BotMux 资产 dry-run、写入、CLI 和本机 workspace 同步测试。
 - `tests/test_novel_runtime.py`：端到端验证和门禁阻断测试。

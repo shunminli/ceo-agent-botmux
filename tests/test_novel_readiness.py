@@ -8,7 +8,7 @@ import unittest
 from pathlib import Path
 
 from botmux_novel import BotmuxAssetSyncRequest, BotmuxAssetSyncer, NovelReadinessChecker, NovelReadinessRequest
-from botmux_novel.readiness import EXPECTED_NOVEL_BOTS
+from botmux_novel.readiness import EXPECTED_NOVEL_BOTS, validate_workflow_bindings
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -39,6 +39,7 @@ class NovelReadinessTest(unittest.TestCase):
             self.assertEqual(checks["botmux_assets"].status, "pass")
             self.assertEqual(checks["bot_configs"].status, "pass")
             self.assertEqual(checks["workflow_validate"].status, "pass")
+            self.assertEqual(checks["workflow_bindings"].status, "pass")
             self.assertEqual(checks["llmwiki"].status, "warn")
             self.assertEqual(checks["series_smoke"].status, "pass")
             self.assertEqual(checks["series_smoke"].data["metrics"]["chapter_count"], 2)
@@ -73,7 +74,58 @@ class NovelReadinessTest(unittest.TestCase):
 
             payload = json.loads(completed.stdout)
             self.assertEqual(payload["status"], "ready_with_warnings")
-            self.assertEqual({check["name"] for check in payload["checks"]}, {"botmux_assets", "bot_configs", "workflow_validate", "llmwiki"})
+            self.assertEqual(
+                {check["name"] for check in payload["checks"]},
+                {"botmux_assets", "bot_configs", "workflow_validate", "workflow_bindings", "llmwiki"},
+            )
+
+    def test_workflow_binding_validator_rejects_unknown_refs(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            workflow_path = Path(tmpdir) / "bad.workflow.json"
+            workflow_path.write_text(
+                json.dumps(
+                    {
+                        "workflowId": "bad-workflow",
+                        "params": {"projectSlug": {"type": "string"}},
+                        "nodes": {
+                            "source": {
+                                "type": "subagent",
+                                "prompt": "${params.projectSlug}",
+                                "outputSchema": {
+                                    "type": "object",
+                                    "properties": {"handoff": {"type": "string"}},
+                                },
+                            },
+                            "consumer": {
+                                "type": "subagent",
+                                "depends": ["source"],
+                                "prompt": "${source.output.missing}\n${params.missing}\n${ghost.output.handoff}\n${unrelated.output.handoff}",
+                                "outputSchema": {
+                                    "type": "object",
+                                    "properties": {"handoff": {"type": "string"}},
+                                },
+                            },
+                            "unrelated": {
+                                "type": "subagent",
+                                "prompt": "no refs",
+                                "outputSchema": {
+                                    "type": "object",
+                                    "properties": {"handoff": {"type": "string"}},
+                                },
+                            },
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            errors = validate_workflow_bindings(workflow_path)
+
+            messages = [error["message"] for error in errors]
+            self.assertIn("Unknown output field on source: missing", messages)
+            self.assertIn("Unknown workflow param: missing", messages)
+            self.assertIn("Unknown upstream node: ghost", messages)
+            self.assertIn("Upstream node is not in dependency closure: unrelated", messages)
 
 
 def install_temp_botmux(botmux_home: Path) -> None:

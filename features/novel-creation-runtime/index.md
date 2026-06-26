@@ -76,7 +76,7 @@ python3 -m botmux_novel readiness --series-smoke
 - `wiki/novels/{project_slug}/*.md`：`wiki-bundle` 子命令生成的本地 llmwiki 写入前审核包。
 - `workflows/*.workflow.json`：版本化的 BotMux 三 bot 协作模板，测试会校验输出契约、人类门禁和本机安装副本一致性。
 - `~/.botmux/workspace/{Novel-*}/AGENTS.md`：由 `botmux-assets --write` 从仓库身份文档生成的运行态 workspace 指令。
-- `readiness` JSON：本机小说生产环境的 BotMux、workflow、llmwiki 和可选 series smoke 检查结果。
+- `readiness` JSON：本机小说生产环境的 BotMux、workflow validate、workflow 绑定、llmwiki 和可选 series smoke 检查结果。
 
 ## 规则与状态
 
@@ -86,7 +86,7 @@ python3 -m botmux_novel readiness --series-smoke
 - `wiki-bundle` 只读取本地 `foundation.json` 并写项目内 Markdown bundle，不调用 llmwiki。
 - `llmwiki-sync` 默认只生成计划；只有传 `--approve` 才把审核包复制到 llmwiki workspace。它不安装 llmwiki，不调用 MCP 写工具。
 - `series` 默认连续生成 5 章、导出 wiki bundle，并统计 P0/P1、修订轮次、归档完整率和 prior context 覆盖率。
-- `readiness` 只读检查本机状态；缺少 llmwiki 时返回 `ready_with_warnings`，BotMux 配置或 workflow validate 失败时返回 `blocked`。
+- `readiness` 只读检查本机状态；缺少 llmwiki 时返回 `ready_with_warnings`，BotMux 配置、workflow validate 或 workflow 绑定校验失败时返回 `blocked`。
 - `botmux-assets` 默认只报告差异；传 `--write` 后才同步本机 BotMux 资产，并为被替换的 `AGENTS.md` 创建备份。
 - `novel-chapter-production` 只输出章节定稿候选包和归档计划，不直接写项目文件或 llmwiki。
 - 质量门禁区分 `pass`、`revise` 和 `block`。
