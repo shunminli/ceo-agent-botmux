@@ -15,6 +15,7 @@ from .agents import (
     DirectorAgent,
     DraftWriterAgent,
     EditorAgent,
+    chapter_id as make_chapter_id,
 )
 from .schema_validation import validate_required
 from .workspace import NovelWorkspace, markdown_list, utc_now
@@ -38,6 +39,16 @@ class NovelFoundationRequest:
     chapter_number: int = 1
     mode: str = "lean"
     word_target: int = 1200
+
+
+@dataclass(frozen=True)
+class NovelChapterRequest:
+    project_path: Path
+    chapter_number: int
+    chapter_goal: str
+    foundation_path: Optional[Path] = None
+    mode: Optional[str] = None
+    word_target: Optional[int] = None
 
 
 @dataclass(frozen=True)
@@ -119,19 +130,25 @@ class NovelWikiBundleResult:
 
 class RunTrace:
     def __init__(self, *, run_id: str, request: Any, started_at: str):
+        request_payload: Dict[str, Any] = {"project_path": str(request.project_path)}
+        for attribute in [
+            "title",
+            "inspiration",
+            "chapter_number",
+            "chapter_goal",
+            "mode",
+            "word_target",
+            "foundation_path",
+        ]:
+            value = getattr(request, attribute, None)
+            if value is not None:
+                request_payload[attribute] = str(value) if isinstance(value, Path) else value
         self.payload: Dict[str, Any] = {
             "run_id": run_id,
             "started_at": started_at,
             "ended_at": None,
             "status": "running",
-            "request": {
-                "project_path": str(request.project_path),
-                "title": request.title,
-                "inspiration": request.inspiration,
-                "chapter_number": request.chapter_number,
-                "mode": request.mode,
-                "word_target": request.word_target,
-            },
+            "request": request_payload,
             "steps": [],
             "artifacts": [],
         }
@@ -247,6 +264,69 @@ class NovelRuntime:
             artifacts=artifacts,
         )
 
+    def chapter(self, request: NovelChapterRequest) -> NovelRunResult:
+        self._validate_chapter_request(request)
+        workspace = NovelWorkspace(request.project_path)
+        workspace.ensure_layout()
+
+        source_path = self._resolve_foundation_path(workspace, request.foundation_path)
+        plan = json.loads(source_path.read_text(encoding="utf-8"))
+        self._validate_plan(plan)
+
+        chapter = make_chapter_id(request.chapter_number)
+        mode = request.mode or plan["project"].get("mode", "lean")
+        word_target = request.word_target or int(plan["project"].get("word_target", 1200))
+        plan["project"].update(
+            {
+                "stage": "ChapterProduction",
+                "mode": mode,
+                "current_chapter": chapter,
+                "word_target": word_target,
+                "source_foundation": str(source_path),
+            }
+        )
+        chapter_goal = dict(plan["chapter_goal"])
+        chapter_goal.update(
+            {
+                "chapter_id": chapter,
+                "objective": request.chapter_goal.strip(),
+            }
+        )
+        plan["chapter_goal"] = chapter_goal
+
+        started_at = utc_now()
+        run_id = f"chapter-{started_at.replace(':', '').replace('-', '')}-{uuid.uuid4().hex[:8]}"
+        trace = RunTrace(run_id=run_id, request=request, started_at=started_at)
+        artifacts: List[Path] = []
+        trace.add_step(
+            "LoadFoundation",
+            "director",
+            "pass",
+            "读取已批准的开书设定包，准备章节生产。",
+            {"source_path": str(source_path), "chapter_id": chapter, "objective": request.chapter_goal.strip()},
+        )
+
+        asset_request = NovelFoundationRequest(
+            project_path=request.project_path,
+            title=plan["project"]["title"],
+            inspiration=plan["story_bible"]["inspiration"],
+            chapter_number=request.chapter_number,
+            mode=mode,
+            word_target=word_target,
+        )
+        artifacts.extend(self._write_project_assets(workspace, plan, asset_request))
+        artifacts.append(workspace.write_json(f"runs/{run_id}/source-foundation.json", plan))
+
+        return self._execute_chapter_pipeline(
+            workspace=workspace,
+            request=request,
+            run_id=run_id,
+            trace=trace,
+            artifacts=artifacts,
+            plan=plan,
+            started_at=started_at,
+        )
+
     def run(self, request: NovelRunRequest) -> NovelRunResult:
         self._validate_request(request)
         workspace = NovelWorkspace(request.project_path)
@@ -269,6 +349,27 @@ class NovelRuntime:
         trace.add_step("Intake", plan_output.name, "pass", plan_output.summary, plan)
         artifacts.extend(self._write_project_assets(workspace, plan, request))
 
+        return self._execute_chapter_pipeline(
+            workspace=workspace,
+            request=request,
+            run_id=run_id,
+            trace=trace,
+            artifacts=artifacts,
+            plan=plan,
+            started_at=started_at,
+        )
+
+    def _execute_chapter_pipeline(
+        self,
+        *,
+        workspace: NovelWorkspace,
+        request: Any,
+        run_id: str,
+        trace: RunTrace,
+        artifacts: List[Path],
+        plan: Dict[str, Any],
+        started_at: str,
+    ) -> NovelRunResult:
         blueprint_output = self.blueprint.generate(plan)
         blueprint = blueprint_output.data
         validate_required("chapter-blueprint", blueprint)
@@ -290,10 +391,18 @@ class NovelRuntime:
         review = review_output.data
         trace.add_step("Review", review_output.name, review["decision"], review_output.summary, review)
         artifacts.append(workspace.write_json(f"runs/{run_id}/review-initial.json", review))
+        blocked_request = NovelRunRequest(
+            project_path=request.project_path,
+            title=plan["project"]["title"],
+            inspiration=plan["story_bible"]["inspiration"],
+            chapter_number=int(blueprint["chapter_id"].split("-")[-1]),
+            mode=plan["project"]["mode"],
+            word_target=int(plan["project"]["word_target"]),
+        )
         if review["decision"] == "block":
             return self._finish_blocked(
                 workspace=workspace,
-                request=request,
+                request=blocked_request,
                 run_id=run_id,
                 trace=trace,
                 artifacts=artifacts,
@@ -315,7 +424,7 @@ class NovelRuntime:
             if review["decision"] != "pass":
                 return self._finish_blocked(
                     workspace=workspace,
-                    request=request,
+                    request=blocked_request,
                     run_id=run_id,
                     trace=trace,
                     artifacts=artifacts,
@@ -328,7 +437,7 @@ class NovelRuntime:
 
         final_path = workspace.write_text(f"manuscript/final/{blueprint['chapter_id']}.md", revised_text)
         artifacts.append(final_path)
-        trace.add_step("Approve", "director", "pass", "质量门禁通过，批准首章定稿。", {"final_path": str(final_path)})
+        trace.add_step("Approve", "director", "pass", "质量门禁通过，批准章节定稿。", {"final_path": str(final_path)})
 
         archive_output = self.archive_agent.archive(final_text=revised_text, plan=plan, blueprint=blueprint, review=review)
         archive = archive_output.data
@@ -339,11 +448,14 @@ class NovelRuntime:
         for character_state in archive["character_state"]:
             validate_required("character-state", character_state)
         trace.add_step("Archive", archive_output.name, archive["archive_decision"], archive_output.summary, archive)
+        archived_chapters = list(plan["project"].get("archived_chapters", []))
+        if blueprint["chapter_id"] not in archived_chapters:
+            archived_chapters.append(blueprint["chapter_id"])
         plan["project"].update(
             {
                 "stage": "Archive",
                 "latest_run_id": run_id,
-                "archived_chapters": [blueprint["chapter_id"]],
+                "archived_chapters": archived_chapters,
             }
         )
         updated_project_path = workspace.write_yaml("project.yaml", plan["project"])
@@ -367,9 +479,9 @@ class NovelRuntime:
 
         sqlite_path = workspace.record_run(
             run_id=run_id,
-            project_title=request.title,
+            project_title=plan["project"]["title"],
             chapter_id=blueprint["chapter_id"],
-            mode=request.mode,
+            mode=plan["project"]["mode"],
             status="completed",
             started_at=started_at,
             ended_at=ended_at,
@@ -747,4 +859,14 @@ Objective: {blueprint['objective']}
         if request.chapter_number < 1:
             raise ValueError("chapter_number must be >= 1")
         if request.word_target < 300:
+            raise ValueError("word_target must be >= 300")
+
+    def _validate_chapter_request(self, request: NovelChapterRequest) -> None:
+        if request.chapter_number < 1:
+            raise ValueError("chapter_number must be >= 1")
+        if not request.chapter_goal.strip():
+            raise ValueError("chapter_goal is required")
+        if request.mode is not None and request.mode not in {"full", "lean", "solo"}:
+            raise ValueError("mode must be one of: full, lean, solo")
+        if request.word_target is not None and request.word_target < 300:
             raise ValueError("word_target must be >= 300")

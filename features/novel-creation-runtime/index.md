@@ -25,6 +25,11 @@ python3 -m botmux_novel wiki-bundle \
   --project /tmp/novel-demo \
   --project-slug shadow-clock-case
 
+python3 -m botmux_novel chapter \
+  --project /tmp/novel-demo \
+  --chapter-number 2 \
+  --chapter-goal "让林烬用半张残页验证巡夜钟异常，并把妹妹影子证词转成下一章追查目标。"
+
 python3 -m botmux_novel run \
   --project /tmp/novel-demo \
   --title 影钟旧案 \
@@ -51,6 +56,7 @@ python3 -m botmux_novel botmux-assets --write
 - `tracking/facts.yaml`、`timeline.yaml`、`foreshadowing.yaml`、`character-state.yaml`、`continuity-issues.yaml`：章节归档状态；伏笔台账包含 id、状态、埋设章节、回收计划和风险等级。
 - `runs/{run_id}/trace.json` 和 `runs/runs.sqlite`：可观察 run 记录和可查询索引。
 - `runs/{foundation_run_id}/foundation.json`：`foundation` 子命令生成的开书设定包。
+- `runs/{chapter_run_id}/source-foundation.json`：`chapter` 子命令使用的 Story Bible 来源快照。
 - `wiki/novels/{project_slug}/*.md`：`wiki-bundle` 子命令生成的本地 llmwiki 写入前审核包。
 - `workflows/*.workflow.json`：版本化的 BotMux 三 bot 协作模板，测试会校验输出契约、人类门禁和本机安装副本一致性。
 - `~/.botmux/workspace/{Novel-*}/AGENTS.md`：由 `botmux-assets --write` 从仓库身份文档生成的运行态 workspace 指令。
@@ -59,6 +65,7 @@ python3 -m botmux_novel botmux-assets --write
 
 - 默认执行 `lean` 模式。
 - `foundation` 只生成开书设定资产，不写 `manuscript/draft|revised|final`。
+- `chapter` 从本地 `foundation.json` 继续生产章节，不重新规划 Story Bible。
 - `wiki-bundle` 只读取本地 `foundation.json` 并写项目内 Markdown bundle，不调用 llmwiki。
 - `botmux-assets` 默认只报告差异；传 `--write` 后才同步本机 BotMux 资产，并为被替换的 `AGENTS.md` 创建备份。
 - `novel-chapter-production` 只输出章节定稿候选包和归档计划，不直接写项目文件或 llmwiki。

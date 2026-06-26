@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Optional
 
 from .botmux_assets import BotmuxAssetSyncRequest, BotmuxAssetSyncer
-from .runtime import NovelFoundationRequest, NovelRunRequest, NovelRuntime, NovelWikiBundleRequest
+from .runtime import NovelChapterRequest, NovelFoundationRequest, NovelRunRequest, NovelRuntime, NovelWikiBundleRequest
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -31,6 +31,17 @@ def build_parser() -> argparse.ArgumentParser:
     foundation_parser.add_argument("--chapter-number", type=int, default=1, help="Initial chapter number for planning.")
     foundation_parser.add_argument("--mode", choices=["full", "lean", "solo"], default="lean", help="Agent execution mode.")
     foundation_parser.add_argument("--word-target", type=int, default=1200, help="Target chapter length for planning.")
+
+    chapter_parser = subparsers.add_parser(
+        "chapter",
+        help="Produce one chapter from an existing foundation.json without replanning the Story Bible.",
+    )
+    chapter_parser.add_argument("--project", required=True, help="Target novel project directory.")
+    chapter_parser.add_argument("--chapter-number", type=int, required=True, help="Chapter number to produce.")
+    chapter_parser.add_argument("--chapter-goal", required=True, help="Approved chapter objective and reader promise.")
+    chapter_parser.add_argument("--foundation-json", help="Optional explicit foundation.json path.")
+    chapter_parser.add_argument("--mode", choices=["full", "lean", "solo"], help="Optional mode override; defaults to foundation mode.")
+    chapter_parser.add_argument("--word-target", type=int, help="Optional target chapter length override.")
 
     wiki_parser = subparsers.add_parser(
         "wiki-bundle",
@@ -78,6 +89,19 @@ def main(argv: Optional[list[str]] = None) -> int:
             word_target=args.word_target,
         )
         result = NovelRuntime().foundation(request)
+        print(json.dumps(result.to_dict(), ensure_ascii=False, indent=2))
+        return 0 if result.status == "completed" else 2
+
+    if args.command == "chapter":
+        request = NovelChapterRequest(
+            project_path=Path(args.project).expanduser().resolve(),
+            chapter_number=args.chapter_number,
+            chapter_goal=args.chapter_goal,
+            foundation_path=Path(args.foundation_json).expanduser().resolve() if args.foundation_json else None,
+            mode=args.mode,
+            word_target=args.word_target,
+        )
+        result = NovelRuntime().chapter(request)
         print(json.dumps(result.to_dict(), ensure_ascii=False, indent=2))
         return 0 if result.status == "completed" else 2
 

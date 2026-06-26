@@ -8,6 +8,7 @@ Updated: 2026-06-26
 
 - 提供 CLI 入口 `python -m botmux_novel run`。
 - 提供开书资产入口 `python -m botmux_novel foundation`，不生成正文。
+- 提供章节生产入口 `python -m botmux_novel chapter`，从已有 `foundation.json` 继续生成章节，不重新规划 Story Bible。
 - 提供本地 wiki 审核包入口 `python -m botmux_novel wiki-bundle`，不调用 llmwiki。
 - 提供 BotMux 资产同步入口 `python -m botmux_novel botmux-assets`，用于同步 workflow 模板和三个小说 bot 的 workspace `AGENTS.md`。
 - 配套版本化 BotMux workflow：`workflows/novel-story-foundation.workflow.json` 和 `workflows/novel-chapter-production.workflow.json`，用于三 bot 协作、humanGate 和归档计划。
@@ -37,7 +38,7 @@ Updated: 2026-06-26
 
 ### Chapter Run
 
-1. `NovelRuntime.run` 校验 `NovelRunRequest` 并创建工作区目录。
+1. `NovelRuntime.run` 校验 `NovelRunRequest` 并创建工作区目录；该入口会从标题和灵感重新生成本地 P0 计划。
 2. `DirectorAgent` 生成项目状态、故事圣经、题材、世界观、角色、人物关系、场景设定、文风档案和首章目标。
 3. `BlueprintAgent` 生成章节蓝图和场景卡。
 4. `ContextPackBuilder` 组装章节上下文包。
@@ -47,6 +48,14 @@ Updated: 2026-06-26
 8. `ConsistencyAgent` 复核通过后由总导演批准定稿。
 9. `ArchiveMemoryAgent` 写入事实、时间线、带 id/status 的伏笔台账、角色状态和冲突记录。
 10. `NovelWorkspace.record_run` 写入 SQLite run 表和 artifact 索引。
+
+### Chapter From Foundation
+
+1. `NovelRuntime.chapter` 读取显式 `foundation.json`，或使用项目中最新的 `runs/foundation-*/foundation.json`。
+2. 用请求中的 `chapter_number` 和 `chapter_goal` 更新当前章节目标。
+3. 写入当前 Story Bible / characters / settings / outline 资产快照，并在 `runs/{run_id}/source-foundation.json` 记录本次来源。
+4. 复用章节状态机完成蓝图、上下文包、草稿、审稿、修订、定稿、归档、trace 和 SQLite run 记录。
+5. 不重新调用 `DirectorAgent.plan_project`，避免批准后的 Story Bible 被灵感重规划覆盖。
 
 ### Wiki Bundle
 

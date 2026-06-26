@@ -7,6 +7,7 @@ from .botmux_assets import (
     BotmuxAssetSyncer,
 )
 from .runtime import (
+    NovelChapterRequest,
     NovelFoundationRequest,
     NovelFoundationResult,
     NovelRunRequest,
@@ -21,6 +22,7 @@ __all__ = [
     "BotmuxAssetSyncRequest",
     "BotmuxAssetSyncResult",
     "BotmuxAssetSyncer",
+    "NovelChapterRequest",
     "NovelFoundationRequest",
     "NovelFoundationResult",
     "NovelRunRequest",

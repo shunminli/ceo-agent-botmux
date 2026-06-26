@@ -8,7 +8,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from botmux_novel import NovelFoundationRequest, NovelRunRequest, NovelRuntime, NovelWikiBundleRequest
+from botmux_novel import NovelChapterRequest, NovelFoundationRequest, NovelRunRequest, NovelRuntime, NovelWikiBundleRequest
 from botmux_novel.agents import BlueprintAgent, ConsistencyAgent, ContextPackBuilder, DirectorAgent
 
 
@@ -152,6 +152,36 @@ class NovelRuntimeTest(unittest.TestCase):
                 row = connection.execute("SELECT status, chapter_id FROM runs WHERE run_id = ?", (result.run_id,)).fetchone()
             self.assertEqual(row, ("completed", "ch-001"))
 
+    def test_chapter_uses_existing_foundation_without_replanning_story_bible(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            project = Path(tmpdir) / "chapter-from-foundation"
+            foundation = NovelRuntime().foundation(
+                NovelFoundationRequest(
+                    project_path=project,
+                    title="影钟旧案",
+                    inspiration="一个背负旧案污名的少年，在巡夜钟声中发现妹妹影子会说真话。",
+                )
+            )
+
+            result = NovelRuntime().chapter(
+                NovelChapterRequest(
+                    project_path=project,
+                    chapter_number=2,
+                    chapter_goal="让林烬用半张残页验证巡夜钟异常，并把妹妹影子证词转成下一章追查目标。",
+                    foundation_path=foundation.foundation_path,
+                )
+            )
+
+            self.assertEqual(result.status, "completed")
+            self.assertEqual(result.chapter_id, "ch-002")
+            self.assertTrue((project / "manuscript/final/ch-002.md").exists())
+            self.assertTrue((project / f"runs/{result.run_id}/source-foundation.json").exists())
+            self.assertTrue((project / "tracking/facts.yaml").exists())
+            trace = json.loads(result.trace_path.read_text(encoding="utf-8"))
+            self.assertEqual(trace["steps"][0]["stage"], "LoadFoundation")
+            self.assertIn("foundation_path", trace["request"])
+            self.assertEqual(trace["request"]["chapter_goal"], "让林烬用半张残页验证巡夜钟异常，并把妹妹影子证词转成下一章追查目标。")
+
     def test_cli_run_uses_real_entrypoint(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             project = Path(tmpdir) / "cli-novel"
@@ -202,6 +232,51 @@ class NovelRuntimeTest(unittest.TestCase):
             self.assertTrue(Path(payload["foundation_path"]).exists())
             self.assertTrue((project / "characters/relationships.json").exists())
             self.assertFalse((project / "manuscript/final/ch-001.md").exists())
+
+    def test_cli_chapter_uses_real_entrypoint(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            project = Path(tmpdir) / "cli-chapter"
+            foundation = subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "botmux_novel",
+                    "foundation",
+                    "--project",
+                    str(project),
+                    "--title",
+                    "影钟旧案",
+                    "--inspiration",
+                    "少年在旧书楼发现父亲旧案残页。",
+                ],
+                check=True,
+                text=True,
+                capture_output=True,
+            )
+            foundation_payload = json.loads(foundation.stdout)
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "botmux_novel",
+                    "chapter",
+                    "--project",
+                    str(project),
+                    "--chapter-number",
+                    "2",
+                    "--chapter-goal",
+                    "让林烬用半张残页验证巡夜钟异常，并把妹妹影子证词转成下一章追查目标。",
+                    "--foundation-json",
+                    foundation_payload["foundation_path"],
+                ],
+                check=True,
+                text=True,
+                capture_output=True,
+            )
+            payload = json.loads(completed.stdout)
+            self.assertEqual(payload["status"], "completed")
+            self.assertEqual(payload["chapter_id"], "ch-002")
+            self.assertTrue(Path(payload["final_path"]).exists())
 
     def test_cli_wiki_bundle_uses_real_entrypoint(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:

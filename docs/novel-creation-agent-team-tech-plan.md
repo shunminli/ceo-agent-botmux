@@ -445,6 +445,7 @@ novel-project/
 当前 `botmux_novel` 已有能力：
 
 - `NovelRuntime.run` 串行执行 Intake、Plan、RetrieveContext、Generate、Review、Revise、Approve、Archive。
+- `NovelRuntime.chapter` 从已有 `foundation.json` 继续生产章节，避免重新规划已批准 Story Bible。
 - 本地工作区输出 `project.yaml`、`story.md`、`settings/*`、`characters/*`、`outline/*`、`tracking/*`、`runs/*`。
 - `python3 -m botmux_novel botmux-assets` 同步仓库 workflow 模板和三个小说 bot workspace `AGENTS.md`。
 - 测试覆盖首章闭环、真实 CLI 入口和门禁阻断。
@@ -456,6 +457,11 @@ python3 -m botmux_novel run \
   --project /tmp/novel-demo \
   --title 影钟旧案 \
   --inspiration "一个背负旧案污名的少年，在巡夜钟声中发现妹妹影子会说真话。"
+
+python3 -m botmux_novel chapter \
+  --project /tmp/novel-demo \
+  --chapter-number 2 \
+  --chapter-goal "让林烬用半张残页验证巡夜钟异常，并把妹妹影子证词转成下一章追查目标。"
 ```
 
 后续演进：
@@ -495,6 +501,7 @@ python3 -m botmux_novel run \
 - 参数只保留标量：`projectSlug`、`title`、`storyBible`、`chapterNumber`、`chapterGoal`、`priorContext`、`wordTarget`、`mode`。
 - 章节生产继续使用同一 3 bot 组织，并在 `director_approval_package` 前 humanGate。
 - workflow 只输出章节定稿候选包和 `archive_plan`，不直接写项目文件或 llmwiki；写入动作后续必须单独 gated。
+- 已新增本地 `python3 -m botmux_novel chapter`，可用已批准/已生成的 `foundation.json` 继续生产章节，用于无 BotMux 依赖的 Phase 2 smoke。
 
 ### Phase 3：质量评估后再扩展
 
