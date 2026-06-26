@@ -84,6 +84,7 @@ python3 -m botmux_novel botmux-assets --write
 /Users/xiaochen/.botmux/bin/botmux workflow validate workflows/novel-chapter-production.workflow.json
 
 python3 -m botmux_novel readiness --bootstrap-smoke
+python3 -m botmux_novel readiness --approval-apply-smoke
 python3 -m botmux_novel readiness --series-smoke
 ```
 
@@ -91,8 +92,8 @@ python3 -m botmux_novel readiness --series-smoke
 
 ```bash
 python3 -m unittest discover -s tests -v
-python3 -m botmux_novel readiness --bootstrap-smoke --series-smoke
-python3 -m botmux_novel readiness --bootstrap-smoke --series-smoke --smoke-chapter-count 20 --llmwiki-smoke
+python3 -m botmux_novel readiness --bootstrap-smoke --approval-apply-smoke --series-smoke
+python3 -m botmux_novel readiness --bootstrap-smoke --approval-apply-smoke --series-smoke --smoke-chapter-count 20 --llmwiki-smoke
 ```
 
 ## Local Doubao CLI

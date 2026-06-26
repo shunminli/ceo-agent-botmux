@@ -5,7 +5,14 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from .llmwiki_sync import LlmwikiSyncRequest, LlmwikiSyncResult, LlmwikiSyncer
+from .llmwiki_sync import (
+    LlmwikiCommandResult,
+    LlmwikiSyncRequest,
+    LlmwikiSyncResult,
+    LlmwikiSyncer,
+    resolve_executable,
+    run_command,
+)
 
 
 @dataclass(frozen=True)
@@ -25,6 +32,7 @@ class NovelApprovalApplyResult:
     project_path: Path
     project_slug: str
     workspace_path: Path
+    init_commands: List[LlmwikiCommandResult]
     llmwiki_sync: LlmwikiSyncResult
     warnings: List[str]
 
@@ -36,6 +44,7 @@ class NovelApprovalApplyResult:
             "project_path": str(self.project_path),
             "project_slug": self.project_slug,
             "workspace_path": str(self.workspace_path),
+            "init_commands": [command.to_dict() for command in self.init_commands],
             "llmwiki_sync": self.llmwiki_sync.to_dict(),
             "warnings": self.warnings,
         }
@@ -61,6 +70,15 @@ class NovelApprovalApplier:
                 "approval package decision is not set to `approve`; treating explicit --approve as the humanGate signal"
             )
 
+        init_commands = ensure_workspace_initialized(
+            workspace_path=workspace_path,
+            llmwiki_bin=llmwiki_bin,
+            approve=request.approve,
+            reindex=request.reindex,
+        )
+        if any(command.status == "failed" for command in init_commands):
+            warnings.append("llmwiki init failed; sync still ran but reindex may fail")
+
         sync_result = self.llmwiki_syncer.sync(
             LlmwikiSyncRequest(
                 project_path=project_path,
@@ -72,7 +90,7 @@ class NovelApprovalApplier:
                 reindex=request.reindex,
             )
         )
-        status = sync_result.status if sync_result.status != "completed" or not warnings else "completed_with_warnings"
+        status = approval_status(sync_status=sync_result.status, warnings=warnings, init_commands=init_commands)
         return NovelApprovalApplyResult(
             status=status,
             approved=request.approve,
@@ -80,6 +98,7 @@ class NovelApprovalApplier:
             project_path=project_path,
             project_slug=project_slug,
             workspace_path=workspace_path,
+            init_commands=init_commands,
             llmwiki_sync=sync_result,
             warnings=[*warnings, *sync_result.warnings],
         )
@@ -107,3 +126,34 @@ def command_option(command: Any, option: str) -> Optional[str]:
         if value == option:
             return str(command[index + 1])
     return None
+
+
+def ensure_workspace_initialized(
+    *,
+    workspace_path: Path,
+    llmwiki_bin: str,
+    approve: bool,
+    reindex: bool,
+) -> List[LlmwikiCommandResult]:
+    if not approve or not reindex:
+        return []
+    index_path = workspace_path / ".llmwiki" / "index.db"
+    if index_path.exists():
+        return []
+    executable = resolve_executable(llmwiki_bin)
+    if executable is None:
+        return []
+    return [run_command([executable, "init", str(workspace_path)])]
+
+
+def approval_status(
+    *,
+    sync_status: str,
+    warnings: List[str],
+    init_commands: List[LlmwikiCommandResult],
+) -> str:
+    if any(command.status == "failed" for command in init_commands):
+        return "failed"
+    if sync_status == "completed" and warnings:
+        return "completed_with_warnings"
+    return sync_status

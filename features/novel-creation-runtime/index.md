@@ -64,9 +64,10 @@ python3 -m botmux_novel run \
 python3 -m botmux_novel botmux-assets
 python3 -m botmux_novel botmux-assets --write
 python3 -m botmux_novel readiness --bootstrap-smoke
+python3 -m botmux_novel readiness --approval-apply-smoke
 python3 -m botmux_novel readiness --series-smoke
 python3 -m botmux_novel readiness --series-smoke --smoke-chapter-count 20
-python3 -m botmux_novel readiness --bootstrap-smoke --series-smoke --smoke-chapter-count 20 --llmwiki-smoke
+python3 -m botmux_novel readiness --bootstrap-smoke --approval-apply-smoke --series-smoke --smoke-chapter-count 20 --llmwiki-smoke
 
 /Users/xiaochen/.botmux/bin/botmux workflow run novel-chapter-production \
   --param projectSlug=shadow-clock-case \
@@ -96,14 +97,14 @@ python3 -m botmux_novel readiness --bootstrap-smoke --series-smoke --smoke-chapt
 - `wiki/novels/{project_slug}/*.md`：`wiki-bundle` 子命令生成的本地 llmwiki 写入前审核包。
 - `workflows/*.workflow.json`：版本化的 BotMux 三 bot 协作模板，测试会校验输出契约、人类门禁和本机安装副本一致性。
 - `~/.botmux/workspace/{Novel-*}/AGENTS.md`：由 `botmux-assets --write` 从仓库身份文档生成的运行态 workspace 指令。
-- `readiness` JSON：本机小说生产环境的 BotMux、workflow validate、workflow 绑定、llmwiki、可选 bootstrap smoke、series smoke 和可选 approved llmwiki sync smoke 检查结果。
+- `readiness` JSON：本机小说生产环境的 BotMux、workflow validate、workflow 绑定、llmwiki、可选 bootstrap smoke、approval apply smoke、series smoke 和可选 approved llmwiki sync smoke 检查结果。
 
 ## 规则与状态
 
 - 默认执行 `lean` 模式。
 - `foundation` 只生成开书设定资产，不写 `manuscript/draft|revised|final`。
 - `novel-bootstrap` 串联开书设定、项目内 wiki bundle、llmwiki dry-run sync plan、MCP 配置和审批包；它不会执行 approved sync、覆盖外部 llmwiki workspace 或修改全局配置。
-- `approval-apply` 默认只重新生成同步计划；只有传 `--approve` 才会按审批包写入 llmwiki workspace，并保留 warning 说明显式 humanGate 信号。
+- `approval-apply` 默认只重新生成同步计划；只有传 `--approve` 才会按审批包写入 llmwiki workspace。若目标 workspace 缺少 llmwiki index 且需要 reindex，会先运行 `llmwiki init`，并保留 warning 说明显式 humanGate 信号。
 - `chapter` 从本地 `foundation.json` 继续生产章节，不重新规划 Story Bible，并自动读取早于当前章节的 `runs/archive-*.json` 作为连续性上下文。
 - `wiki-bundle` 只读取本地 `foundation.json` 并写项目内 Markdown bundle，不调用 llmwiki。
 - `llmwiki-sync` 默认只生成计划；只有传 `--approve` 才把审核包复制到 llmwiki workspace。它不安装 llmwiki，不调用 MCP 写工具。

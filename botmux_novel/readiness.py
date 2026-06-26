@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, Iterator, List, Optional, Set, Tuple
 
+from .approval import NovelApprovalApplier, NovelApprovalApplyRequest
 from .bootstrap import NovelBootstrapRequest, NovelBootstrapper
 from .botmux_assets import BotmuxAssetSyncRequest, BotmuxAssetSyncer
 from .llmwiki_sync import LlmwikiSyncRequest, LlmwikiSyncer
@@ -40,6 +41,7 @@ class NovelReadinessRequest:
     smoke_chapter_count: int = 5
     run_llmwiki_smoke: bool = False
     run_bootstrap_smoke: bool = False
+    run_approval_apply_smoke: bool = False
 
 
 @dataclass(frozen=True)
@@ -87,6 +89,8 @@ class NovelReadinessChecker:
         ]
         if request.run_bootstrap_smoke:
             checks.append(self._check_bootstrap_smoke(llmwiki_bin=request.llmwiki_bin))
+        if request.run_approval_apply_smoke:
+            checks.append(self._check_approval_apply_smoke(llmwiki_bin=request.llmwiki_bin))
         if request.run_series_smoke:
             checks.append(self._check_series_smoke(chapter_count=request.smoke_chapter_count))
         if request.run_llmwiki_smoke:
@@ -377,6 +381,80 @@ class NovelReadinessChecker:
                 status="fail",
                 summary=f"Novel bootstrap smoke failed: {exc}",
                 data={"llmwiki_bin": llmwiki_bin},
+            )
+
+    def _check_approval_apply_smoke(self, *, llmwiki_bin: str) -> ReadinessCheck:
+        executable = resolve_executable(llmwiki_bin)
+        if executable is None:
+            return ReadinessCheck(
+                name="approval_apply_smoke",
+                status="fail",
+                summary=f"Approval apply smoke requires an llmwiki executable but none was found: {llmwiki_bin}",
+                data={"llmwiki_bin": llmwiki_bin},
+            )
+
+        try:
+            with tempfile.TemporaryDirectory() as tmpdir:
+                root = Path(tmpdir)
+                project_path = root / "readiness-approval-project"
+                workspace_path = root / "readiness-approval-workspace"
+                project_slug = "shadow-clock-case"
+                bootstrap_result = NovelBootstrapper().bootstrap(
+                    NovelBootstrapRequest(
+                        project_path=project_path,
+                        title="影钟旧案",
+                        inspiration="退役巡夜人在旧书楼发现父亲旧案残页，必须在巡城司清查前保护妹妹身份并找出篡改真相的人。",
+                        project_slug=project_slug,
+                        workspace_path=workspace_path,
+                        llmwiki_bin=executable,
+                    )
+                )
+                apply_result = NovelApprovalApplier().apply(
+                    NovelApprovalApplyRequest(
+                        approval_package_path=bootstrap_result.approval_package_json_path,
+                        approve=True,
+                    )
+                )
+                target_overview = workspace_path / "wiki" / "novels" / project_slug / "overview.md"
+                index_path = workspace_path / ".llmwiki" / "index.db"
+                init_succeeded = any(command.status == "succeeded" for command in apply_result.init_commands)
+                reindex_succeeded = any(command.status == "succeeded" for command in apply_result.llmwiki_sync.commands)
+                passed = (
+                    apply_result.status in {"completed", "completed_with_warnings"}
+                    and apply_result.approved
+                    and init_succeeded
+                    and reindex_succeeded
+                    and target_overview.exists()
+                    and index_path.exists()
+                )
+                return ReadinessCheck(
+                    name="approval_apply_smoke",
+                    status="pass" if passed else "fail",
+                    summary=(
+                        "Approval apply smoke initialized a temporary workspace, applied approved wiki pages, and reindexed it."
+                        if passed
+                        else "Approval apply smoke did not meet expected init/write/reindex checks."
+                    ),
+                    data={
+                        "llmwiki_bin": executable,
+                        "project_path": str(project_path),
+                        "workspace_path": str(workspace_path),
+                        "approval_package_path": str(bootstrap_result.approval_package_json_path),
+                        "apply_status": apply_result.status,
+                        "approved": apply_result.approved,
+                        "target_overview_exists": target_overview.exists(),
+                        "index_exists": index_path.exists(),
+                        "init_commands": [command.to_dict() for command in apply_result.init_commands],
+                        "sync_commands": [command.to_dict() for command in apply_result.llmwiki_sync.commands],
+                        "warnings": apply_result.warnings,
+                    },
+                )
+        except Exception as exc:
+            return ReadinessCheck(
+                name="approval_apply_smoke",
+                status="fail",
+                summary=f"Approval apply smoke failed: {exc}",
+                data={"llmwiki_bin": executable},
             )
 
     def _check_llmwiki_smoke(self, *, llmwiki_bin: str) -> ReadinessCheck:

@@ -69,6 +69,7 @@ class NovelApprovalApplyTest(unittest.TestCase):
             self.assertEqual(result.status, "completed_with_warnings")
             self.assertTrue(result.approved)
             self.assertTrue((workspace / "wiki/novels/shadow-clock-case/overview.md").exists())
+            self.assertTrue(any(command.status == "succeeded" for command in result.init_commands))
             self.assertTrue(any(command.status == "succeeded" for command in result.llmwiki_sync.commands))
             self.assertTrue(any("humanGate" in warning for warning in result.warnings))
 
@@ -121,6 +122,7 @@ class NovelApprovalApplyTest(unittest.TestCase):
             payload = json.loads(completed.stdout)
             self.assertEqual(payload["status"], "completed_with_warnings")
             self.assertTrue(payload["approved"])
+            self.assertTrue(any(command["status"] == "succeeded" for command in payload["init_commands"]))
             self.assertTrue((workspace / "wiki/novels/shadow-clock-case/overview.md").exists())
 
 

@@ -59,7 +59,7 @@ python3 -m botmux_novel novel-bootstrap \
   --project-slug shadow-clock-case
 ```
 
-产物在 `runs/{bootstrap_run_id}/approval-package.md` 和 `approval-package.json`。审批通过后优先执行其中的 `approval-apply --approve` 命令，它会读取审批包中的 project、slug、workspace 和 llmwiki 配置；底层仍调用 `llmwiki-sync --approve --reindex`。
+产物在 `runs/{bootstrap_run_id}/approval-package.md` 和 `approval-package.json`。审批通过后优先执行其中的 `approval-apply --approve` 命令，它会读取审批包中的 project、slug、workspace 和 llmwiki 配置；如果目标 workspace 还没有 llmwiki index，会先初始化；底层仍调用 `llmwiki-sync --approve --reindex`。
 
 ```bash
 python3 -m botmux_novel approval-apply \
@@ -163,8 +163,9 @@ python3 -m unittest discover -s tests -v
 /Users/xiaochen/.botmux/bin/botmux workflow validate workflows/novel-chapter-production.workflow.json
 llmwiki --help
 python3 -m botmux_novel readiness --bootstrap-smoke
+python3 -m botmux_novel readiness --approval-apply-smoke
 python3 -m botmux_novel readiness --series-smoke --smoke-chapter-count 20
-python3 -m botmux_novel readiness --bootstrap-smoke --series-smoke --smoke-chapter-count 20 --llmwiki-smoke
+python3 -m botmux_novel readiness --bootstrap-smoke --approval-apply-smoke --series-smoke --smoke-chapter-count 20 --llmwiki-smoke
 python3 -m botmux_novel llmwiki-mcp-config --workspace /path/to/novel-project --project-slug <slug>
 ```
 
