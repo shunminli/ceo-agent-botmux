@@ -59,6 +59,13 @@ class NovelBootstrapResult:
         }
 
 
+@dataclass(frozen=True)
+class ApprovalPackageWriteResult:
+    payload: Dict[str, Any]
+    approval_package_path: Path
+    approval_package_json_path: Path
+
+
 class NovelBootstrapper:
     def __init__(self) -> None:
         self.runtime = NovelRuntime()
@@ -113,61 +120,22 @@ class NovelBootstrapper:
 
         run_dir = project_path / "runs" / run_id
         run_dir.mkdir(parents=True, exist_ok=True)
-        approval_package_json_path = run_dir / "approval-package.json"
-        approval_package_path = run_dir / "approval-package.md"
-        payload = approval_payload(
+        approval_package = write_approval_package(
             request=request,
             run_id=run_id,
             foundation=foundation,
             wiki_bundle=wiki_bundle,
             llmwiki_sync=llmwiki_sync,
             mcp_config=mcp_config,
+            run_dir=run_dir,
         )
-        payload["human_gate"]["approval_decision_command"] = [
-            "python3",
-            "-m",
-            "botmux_novel",
-            "approval-decision",
-            "--approval-package",
-            str(approval_package_json_path),
-            "--decision",
-            "approve",
-            "--reviewer",
-            "human",
-            "--notes",
-            "Approved after reviewing approval-package.md and wiki bundle.",
-        ]
-        payload["human_gate"]["approval_apply_command"] = [
-            "python3",
-            "-m",
-            "botmux_novel",
-            "approval-apply",
-            "--approval-package",
-            str(approval_package_json_path),
-            "--approve",
-        ]
-        payload["next_actions"]["chapter_start_command"] = [
-            "python3",
-            "-m",
-            "botmux_novel",
-            "chapter",
-            "--project",
-            str(project_path),
-            "--chapter-number",
-            str(request.chapter_number),
-            "--foundation-json",
-            str(foundation.foundation_path),
-        ]
-        validate_schema("approval-package", payload)
-        approval_package_json_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-        approval_package_path.write_text(render_approval_markdown(payload), encoding="utf-8")
 
         artifacts = [
             foundation.foundation_path,
             wiki_bundle.bundle_path,
             llmwiki_sync.plan_path,
-            approval_package_json_path,
-            approval_package_path,
+            approval_package.approval_package_json_path,
+            approval_package.approval_package_path,
         ]
         status = "ready" if mcp_config.status == "ready" else "ready_with_warnings"
         return NovelBootstrapResult(
@@ -180,10 +148,82 @@ class NovelBootstrapper:
             wiki_bundle=wiki_bundle,
             llmwiki_sync=llmwiki_sync,
             mcp_config=mcp_config,
-            approval_package_path=approval_package_path,
-            approval_package_json_path=approval_package_json_path,
+            approval_package_path=approval_package.approval_package_path,
+            approval_package_json_path=approval_package.approval_package_json_path,
             artifacts=artifacts,
         )
+
+
+def write_approval_package(
+    *,
+    request: NovelBootstrapRequest,
+    run_id: str,
+    foundation: NovelFoundationResult,
+    wiki_bundle: NovelWikiBundleResult,
+    llmwiki_sync: LlmwikiSyncResult,
+    mcp_config: NovelLlmwikiMcpConfigResult,
+    run_dir: Path,
+    extra_payload: Optional[Dict[str, Any]] = None,
+    extra_warnings: Optional[List[str]] = None,
+) -> ApprovalPackageWriteResult:
+    run_dir.mkdir(parents=True, exist_ok=True)
+    approval_package_json_path = run_dir / "approval-package.json"
+    approval_package_path = run_dir / "approval-package.md"
+    payload = approval_payload(
+        request=request,
+        run_id=run_id,
+        foundation=foundation,
+        wiki_bundle=wiki_bundle,
+        llmwiki_sync=llmwiki_sync,
+        mcp_config=mcp_config,
+    )
+    payload["human_gate"]["approval_decision_command"] = [
+        "python3",
+        "-m",
+        "botmux_novel",
+        "approval-decision",
+        "--approval-package",
+        str(approval_package_json_path),
+        "--decision",
+        "approve",
+        "--reviewer",
+        "human",
+        "--notes",
+        "Approved after reviewing approval-package.md and wiki bundle.",
+    ]
+    payload["human_gate"]["approval_apply_command"] = [
+        "python3",
+        "-m",
+        "botmux_novel",
+        "approval-apply",
+        "--approval-package",
+        str(approval_package_json_path),
+        "--approve",
+    ]
+    payload["next_actions"]["chapter_start_command"] = [
+        "python3",
+        "-m",
+        "botmux_novel",
+        "chapter",
+        "--project",
+        str(foundation.project_path),
+        "--chapter-number",
+        str(request.chapter_number),
+        "--foundation-json",
+        str(foundation.foundation_path),
+    ]
+    if extra_warnings:
+        payload["llmwiki"]["warnings"].extend(extra_warnings)
+    if extra_payload:
+        payload.update(extra_payload)
+    validate_schema("approval-package", payload)
+    approval_package_json_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    approval_package_path.write_text(render_approval_markdown(payload), encoding="utf-8")
+    return ApprovalPackageWriteResult(
+        payload=payload,
+        approval_package_path=approval_package_path,
+        approval_package_json_path=approval_package_json_path,
+    )
 
 
 def approval_payload(

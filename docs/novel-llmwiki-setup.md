@@ -61,6 +61,17 @@ python3 -m botmux_novel novel-bootstrap \
 
 产物在 `runs/{bootstrap_run_id}/approval-package.md` 和 `approval-package.json`，写入前会按 `approval-package.schema.json` 校验必填字段和基础类型。审批通过前先执行 `approval-check --apply-dry-run`，它会再次检查 schema，并校验审核材料、humanGate 命令、llmwiki preview、MCP 角色策略和 dry-run apply 路径。审批通过后先执行其中的 `approval-decision --decision approve` 命令，记录 reviewer、notes、timestamp 和历史；再执行 `approval-apply --approve`。`approval-decision` 和 `approval-apply` 读取审批包时都会执行同一 schema 校验。`approval-apply` 会读取审批包中的 project、slug、workspace 和 llmwiki 配置；如果目标 workspace 还没有 llmwiki index，会先初始化；底层仍调用 `llmwiki-sync --approve --reindex --lint`，CLI 不支持 lint 时会运行本地 `wiki-lint` fallback，lint 返回非 0 时写入结果为 `failed`。完成知识库写入后，可继续执行审批包里的 `next_actions.chapter_start_command`，直接从批准的 `foundation.json` 生成首章。
 
+如果开书设定先由真实 BotMux `novel-story-foundation` 三 bot workflow 产出，先把 workflow 结果保存为 JSON，再导入同一套本地审批链路：
+
+```bash
+python3 -m botmux_novel workflow-foundation-import \
+  --workflow-result /path/to/novel-story-foundation-result.json \
+  --project /path/to/novel-project \
+  --project-slug shadow-clock-case
+```
+
+该导入会校验 `story_bible_package` 和 `wiki_sync_plan` 节点输出契约，保存原始 workflow result、节点输出和规范化 `foundation.json`，然后生成 wiki bundle、llmwiki dry-run sync plan、MCP config 和 `approval-package.md|json`。后续仍执行同一套 `approval-check`、`approval-decision`、`approval-apply` 和 `chapter` 命令。
+
 ```bash
 python3 -m botmux_novel approval-check \
   --approval-package /path/to/novel-project/runs/<bootstrap-run-id>/approval-package.json \

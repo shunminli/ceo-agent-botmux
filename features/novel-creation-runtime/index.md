@@ -27,6 +27,11 @@ python3 -m botmux_novel novel-bootstrap \
   --inspiration "一个背负旧案污名的少年，在巡夜钟声中发现妹妹影子会说真话。" \
   --project-slug shadow-clock-case
 
+python3 -m botmux_novel workflow-foundation-import \
+  --workflow-result /tmp/novel-story-foundation-result.json \
+  --project /tmp/novel-demo \
+  --project-slug shadow-clock-case
+
 python3 -m botmux_novel approval-decision \
   --approval-package /tmp/novel-demo/runs/<bootstrap-run-id>/approval-package.json \
   --decision approve \
@@ -84,9 +89,10 @@ python3 -m botmux_novel botmux-assets
 python3 -m botmux_novel botmux-assets --write
 python3 -m botmux_novel readiness --bootstrap-smoke
 python3 -m botmux_novel readiness --approval-apply-smoke
+python3 -m botmux_novel readiness --workflow-import-smoke
 python3 -m botmux_novel readiness --series-smoke
 python3 -m botmux_novel readiness --series-smoke --smoke-chapter-count 20
-python3 -m botmux_novel readiness --bootstrap-smoke --approval-apply-smoke --series-smoke --smoke-chapter-count 20 --llmwiki-smoke
+python3 -m botmux_novel readiness --bootstrap-smoke --workflow-import-smoke --approval-apply-smoke --series-smoke --smoke-chapter-count 20 --llmwiki-smoke
 
 /Users/xiaochen/.botmux/bin/botmux workflow run novel-chapter-production \
   --param projectSlug=shadow-clock-case \
@@ -106,6 +112,7 @@ python3 -m botmux_novel readiness --bootstrap-smoke --approval-apply-smoke --ser
 - `tracking/facts.yaml`、`timeline.yaml`、`foreshadowing.yaml`、`character-state.yaml`、`continuity-issues.yaml`：章节归档状态；伏笔台账包含 id、状态、埋设章节、回收计划和风险等级。
 - `runs/{run_id}/trace.json` 和 `runs/runs.sqlite`：可观察 run 记录和可查询索引。
 - `runs/{foundation_run_id}/foundation.json`：`foundation` 子命令生成的开书设定包。
+- `runs/{workflow_foundation_run_id}/workflow-result-source.json|workflow-node-outputs.json|foundation.json`：`workflow-foundation-import` 保存的 BotMux workflow 原始结果、节点输出和规范化 Story Bible 来源。
 - `runs/{bootstrap_run_id}/approval-package.md|json`：`novel-bootstrap` 子命令生成的 Story Bible/wiki/MCP 人工审批包，包含审批记录、approved apply 和首章启动命令。
 - `approval-decision` JSON：审批决策记录结果，包含 decision、reviewer、notes、decided_at 和审批包路径。
 - `approval-check` JSON：审批包机器校验结果，包含审核材料、humanGate 命令、llmwiki 预览、MCP 策略、workspace target、可选 dry-run apply 和 chapter smoke 检查。
@@ -121,13 +128,14 @@ python3 -m botmux_novel readiness --bootstrap-smoke --approval-apply-smoke --ser
 - `workflows/*.workflow.json`：版本化的 BotMux 三 bot 协作模板，测试会校验输出契约、人类门禁和本机安装副本一致性。
 - `schemas/approval-package.schema.json`：审批包必填字段和基础类型契约，覆盖项目元数据、审核材料、humanGate 命令、llmwiki preview、MCP 策略和下一步命令。
 - `~/.botmux/workspace/{Novel-*}/AGENTS.md`：由 `botmux-assets --write` 从仓库身份文档生成的运行态 workspace 指令。
-- `readiness` JSON：本机小说生产环境的 BotMux、bot workspace 身份绑定、workflow validate、workflow 绑定、workflow 合成契约、llmwiki、可选 bootstrap smoke、approval apply smoke、series smoke 和可选 approved llmwiki sync smoke 检查结果；bootstrap smoke 会执行审批包里的首章启动命令。
+- `readiness` JSON：本机小说生产环境的 BotMux、bot workspace 身份绑定、workflow validate、workflow 绑定、workflow 合成契约、llmwiki、可选 bootstrap smoke、workflow import smoke、approval apply smoke、series smoke 和可选 approved llmwiki sync smoke 检查结果；bootstrap smoke 和 workflow import smoke 会执行审批包里的首章启动命令。
 
 ## 规则与状态
 
 - 默认执行 `lean` 模式。
 - `foundation` 只生成开书设定资产，不写 `manuscript/draft|revised|final`。
 - `novel-bootstrap` 串联开书设定、项目内 wiki bundle、llmwiki dry-run sync plan、MCP 配置和审批包；审批包会在落盘前通过 `approval-package.schema.json` 必填字段和基础类型校验，并包含 `next_actions.chapter_start_command`，用于在审批和写入后从批准的 foundation 直接启动首章；它不会执行 approved sync、覆盖外部 llmwiki workspace 或修改全局配置。
+- `workflow-foundation-import` 读取已完成的 `novel-story-foundation` workflow JSON 结果，校验 `story_bible_package` 和 `wiki_sync_plan` 输出契约，把 Story Bible 规范化成 `foundation.json`，再复用 wiki bundle、dry-run sync、MCP config 和 approval package 链路；它不执行 approved sync。
 - `approval-decision` 只把 humanGate 决策写入审批包 JSON，并在同目录 `approval-package.md` 存在时重渲染 Markdown 审批包；它会先按 `approval-package.schema.json` 校验审批包，不执行 llmwiki 写入，正式批准路径应先记录 `--decision approve`。
 - `approval-check` 默认只读校验审批包；它会先按 `approval-package.schema.json` 递归检查必填字段和基础类型。`--apply-dry-run` 只验证 `approval-apply` dry-run 消费路径，不执行 approved writes；`--chapter-smoke` 会执行首章命令，应用在临时 smoke 项目，不建议在未经审批的真实项目上默认运行。
 - `approval-apply` 默认只重新生成同步计划；它会先按 `approval-package.schema.json` 校验审批包，只有传 `--approve` 才会按审批包写入 llmwiki workspace，并默认运行 `llmwiki reindex` 与写后 lint。若审批包已记录 `request_changes` 或 `reject`，会拒绝写入；若未记录 `approve` 但命令显式 `--approve`，会保留 warning 说明这是命令级 humanGate 信号。
@@ -136,7 +144,7 @@ python3 -m botmux_novel readiness --bootstrap-smoke --approval-apply-smoke --ser
 - `llmwiki-sync` 默认只生成计划；只有传 `--approve` 才把审核包复制到 llmwiki workspace。传 `--lint` 后优先运行 `llmwiki lint <workspace>`；若当前 llmwiki CLI 不支持 `lint` 子命令，则自动运行本地 `wiki-lint` fallback；若 lint 检查失败则同步结果为 `failed`。它不安装 llmwiki，不调用 MCP 写工具。
 - `llmwiki-mcp-config` 只生成配置片段和角色绑定策略，不写 `~/.codex/config.toml`，默认只建议 Director 和 Validator 接入 llmwiki MCP。
 - `series` 默认连续生成 5 章、导出 wiki bundle，并统计 P0/P1、修订轮次、归档完整率和 prior context 覆盖率。
-- `readiness` 只读检查本机状态；缺少 llmwiki 时返回 `ready_with_warnings`，BotMux 配置、bot workingDir 与 workspace `AGENTS.md` 身份绑定、workflow validate、workflow 绑定校验、workflow 合成契约校验或显式请求的 smoke 失败时返回 `blocked`。
+- `readiness` 只读检查本机状态；缺少 llmwiki 时返回 `ready_with_warnings`，BotMux 配置、bot workingDir 与 workspace `AGENTS.md` 身份绑定、workflow validate、workflow 绑定校验、workflow 合成契约校验、workflow import smoke 或显式请求的其他 smoke 失败时返回 `blocked`。
 - `botmux-assets` 默认只报告差异；传 `--write` 后才同步本机 BotMux 资产，并为被替换的 `AGENTS.md` 创建备份。
 - `novel-chapter-production` 只输出章节定稿候选包和归档计划，不直接写项目文件或 llmwiki。
 - 质量门禁区分 `pass`、`revise` 和 `block`。

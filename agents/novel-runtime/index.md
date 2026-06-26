@@ -9,6 +9,7 @@ Updated: 2026-06-27
 - 提供 CLI 入口 `python -m botmux_novel run`。
 - 提供开书资产入口 `python -m botmux_novel foundation`，不生成正文。
 - 提供真实项目启动包入口 `python -m botmux_novel novel-bootstrap`，串联 foundation、wiki bundle、llmwiki dry-run sync plan、MCP config 和 human approval package。
+- 提供 BotMux 开书 workflow 输出导入口 `python -m botmux_novel workflow-foundation-import`，把已完成的 `novel-story-foundation` 节点输出转成本地 foundation、wiki bundle、dry-run sync plan、MCP config 和 human approval package。
 - 提供审批决策记录入口 `python -m botmux_novel approval-decision`，把 humanGate 的 approve、request_changes 或 reject 写回 `approval-package.json`，记录 reviewer、notes、timestamp 和历史。
 - 提供审批包校验入口 `python -m botmux_novel approval-check`，默认只读验证审核材料、humanGate 命令、llmwiki 预览、MCP 角色策略和首章启动命令，可选 dry-run apply / chapter smoke。
 - 提供审批包执行入口 `python -m botmux_novel approval-apply`，读取 `approval-package.json`，默认 dry-run，只有显式 `--approve` 才执行 llmwiki 文件同步、reindex 和 lint。
@@ -32,6 +33,7 @@ Updated: 2026-06-27
 - 当前覆盖单项目的开书和连续章节 smoke；已用 20 章本地稳定性基线验证归档和 prior context 持续传递。真实模型 provider、Web UI 和向量检索属于后续迭代。
 - 输出是本地 Markdown/YAML/JSON/SQLite 文件，不涉及生产发布、云同步或多用户权限。
 - `novel-bootstrap` 会写项目内 wiki 审核包、审批包和 dry-run 计划，但不会执行 approved sync、不会覆盖外部 llmwiki workspace，也不会修改 Codex/BotMux 全局配置。
+- `workflow-foundation-import` 只导入已经完成的 BotMux workflow JSON 输出；它校验 `story_bible_package` 和 `wiki_sync_plan` 节点输出契约，写本地审核材料和审批包，但不执行 approved sync。
 - `approval-decision` 是 humanGate 审计记录入口；它只更新审批包 JSON，不执行 llmwiki 写入。
 - `approval-apply` 是 humanGate 后的执行器；不带 `--approve` 时只生成新同步计划，带 `--approve` 才应用审批包中的项目路径、slug、workspace 和 llmwiki 配置，并默认运行 reindex/lint；若审批包已记录 `request_changes` 或 `reject`，会拒绝 approved sync。
 - `wiki-bundle` 写本地 `wiki/novels/{project_slug}/` Markdown 页面包，用于人工审核或后续 gated llmwiki 写入。
@@ -59,6 +61,15 @@ Updated: 2026-06-27
 3. 运行未审批的 `llmwiki-sync`，只生成 sync plan；即使命令中带 planned reindex/lint，也不会执行 post-write 命令或覆盖外部 workspace。
 4. 运行 `llmwiki-mcp-config`，生成项目级 MCP JSON、Codex TOML 和三角色绑定策略。
 5. 用 `approval-package.schema.json` 校验审批包必填字段和基础类型后，写入 `runs/{bootstrap_run_id}/approval-package.json` 和 `approval-package.md`，列出 humanGate 必审项、页面清单、决策记录命令、批准后写入命令和 `next_actions.chapter_start_command`。
+
+### Workflow Foundation Import
+
+1. `NovelWorkflowFoundationImporter` 读取已完成的 `novel-story-foundation` workflow JSON 结果。
+2. 递归提取 `story_bible_package` 和 `wiki_sync_plan` 节点输出，并校验标准 `preview/handoff/data/open_questions/risks/wiki_refs/change_declarations` 契约。
+3. 把 Story Bible 数据规范化成本地 `foundation.json` 所需的 project、story_bible、characters、relationships、scene_settings、style_profile、volume_outline 和 chapter_goal。
+4. 写入项目资产、`runs/{workflow_foundation_run_id}/workflow-result-source.json`、`workflow-node-outputs.json`、`foundation.json`、trace 和 SQLite run 记录。
+5. 复用 `wiki-bundle`、未审批 `llmwiki-sync`、`llmwiki-mcp-config` 和同一套 approval package 写入逻辑；导入警告会进入审批包 warnings，供 humanGate 审阅。
+6. 输出的审批包仍需走 `approval-check`、`approval-decision` 和 `approval-apply`；导入动作本身不写 llmwiki。
 
 ### Approval Decision
 
@@ -153,9 +164,10 @@ Updated: 2026-06-27
 6. 检查 `llmwiki` 是否在 PATH 且 `llmwiki --help` 可执行；缺失或不可用是 warning，不阻断本地文件同步。
 7. 传 `--bootstrap-smoke` 时在临时目录跑 `novel-bootstrap`，确认 foundation、wiki 审核包、dry-run sync plan、MCP config 和 approval package 可生成，执行审批包里的 `next_actions.chapter_start_command`，并确认外部 workspace 未被写入。
 8. `bootstrap_smoke` 会调用 `approval-check --apply-dry-run` 等价路径，确认审批包本身可被机器校验且 dry-run apply 不执行 approved writes。
-9. 传 `--approval-apply-smoke` 时在临时目录跑 `novel-bootstrap`、`approval-decision --decision approve` 和 approved `approval-apply`，确认决策记录、workspace 自动初始化、页面写入、lint 和 reindex 可用。
-10. 传 `--series-smoke` 时在临时目录跑连续章节 smoke，并检查 Phase 3 指标阈值。
-11. 传 `--llmwiki-smoke` 时在临时目录生成 wiki bundle，初始化独立 llmwiki workspace，执行 approved `llmwiki-sync --reindex --lint`，确认页面复制、lint 和索引重建可用。
+9. 传 `--workflow-import-smoke` 时用合成 BotMux 输出跑 `workflow-foundation-import`，再执行 `approval-check --apply-dry-run --chapter-smoke`，确认真实 workflow 结果能进入本地审批链路。
+10. 传 `--approval-apply-smoke` 时在临时目录跑 `novel-bootstrap`、`approval-decision --decision approve` 和 approved `approval-apply`，确认决策记录、workspace 自动初始化、页面写入、lint 和 reindex 可用。
+11. 传 `--series-smoke` 时在临时目录跑连续章节 smoke，并检查 Phase 3 指标阈值。
+12. 传 `--llmwiki-smoke` 时在临时目录生成 wiki bundle，初始化独立 llmwiki workspace，执行 approved `llmwiki-sync --reindex --lint`，确认页面复制、lint 和索引重建可用。
 
 ### BotMux Assets
 
@@ -179,6 +191,7 @@ Updated: 2026-06-27
 - `botmux_novel/approval.py`：记录 humanGate 审批决策，并在批准后读取审批包执行 gated llmwiki sync。
 - `botmux_novel/approval_check.py`：只读校验审批包、审核材料、humanGate 命令、MCP 策略和可选 dry-run / chapter smoke。
 - `botmux_novel/bootstrap.py`：真实项目启动包、审批包、wiki dry-run sync plan 和 MCP 配置串联。
+- `botmux_novel/workflow_import.py`：真实 BotMux 开书 workflow 输出导入、本地 foundation 规范化和审批包桥接。
 - `botmux_novel/chapter_goals.py`：本地 deterministic 章节目标模板，供 series 和下一章 handoff 复用。
 - `botmux_novel/agents.py`：确定性 MVP Agent 行为。
 - `botmux_novel/workspace.py`：文件工作区、YAML 渲染和 SQLite 记录。

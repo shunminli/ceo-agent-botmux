@@ -42,6 +42,11 @@ from .runtime import (
 )
 from .series import NovelSeriesRequest, NovelSeriesResult, NovelSeriesRunner
 from .wiki_lint import WikiLintIssue, WikiLintResult, WikiLinter
+from .workflow_import import (
+    NovelWorkflowFoundationImporter,
+    NovelWorkflowFoundationImportRequest,
+    NovelWorkflowFoundationImportResult,
+)
 
 __all__ = [
     "BotmuxAssetAction",
@@ -83,6 +88,9 @@ __all__ = [
     "NovelRuntime",
     "NovelWikiBundleRequest",
     "NovelWikiBundleResult",
+    "NovelWorkflowFoundationImporter",
+    "NovelWorkflowFoundationImportRequest",
+    "NovelWorkflowFoundationImportResult",
     "ReadinessCheck",
     "WikiLintIssue",
     "WikiLintResult",

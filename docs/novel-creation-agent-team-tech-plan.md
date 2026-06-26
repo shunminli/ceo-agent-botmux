@@ -542,6 +542,7 @@ python3 -m botmux_novel readiness --bootstrap-smoke --approval-apply-smoke --ser
 - 首次只做预览，不自动写 llmwiki。
 - 已新增本地 `python3 -m botmux_novel foundation`，只生成开书设定资产、foundation trace 和 SQLite run 记录，不进入正文草稿。
 - 已新增本地 `python3 -m botmux_novel novel-bootstrap`，一键生成开书设定、项目内 wiki 审核包、llmwiki dry-run sync plan、MCP 配置和 human approval package；该命令不执行 approved sync、不覆盖外部 llmwiki workspace。
+- 已新增本地 `python3 -m botmux_novel workflow-foundation-import`，把真实 `novel-story-foundation` workflow 结果中的 `story_bible_package` 和 `wiki_sync_plan` 节点输出导入为本地 `foundation.json`、wiki 审核包、dry-run sync plan、MCP 配置和 human approval package；导入过程不执行 approved sync。
 - `novel-bootstrap` 写入审批包前会按 `approval-package.schema.json` 校验必填字段和基础类型；`approval-decision` 和 `approval-apply` 消费审批包时也会执行同一校验，避免畸形审批包绕过 `approval-check`。
 - 本地 P0 runtime 已能写出关系图、场景设定、文风档案和带 id/status 的伏笔台账，作为 Story Bible 后续落库的数据契约基础。
 - 已新增本地 `python3 -m botmux_novel wiki-bundle`，把 foundation JSON 导出为 `/wiki/novels/{project_slug}/` Markdown 页面包；该命令不调用 llmwiki，只作为写入前审核材料。
@@ -564,7 +565,7 @@ python3 -m botmux_novel readiness --bootstrap-smoke --approval-apply-smoke --ser
 
 - 已新增本地 `python3 -m botmux_novel series`，默认可连续生成 5 章样例项目，并已通过 20 章稳定性基线。
 - `series` 会统计 P0/P1 冲突、修订轮次、归档完整率、prior context 覆盖率和用户修改点。
-- 已新增本地 `python3 -m botmux_novel readiness --bootstrap-smoke --approval-apply-smoke --series-smoke`，用于一键验收本机 BotMux/bot workspace 身份绑定/workflow validate/workflow 绑定/workflow 合成契约/llmwiki/bootstrap/approval decision/approval apply/series smoke 状态；`--llmwiki-smoke` 可额外验证底层 approved llmwiki workspace 写入、lint 和 reindex。
+- 已新增本地 `python3 -m botmux_novel readiness --bootstrap-smoke --workflow-import-smoke --approval-apply-smoke --series-smoke`，用于一键验收本机 BotMux/bot workspace 身份绑定/workflow validate/workflow 绑定/workflow 合成契约/llmwiki/bootstrap/workflow import/approval decision/approval apply/series smoke 状态；`--llmwiki-smoke` 可额外验证底层 approved llmwiki workspace 写入、lint 和 reindex。
 - 只有当某类任务反复成为瓶颈时，才新增专职 bot。
 
 ## 16. 验收标准
@@ -591,7 +592,7 @@ python3 -m botmux_novel readiness --bootstrap-smoke --approval-apply-smoke --ser
 
 ## 18. 下一步
 
-1. 拿到真实项目参数后先运行 `python3 -m botmux_novel novel-bootstrap`，产出本地 Story Bible 候选、wiki 审核包、MCP 配置和审批包。
-2. 如需多 bot 协作口径，再用相同参数运行 `novel-story-foundation`，在 `story_bible_package` 的 humanGate 审批关键人设、关系、剧情走势和场景设定。
+1. 拿到真实项目参数后，可先运行 `python3 -m botmux_novel novel-bootstrap` 产出本地 Story Bible 候选、wiki 审核包、MCP 配置和审批包。
+2. 如需多 bot 协作口径，用相同参数运行 `novel-story-foundation`，在 `story_bible_package` 的 humanGate 审批关键人设、关系、剧情走势和场景设定；workflow 完成后把结果 JSON 交给 `python3 -m botmux_novel workflow-foundation-import --workflow-result ...`，生成同一套本地审核材料和审批包。
 3. 审批通过前可先执行 `approval-check --apply-dry-run` 确认审批包、审核材料、命令和 dry-run apply 路径完整；审批通过后执行审批包里的 `approval-decision --decision approve` 记录 reviewer、notes 和时间，再执行 `approval-apply --approve`，该路径默认运行 reindex/lint；或让 Director 在单独 humanGate workflow 中执行等价写入。
 4. 把批准后的 Story Bible 输入 `novel-chapter-production` 或 `python3 -m botmux_novel chapter` 继续章节生产；审批包会给出 `next_actions.chapter_start_command`，首章可直接运行该命令，它会从批准的 `foundation.json` 自动继承 `chapter_goal.objective`；首章归档后优先审阅并运行 `runs/{run_id}/next-chapter-command.md|json` 里的下一章 handoff，必要时再修改 `--chapter-goal`。

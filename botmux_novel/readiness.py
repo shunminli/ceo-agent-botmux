@@ -21,6 +21,7 @@ from .botmux_assets import BotmuxAssetSyncRequest, BotmuxAssetSyncer
 from .llmwiki_sync import LlmwikiSyncRequest, LlmwikiSyncer
 from .runtime import NovelFoundationRequest, NovelRuntime, NovelWikiBundleRequest
 from .series import NovelSeriesRequest, NovelSeriesRunner
+from .workflow_import import NovelWorkflowFoundationImportRequest, NovelWorkflowFoundationImporter
 
 
 EXPECTED_NOVEL_BOTS = {
@@ -48,6 +49,7 @@ class NovelReadinessRequest:
     run_llmwiki_smoke: bool = False
     run_bootstrap_smoke: bool = False
     run_approval_apply_smoke: bool = False
+    run_workflow_import_smoke: bool = False
 
 
 @dataclass(frozen=True)
@@ -98,6 +100,8 @@ class NovelReadinessChecker:
             checks.append(self._check_bootstrap_smoke(llmwiki_bin=request.llmwiki_bin))
         if request.run_approval_apply_smoke:
             checks.append(self._check_approval_apply_smoke(llmwiki_bin=request.llmwiki_bin))
+        if request.run_workflow_import_smoke:
+            checks.append(self._check_workflow_import_smoke(llmwiki_bin=request.llmwiki_bin))
         if request.run_series_smoke:
             checks.append(self._check_series_smoke(chapter_count=request.smoke_chapter_count))
         if request.run_llmwiki_smoke:
@@ -567,6 +571,72 @@ class NovelReadinessChecker:
                 data={"llmwiki_bin": executable},
             )
 
+    def _check_workflow_import_smoke(self, *, llmwiki_bin: str) -> ReadinessCheck:
+        try:
+            with tempfile.TemporaryDirectory() as tmpdir:
+                root = Path(tmpdir)
+                workflow_result_path = root / "workflow-result.json"
+                project_path = root / "readiness-workflow-import-project"
+                workspace_path = root / "readiness-workflow-import-workspace"
+                workflow_result_path.write_text(
+                    json.dumps(synthetic_story_foundation_workflow_result(), ensure_ascii=False, indent=2),
+                    encoding="utf-8",
+                )
+                result = NovelWorkflowFoundationImporter().import_foundation(
+                    NovelWorkflowFoundationImportRequest(
+                        workflow_result_path=workflow_result_path,
+                        project_path=project_path,
+                        project_slug="shadow-clock-case",
+                        workspace_path=workspace_path,
+                        llmwiki_bin=llmwiki_bin,
+                    )
+                )
+                approval_check = NovelApprovalPackageChecker().check(
+                    NovelApprovalCheckRequest(
+                        approval_package_path=result.approval_package_json_path,
+                        run_apply_dry_run=True,
+                        run_chapter_smoke=True,
+                    )
+                )
+                check_names = [check.name for check in approval_check.checks]
+                target_overview = workspace_path / "wiki" / "novels" / "shadow-clock-case" / "overview.md"
+                passed = (
+                    result.status in {"ready", "ready_with_warnings"}
+                    and approval_check.status == "ready"
+                    and result.foundation.foundation_path.exists()
+                    and result.approval_package_json_path.exists()
+                    and "apply_dry_run" in check_names
+                    and "chapter_smoke" in check_names
+                    and not target_overview.exists()
+                )
+                return ReadinessCheck(
+                    name="workflow_import_smoke",
+                    status="pass" if passed else "fail",
+                    summary=(
+                        "Workflow import smoke converted synthetic BotMux outputs into an approval package."
+                        if passed
+                        else "Workflow import smoke did not produce a ready approval package."
+                    ),
+                    data={
+                        "result_status": result.status,
+                        "project_path": str(project_path),
+                        "workspace_path": str(workspace_path),
+                        "foundation_path_exists": result.foundation.foundation_path.exists(),
+                        "approval_package_json_exists": result.approval_package_json_path.exists(),
+                        "approval_check_status": approval_check.status,
+                        "approval_check_names": check_names,
+                        "target_overview_exists": target_overview.exists(),
+                        "warnings": result.warnings,
+                    },
+                )
+        except Exception as exc:
+            return ReadinessCheck(
+                name="workflow_import_smoke",
+                status="fail",
+                summary=f"Workflow import smoke failed: {exc}",
+                data={"llmwiki_bin": llmwiki_bin},
+            )
+
     def _check_llmwiki_smoke(self, *, llmwiki_bin: str) -> ReadinessCheck:
         executable = resolve_executable(llmwiki_bin)
         if executable is None:
@@ -718,6 +788,126 @@ def command_payload(completed: subprocess.CompletedProcess[str]) -> Dict[str, An
         "returncode": completed.returncode,
         "stdout": completed.stdout,
         "stderr": completed.stderr,
+    }
+
+
+def synthetic_story_foundation_workflow_result() -> Dict[str, Any]:
+    return {
+        "workflowId": "novel-story-foundation",
+        "params": {
+            "projectSlug": "shadow-clock-case",
+            "title": "影钟旧案",
+            "inspiration": "一个背负旧案污名的少年，在巡夜钟声中发现妹妹影子会说真话。",
+            "genre": "东方悬疑幻想",
+            "targetLength": "长篇",
+            "mode": "lean",
+        },
+        "nodes": {
+            "story_bible_package": {
+                "output": synthetic_agent_output(
+                    preview="Story Bible 候选已完成，核心为旧案、巡夜钟和妹妹影子证词。",
+                    handoff="林烬必须用旧案残页和巡夜钟规则找回选择权。",
+                    data={
+                        "story_promise": "背负旧案污名的少年用被删改的残页反击巡城司。",
+                        "theme": "在被规定的人生里夺回选择权",
+                        "core_conflict": "林烬必须在保护妹妹户籍和揭开父亲旧案之间选择。",
+                        "ending_constraint": "终局必须用已铺垫的残页、巡夜钟和记忆代价反击。",
+                        "characters": [
+                            {
+                                "id": "protagonist",
+                                "name": "林烬",
+                                "role": "主角",
+                                "motivation": "查清父亲旧案并保住妹妹户籍。",
+                                "current_state": "贫寒、克制、背负污名。",
+                                "secret": "能看见被抵押记忆留下的残光。",
+                            },
+                            {
+                                "id": "antagonist",
+                                "name": "玄衣巡使",
+                                "role": "明面阻力",
+                                "motivation": "压下旧案残页，维护巡城司权威。",
+                                "current_state": "掌控城门和夜巡记录。",
+                                "secret": "他只是在替真正主谋清场。",
+                            },
+                        ],
+                        "relationships": {
+                            "edges": [
+                                {
+                                    "source": "protagonist",
+                                    "target": "antagonist",
+                                    "type": "conflict",
+                                    "pressure": "巡使掌握妹妹户籍和旧案清场权。",
+                                    "secret": "巡使知道残页会指向真正主谋。",
+                                }
+                            ]
+                        },
+                        "settings": [
+                            {
+                                "id": "old-library",
+                                "name": "旧书楼",
+                                "kind": "location",
+                                "function": "提供旧案残页并测试主角是否愿意付出记忆代价。",
+                                "conflict_pressure": "答案必须用记忆交换，守灯人不完全可信。",
+                                "rules": ["旧书楼只保存被删改前的残页。"],
+                                "reuse_value": "用于线索补给、代价抉择和版本对照。",
+                            },
+                            {
+                                "id": "patrol-bell",
+                                "name": "巡夜钟",
+                                "kind": "world_rule",
+                                "function": "让谎言在影子里显形，形成悬疑验证机制。",
+                                "conflict_pressure": "钟声时间可被篡改，真相和陷阱会同时出现。",
+                                "rules": ["钟响后三刻内，谎言会在影子里显形。"],
+                                "reuse_value": "用于审讯、反转、伏笔回收和终局反击。",
+                            },
+                        ],
+                        "rules": {
+                            "world_rules": [
+                                "城中术法必须以记忆作抵押。",
+                                "巡夜钟响后三刻内，谎言会在影子里显形。",
+                            ],
+                            "forbidden": ["不能让主角突然无代价突破。", "不能提前揭示禁术源头。"],
+                        },
+                        "plot_arc": {
+                            "volume": "第一卷：影子里的旧案",
+                            "goal": "林烬从被动背锅到掌握第一份旧案证据。",
+                            "turning_points": ["旧书楼残页", "巡夜钟试探", "妹妹被卷入户籍清查", "主角公开反击"],
+                            "opening_hook": "用旧书楼残页引出主角秘密能力，并埋下巡夜钟伏笔。",
+                        },
+                        "style_profile": {
+                            "id": "shadow-clock-style",
+                            "tone": "冷峻、克制、悬疑压迫",
+                            "rules": ["减少解释性总结。", "对话保留潜台词。"],
+                            "forbidden_expressions": ["感到无比震惊"],
+                            "positive_examples": ["林烬把指腹按在那行墨痕上。"],
+                            "negative_examples": ["林烬感到无比震惊。"],
+                        },
+                    },
+                )
+            },
+            "wiki_sync_plan": {
+                "output": synthetic_agent_output(
+                    preview="计划写入 overview、story-bible、characters、relationships 和 world-scenes。",
+                    handoff="llmwiki 写入计划：先 overview，再 story-bible，再角色和关系页面。",
+                    data={
+                        "write_plan": ["overview.md", "story-bible.md", "characters/*.md", "relationships.md"],
+                        "rollback_plan": "写入前保留本地 bundle，写入后执行 lint/reindex。",
+                    },
+                )
+            },
+        },
+    }
+
+
+def synthetic_agent_output(*, preview: str, handoff: str, data: Dict[str, Any]) -> Dict[str, Any]:
+    return {
+        "preview": preview,
+        "handoff": handoff,
+        "data": data,
+        "open_questions": [],
+        "risks": [],
+        "wiki_refs": [],
+        "change_declarations": [],
     }
 
 

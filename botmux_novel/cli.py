@@ -20,6 +20,7 @@ from .readiness import NovelReadinessChecker, NovelReadinessRequest
 from .runtime import NovelChapterRequest, NovelFoundationRequest, NovelRunRequest, NovelRuntime, NovelWikiBundleRequest
 from .series import NovelSeriesRequest, NovelSeriesRunner
 from .wiki_lint import WikiLinter
+from .workflow_import import NovelWorkflowFoundationImporter, NovelWorkflowFoundationImportRequest
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -58,6 +59,21 @@ def build_parser() -> argparse.ArgumentParser:
     bootstrap_parser.add_argument("--mode", choices=["full", "lean", "solo"], default="lean", help="Agent execution mode.")
     bootstrap_parser.add_argument("--word-target", type=int, default=1200, help="Target chapter length for planning.")
     bootstrap_parser.add_argument("--llmwiki-bin", default="llmwiki", help="llmwiki executable to place in generated MCP config and planned reindex command.")
+
+    workflow_import_parser = subparsers.add_parser(
+        "workflow-foundation-import",
+        help="Import a completed novel-story-foundation workflow result into local review assets and an approval package.",
+    )
+    workflow_import_parser.add_argument("--workflow-result", required=True, help="JSON result from a completed novel-story-foundation workflow run.")
+    workflow_import_parser.add_argument("--project", required=True, help="Target novel project directory.")
+    workflow_import_parser.add_argument("--project-slug", required=True, help="Target wiki namespace slug.")
+    workflow_import_parser.add_argument("--title", help="Novel project title. Defaults to workflow params or Story Bible data.")
+    workflow_import_parser.add_argument("--inspiration", help="Story inspiration. Defaults to workflow params or Story Bible output.")
+    workflow_import_parser.add_argument("--workspace", help="llmwiki workspace directory. Defaults to --project.")
+    workflow_import_parser.add_argument("--chapter-number", type=int, default=1, help="Initial chapter number for planning.")
+    workflow_import_parser.add_argument("--mode", choices=["full", "lean", "solo"], default="lean", help="Agent execution mode.")
+    workflow_import_parser.add_argument("--word-target", type=int, default=1200, help="Target chapter length for planning.")
+    workflow_import_parser.add_argument("--llmwiki-bin", default="llmwiki", help="llmwiki executable to place in generated MCP config and planned reindex command.")
 
     approval_parser = subparsers.add_parser(
         "approval-apply",
@@ -163,6 +179,7 @@ def build_parser() -> argparse.ArgumentParser:
     readiness_parser.add_argument("--llmwiki-bin", default="llmwiki", help="llmwiki executable to check.")
     readiness_parser.add_argument("--bootstrap-smoke", action="store_true", help="Run a temporary novel-bootstrap smoke without approved llmwiki writes.")
     readiness_parser.add_argument("--approval-apply-smoke", action="store_true", help="Run a temporary approval-decision plus approval-apply smoke with approved llmwiki writes.")
+    readiness_parser.add_argument("--workflow-import-smoke", action="store_true", help="Run a temporary workflow result import smoke through approval-check.")
     readiness_parser.add_argument("--series-smoke", action="store_true", help="Run a temporary multi-chapter series smoke.")
     readiness_parser.add_argument("--smoke-chapter-count", type=int, default=5, help="Chapter count for --series-smoke.")
     readiness_parser.add_argument(
@@ -225,6 +242,23 @@ def main(argv: Optional[list[str]] = None) -> int:
             llmwiki_bin=args.llmwiki_bin,
         )
         result = NovelBootstrapper().bootstrap(request)
+        print(json.dumps(result.to_dict(), ensure_ascii=False, indent=2))
+        return 0 if result.status in {"ready", "ready_with_warnings"} else 2
+
+    if args.command == "workflow-foundation-import":
+        request = NovelWorkflowFoundationImportRequest(
+            workflow_result_path=Path(args.workflow_result).expanduser().resolve(),
+            project_path=Path(args.project).expanduser().resolve(),
+            project_slug=args.project_slug,
+            title=args.title,
+            inspiration=args.inspiration,
+            workspace_path=Path(args.workspace).expanduser().resolve() if args.workspace else None,
+            chapter_number=args.chapter_number,
+            mode=args.mode,
+            word_target=args.word_target,
+            llmwiki_bin=args.llmwiki_bin,
+        )
+        result = NovelWorkflowFoundationImporter().import_foundation(request)
         print(json.dumps(result.to_dict(), ensure_ascii=False, indent=2))
         return 0 if result.status in {"ready", "ready_with_warnings"} else 2
 
@@ -345,6 +379,7 @@ def main(argv: Optional[list[str]] = None) -> int:
             llmwiki_bin=args.llmwiki_bin,
             run_bootstrap_smoke=args.bootstrap_smoke,
             run_approval_apply_smoke=args.approval_apply_smoke,
+            run_workflow_import_smoke=args.workflow_import_smoke,
             run_series_smoke=args.series_smoke,
             smoke_chapter_count=args.smoke_chapter_count,
             run_llmwiki_smoke=args.llmwiki_smoke,
