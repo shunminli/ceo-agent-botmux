@@ -54,12 +54,27 @@ class NovelBootstrapTest(unittest.TestCase):
             self.assertIn(str(result.approval_package_json_path), package["human_gate"]["approval_decision_command"])
             self.assertIn("approval-apply", package["human_gate"]["approval_apply_command"])
             self.assertIn(str(result.approval_package_json_path), package["human_gate"]["approval_apply_command"])
+            self.assertIn("chapter", package["next_actions"]["chapter_start_command"])
+            self.assertIn("--foundation-json", package["next_actions"]["chapter_start_command"])
+            self.assertIn(str(result.foundation.foundation_path), package["next_actions"]["chapter_start_command"])
             self.assertEqual(package["llmwiki"]["preview"]["page_count"], 12)
             package_markdown = result.approval_package_path.read_text(encoding="utf-8")
             self.assertIn("# Novel Bootstrap Approval Package", package_markdown)
             self.assertIn("Record approval decision command", package_markdown)
             self.assertIn("Preferred approval apply command", package_markdown)
             self.assertIn("Underlying approved write command", package_markdown)
+            self.assertIn("Start opening chapter command", package_markdown)
+
+            chapter = subprocess.run(
+                package["next_actions"]["chapter_start_command"],
+                check=True,
+                text=True,
+                capture_output=True,
+            )
+            chapter_payload = json.loads(chapter.stdout)
+            self.assertEqual(chapter_payload["status"], "completed")
+            self.assertEqual(chapter_payload["chapter_id"], "ch-001")
+            self.assertTrue((project / "manuscript/final/ch-001.md").exists())
 
     def test_cli_novel_bootstrap_uses_real_entrypoint(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:

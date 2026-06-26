@@ -340,6 +340,32 @@ class NovelReadinessChecker:
                 wiki_overview = result.wiki_bundle.bundle_path / "overview.md"
                 target_overview = workspace_path / "wiki" / "novels" / project_slug / "overview.md"
                 package_payload = json.loads(result.approval_package_json_path.read_text(encoding="utf-8"))
+                chapter_start_command = package_payload.get("next_actions", {}).get("chapter_start_command", [])
+                chapter_start_result: Dict[str, Any] = {
+                    "returncode": None,
+                    "status": None,
+                    "chapter_id": None,
+                    "final_path_exists": False,
+                }
+                if chapter_start_command:
+                    completed = subprocess.run(
+                        [str(item) for item in chapter_start_command],
+                        text=True,
+                        capture_output=True,
+                        check=False,
+                        cwd=Path(__file__).resolve().parents[1],
+                    )
+                    chapter_start_result["returncode"] = completed.returncode
+                    if completed.returncode == 0:
+                        chapter_payload = json.loads(completed.stdout)
+                        final_path = Path(chapter_payload["final_path"])
+                        chapter_start_result.update(
+                            {
+                                "status": chapter_payload.get("status"),
+                                "chapter_id": chapter_payload.get("chapter_id"),
+                                "final_path_exists": final_path.exists(),
+                            }
+                        )
                 passed = (
                     result.status in {"ready", "ready_with_warnings"}
                     and result.foundation.foundation_path.exists()
@@ -351,6 +377,11 @@ class NovelReadinessChecker:
                     and result.approval_package_json_path.exists()
                     and not target_overview.exists()
                     and package_payload.get("status") == "ready_for_human_review"
+                    and "chapter" in chapter_start_command
+                    and "--foundation-json" in chapter_start_command
+                    and chapter_start_result["returncode"] == 0
+                    and chapter_start_result["status"] == "completed"
+                    and chapter_start_result["final_path_exists"]
                 )
                 if not passed:
                     status = "fail"
@@ -362,7 +393,7 @@ class NovelReadinessChecker:
                     name="bootstrap_smoke",
                     status=status,
                     summary=(
-                        "Novel bootstrap smoke generated foundation, wiki review bundle, dry-run sync plan, MCP config, and approval package."
+                        "Novel bootstrap smoke generated the approval package and verified its opening chapter command."
                         if passed
                         else "Novel bootstrap smoke did not meet readiness checks."
                     ),
@@ -375,6 +406,8 @@ class NovelReadinessChecker:
                         "approval_package_exists": result.approval_package_path.exists(),
                         "approval_package_json_exists": result.approval_package_json_path.exists(),
                         "target_overview_exists": target_overview.exists(),
+                        "chapter_start_command": chapter_start_command,
+                        "chapter_start_result": chapter_start_result,
                         "llmwiki_sync_status": result.llmwiki_sync.status,
                         "mcp_config_status": result.mcp_config.status,
                         "warnings": result.mcp_config.warnings + result.llmwiki_sync.warnings,

@@ -201,6 +201,10 @@ class NovelReadinessTest(unittest.TestCase):
             self.assertEqual(checks["bootstrap_smoke"].data["llmwiki_sync_status"], "planned")
             self.assertTrue(checks["bootstrap_smoke"].data["approval_package_exists"])
             self.assertTrue(checks["bootstrap_smoke"].data["approval_package_json_exists"])
+            self.assertIn("chapter", checks["bootstrap_smoke"].data["chapter_start_command"])
+            self.assertIn("--foundation-json", checks["bootstrap_smoke"].data["chapter_start_command"])
+            self.assertEqual(checks["bootstrap_smoke"].data["chapter_start_result"]["status"], "completed")
+            self.assertTrue(checks["bootstrap_smoke"].data["chapter_start_result"]["final_path_exists"])
             self.assertFalse(checks["bootstrap_smoke"].data["target_overview_exists"])
 
     def test_approval_apply_smoke_runs_init_write_and_reindex(self) -> None:

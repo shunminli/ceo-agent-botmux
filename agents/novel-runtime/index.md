@@ -56,7 +56,7 @@ Updated: 2026-06-27
 2. 运行 `wiki-bundle`，导出 `wiki/novels/{project_slug}/` 审核页面。
 3. 运行未审批的 `llmwiki-sync`，只生成 sync plan；即使命令中带 planned reindex，也不会执行 reindex 或覆盖外部 workspace。
 4. 运行 `llmwiki-mcp-config`，生成项目级 MCP JSON、Codex TOML 和三角色绑定策略。
-5. 写入 `runs/{bootstrap_run_id}/approval-package.json` 和 `approval-package.md`，列出 humanGate 必审项、页面清单、决策记录命令、批准后写入命令和下一步。
+5. 写入 `runs/{bootstrap_run_id}/approval-package.json` 和 `approval-package.md`，列出 humanGate 必审项、页面清单、决策记录命令、批准后写入命令和 `next_actions.chapter_start_command`。
 
 ### Approval Decision
 
@@ -138,7 +138,7 @@ Updated: 2026-06-27
 3. 运行 `botmux workflow validate` 校验两个 workflow 模板。
 4. 静态校验 workflow 模板中的 `${params.*}` 和 `${node.output.*}` 绑定，确认参数、上游节点、依赖闭包和输出字段都存在。
 5. 检查 `llmwiki` 是否在 PATH 且 `llmwiki --help` 可执行；缺失或不可用是 warning，不阻断本地文件同步。
-6. 传 `--bootstrap-smoke` 时在临时目录跑 `novel-bootstrap`，确认 foundation、wiki 审核包、dry-run sync plan、MCP config 和 approval package 可生成，且外部 workspace 未被写入。
+6. 传 `--bootstrap-smoke` 时在临时目录跑 `novel-bootstrap`，确认 foundation、wiki 审核包、dry-run sync plan、MCP config 和 approval package 可生成，执行审批包里的 `next_actions.chapter_start_command`，并确认外部 workspace 未被写入。
 7. 传 `--approval-apply-smoke` 时在临时目录跑 `novel-bootstrap`、`approval-decision --decision approve` 和 approved `approval-apply`，确认决策记录、workspace 自动初始化、页面写入和 reindex 可用。
 8. 传 `--series-smoke` 时在临时目录跑连续章节 smoke，并检查 Phase 3 指标阈值。
 9. 传 `--llmwiki-smoke` 时在临时目录生成 wiki bundle，初始化独立 llmwiki workspace，执行 approved `llmwiki-sync --reindex`，确认页面复制和索引重建可用。

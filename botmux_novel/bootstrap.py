@@ -144,6 +144,18 @@ class NovelBootstrapper:
             str(approval_package_json_path),
             "--approve",
         ]
+        payload["next_actions"]["chapter_start_command"] = [
+            "python3",
+            "-m",
+            "botmux_novel",
+            "chapter",
+            "--project",
+            str(project_path),
+            "--chapter-number",
+            str(request.chapter_number),
+            "--foundation-json",
+            str(foundation.foundation_path),
+        ]
         approval_package_json_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
         approval_package_path.write_text(render_approval_markdown(payload), encoding="utf-8")
 
@@ -228,12 +240,13 @@ def approval_payload(
             "mcp_config": mcp_config.to_dict(),
             "warnings": [*llmwiki_sync.warnings, *mcp_config.warnings],
         },
+        "next_actions": {},
         "next_steps": [
             "Human reviews approval-package.md and wiki bundle pages.",
             "If approved, run approval_decision_command to record reviewer, decision, timestamp, and notes.",
             "Run approval_apply_command or let Director execute an equivalent humanGate-approved write.",
             "After llmwiki sync, configure the generated MCP server for Director and Validator only.",
-            "Start chapter production from the approved foundation JSON or Story Bible handoff.",
+            "Run chapter_start_command to produce the opening chapter from the approved foundation JSON.",
         ],
     }
 
@@ -259,6 +272,7 @@ def render_approval_markdown(payload: Dict[str, Any]) -> str:
     command = shlex.join(human_gate["approved_write_command"])
     decision_command = shlex.join(human_gate.get("approval_decision_command", []))
     apply_command = shlex.join(human_gate.get("approval_apply_command", []))
+    chapter_start_command = shlex.join(payload.get("next_actions", {}).get("chapter_start_command", []))
     pages = "\n".join(f"- `{page}`" for page in preview.get("pages", [])) or "- No pages found"
     must_review = "\n".join(f"- {item}" for item in human_gate["must_review"])
     next_steps = "\n".join(f"{index}. {step}" for index, step in enumerate(payload["next_steps"], start=1))
@@ -319,6 +333,12 @@ Underlying approved write command:
 
 ```bash
 {command}
+```
+
+Start opening chapter command:
+
+```bash
+{chapter_start_command}
 ```
 
 ## Next Steps

@@ -586,4 +586,4 @@ python3 -m botmux_novel readiness --bootstrap-smoke --approval-apply-smoke --ser
 1. 拿到真实项目参数后先运行 `python3 -m botmux_novel novel-bootstrap`，产出本地 Story Bible 候选、wiki 审核包、MCP 配置和审批包。
 2. 如需多 bot 协作口径，再用相同参数运行 `novel-story-foundation`，在 `story_bible_package` 的 humanGate 审批关键人设、关系、剧情走势和场景设定。
 3. 审批通过后先执行审批包里的 `approval-decision --decision approve` 记录 reviewer、notes 和时间，再执行 `approval-apply --approve`；或让 Director 在单独 humanGate workflow 中执行等价写入。
-4. 把批准后的 Story Bible 输入 `novel-chapter-production` 或 `python3 -m botmux_novel chapter` 继续章节生产；首章可直接运行 `chapter --chapter-number 1`，它会从最新 `foundation.json` 自动继承 `chapter_goal.objective`，第二章以后再显式传入新的 `--chapter-goal`。
+4. 把批准后的 Story Bible 输入 `novel-chapter-production` 或 `python3 -m botmux_novel chapter` 继续章节生产；审批包会给出 `next_actions.chapter_start_command`，首章可直接运行该命令，它会从批准的 `foundation.json` 自动继承 `chapter_goal.objective`，第二章以后再显式传入新的 `--chapter-goal`。

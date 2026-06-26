@@ -59,7 +59,7 @@ python3 -m botmux_novel novel-bootstrap \
   --project-slug shadow-clock-case
 ```
 
-产物在 `runs/{bootstrap_run_id}/approval-package.md` 和 `approval-package.json`。审批通过后先执行其中的 `approval-decision --decision approve` 命令，记录 reviewer、notes、timestamp 和历史；再执行 `approval-apply --approve`。`approval-apply` 会读取审批包中的 project、slug、workspace 和 llmwiki 配置；如果目标 workspace 还没有 llmwiki index，会先初始化；底层仍调用 `llmwiki-sync --approve --reindex`。
+产物在 `runs/{bootstrap_run_id}/approval-package.md` 和 `approval-package.json`。审批通过后先执行其中的 `approval-decision --decision approve` 命令，记录 reviewer、notes、timestamp 和历史；再执行 `approval-apply --approve`。`approval-apply` 会读取审批包中的 project、slug、workspace 和 llmwiki 配置；如果目标 workspace 还没有 llmwiki index，会先初始化；底层仍调用 `llmwiki-sync --approve --reindex`。完成知识库写入后，可继续执行审批包里的 `next_actions.chapter_start_command`，直接从批准的 `foundation.json` 生成首章。
 
 ```bash
 python3 -m botmux_novel approval-decision \
@@ -71,6 +71,11 @@ python3 -m botmux_novel approval-decision \
 python3 -m botmux_novel approval-apply \
   --approval-package /path/to/novel-project/runs/<bootstrap-run-id>/approval-package.json \
   --approve
+
+python3 -m botmux_novel chapter \
+  --project /path/to/novel-project \
+  --chapter-number 1 \
+  --foundation-json /path/to/novel-project/runs/<foundation-run-id>/foundation.json
 ```
 
 手动拆步流程如下：
