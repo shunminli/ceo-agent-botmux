@@ -93,6 +93,17 @@ python3 -m botmux_novel chapter \
   --foundation-json /path/to/novel-project/runs/<foundation-run-id>/foundation.json
 ```
 
+如果章节正文由真实 BotMux `novel-chapter-production` workflow 产出，完成 humanGate 后可导入本地章节文件和归档：
+
+```bash
+python3 -m botmux_novel chapter-workflow-import \
+  --workflow-result /path/to/novel-chapter-production-result.json \
+  --project /path/to/novel-project \
+  --foundation-json /path/to/novel-project/runs/<foundation-run-id>/foundation.json
+```
+
+该命令只写本地 `manuscript/`、`tracking/`、`runs/archive-{chapter}.json`、trace 和下一章 handoff；不写 llmwiki。章节知识库更新仍需要后续单独走 `wiki-bundle`、`llmwiki-sync` 或其他 humanGate-approved sync。
+
 手动拆步流程如下：
 
 1. 生成或更新开书资产。

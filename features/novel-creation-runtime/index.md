@@ -73,6 +73,10 @@ python3 -m botmux_novel chapter \
   --chapter-number 2 \
   --chapter-goal "让林烬用半张残页验证巡夜钟异常，并把妹妹影子证词转成下一章追查目标。"
 
+python3 -m botmux_novel chapter-workflow-import \
+  --workflow-result /tmp/novel-chapter-production-result.json \
+  --project /tmp/novel-demo
+
 python3 -m botmux_novel series \
   --project /tmp/novel-series-demo \
   --title 影钟旧案 \
@@ -90,9 +94,10 @@ python3 -m botmux_novel botmux-assets --write
 python3 -m botmux_novel readiness --bootstrap-smoke
 python3 -m botmux_novel readiness --approval-apply-smoke
 python3 -m botmux_novel readiness --workflow-import-smoke
+python3 -m botmux_novel readiness --chapter-import-smoke
 python3 -m botmux_novel readiness --series-smoke
 python3 -m botmux_novel readiness --series-smoke --smoke-chapter-count 20
-python3 -m botmux_novel readiness --bootstrap-smoke --workflow-import-smoke --approval-apply-smoke --series-smoke --smoke-chapter-count 20 --llmwiki-smoke
+python3 -m botmux_novel readiness --bootstrap-smoke --workflow-import-smoke --chapter-import-smoke --approval-apply-smoke --series-smoke --smoke-chapter-count 20 --llmwiki-smoke
 
 /Users/xiaochen/.botmux/bin/botmux workflow run novel-chapter-production \
   --param projectSlug=shadow-clock-case \
@@ -120,6 +125,8 @@ python3 -m botmux_novel readiness --bootstrap-smoke --workflow-import-smoke --ap
 - `runs/{chapter_run_id}/source-foundation.json`：`chapter` 子命令使用的 Story Bible 来源快照。
 - `runs/{chapter_run_id}/prior-context.json`：`chapter` 子命令自动汇总的前文章节归档上下文。
 - `runs/{chapter_run_id}/next-chapter-command.md|json`：从 foundation 生产的章节完成后生成的下一章 handoff，包含建议目标、来源引用和可审阅执行的命令。
+- `runs/{workflow_chapter_run_id}/workflow-result-source.json|workflow-node-outputs.json|summary.md|next-chapter-command.md|json`：`chapter-workflow-import` 保存的章节 workflow 原始结果、节点输出、导入摘要和下一章 handoff。
+- `runs/archive-{chapter}.json`：本地章节归档快照；可由 deterministic `chapter` 或通过 humanGate 的章节 workflow 导入生成。
 - `runs/llmwiki-sync-{project_slug}-{timestamp}.json`：`llmwiki-sync` 子命令生成的写入门禁计划、影响面、回滚计划和命令结果。
 - `wiki-lint` JSON：本地 wiki Markdown 结构 lint 结果，包含 checked files 和 issues。
 - `llmwiki-mcp-config` JSON：项目级 MCP server 片段、Codex TOML、角色绑定策略和 humanGate 规则。
@@ -128,7 +135,7 @@ python3 -m botmux_novel readiness --bootstrap-smoke --workflow-import-smoke --ap
 - `workflows/*.workflow.json`：版本化的 BotMux 三 bot 协作模板，测试会校验输出契约、人类门禁和本机安装副本一致性。
 - `schemas/approval-package.schema.json`：审批包必填字段和基础类型契约，覆盖项目元数据、审核材料、humanGate 命令、llmwiki preview、MCP 策略和下一步命令。
 - `~/.botmux/workspace/{Novel-*}/AGENTS.md`：由 `botmux-assets --write` 从仓库身份文档生成的运行态 workspace 指令。
-- `readiness` JSON：本机小说生产环境的 BotMux、bot workspace 身份绑定、workflow validate、workflow 绑定、workflow 合成契约、llmwiki、可选 bootstrap smoke、workflow import smoke、approval apply smoke、series smoke 和可选 approved llmwiki sync smoke 检查结果；bootstrap smoke 和 workflow import smoke 会执行审批包里的首章启动命令。
+- `readiness` JSON：本机小说生产环境的 BotMux、bot workspace 身份绑定、workflow validate、workflow 绑定、workflow 合成契约、llmwiki、可选 bootstrap smoke、workflow import smoke、chapter import smoke、approval apply smoke、series smoke 和可选 approved llmwiki sync smoke 检查结果；bootstrap smoke 和 workflow import smoke 会执行审批包里的首章启动命令。
 
 ## 规则与状态
 
@@ -140,6 +147,7 @@ python3 -m botmux_novel readiness --bootstrap-smoke --workflow-import-smoke --ap
 - `approval-check` 默认只读校验审批包；它会先按 `approval-package.schema.json` 递归检查必填字段和基础类型。`--apply-dry-run` 只验证 `approval-apply` dry-run 消费路径，不执行 approved writes；`--chapter-smoke` 会执行首章命令，应用在临时 smoke 项目，不建议在未经审批的真实项目上默认运行。
 - `approval-apply` 默认只重新生成同步计划；它会先按 `approval-package.schema.json` 校验审批包，只有传 `--approve` 才会按审批包写入 llmwiki workspace，并默认运行 `llmwiki reindex` 与写后 lint。若审批包已记录 `request_changes` 或 `reject`，会拒绝写入；若未记录 `approve` 但命令显式 `--approve`，会保留 warning 说明这是命令级 humanGate 信号。
 - `chapter` 从本地 `foundation.json` 继续生产章节，不重新规划 Story Bible；未传 `--chapter-goal` 时自动使用 `foundation.json` 的 `chapter_goal.objective`，自动读取早于当前章节的 `runs/archive-*.json` 作为连续性上下文，并在完成后生成下一章 handoff 命令。
+- `chapter-workflow-import` 读取已完成的 `novel-chapter-production` workflow JSON 结果，校验七个节点输出契约，只有 Director 决策和 archive plan 均通过时才写入本地 final、tracking、archive 和下一章 handoff；被 block 的章节只写 blocked run artifacts，不写 final，不写 llmwiki。
 - `wiki-bundle` 只读取本地 `foundation.json` 并写项目内 Markdown bundle，不调用 llmwiki。
 - `llmwiki-sync` 默认只生成计划；只有传 `--approve` 才把审核包复制到 llmwiki workspace。传 `--lint` 后优先运行 `llmwiki lint <workspace>`；若当前 llmwiki CLI 不支持 `lint` 子命令，则自动运行本地 `wiki-lint` fallback；若 lint 检查失败则同步结果为 `failed`。它不安装 llmwiki，不调用 MCP 写工具。
 - `llmwiki-mcp-config` 只生成配置片段和角色绑定策略，不写 `~/.codex/config.toml`，默认只建议 Director 和 Validator 接入 llmwiki MCP。

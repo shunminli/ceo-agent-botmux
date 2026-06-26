@@ -528,6 +528,46 @@ class NovelReadinessTest(unittest.TestCase):
             self.assertIn("chapter_smoke", checks["workflow_import_smoke"]["data"]["approval_check_names"])
             self.assertFalse(checks["workflow_import_smoke"]["data"]["target_overview_exists"])
 
+    def test_cli_readiness_can_run_chapter_import_smoke(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            botmux_home = root / ".botmux"
+            fake_botmux = root / "botmux"
+            fake_llmwiki = root / "llmwiki"
+            install_temp_botmux(botmux_home)
+            write_fake_botmux(fake_botmux)
+            write_fake_llmwiki(fake_llmwiki)
+
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "botmux_novel",
+                    "readiness",
+                    "--repo",
+                    str(REPO_ROOT),
+                    "--botmux-home",
+                    str(botmux_home),
+                    "--botmux-bin",
+                    str(fake_botmux),
+                    "--llmwiki-bin",
+                    str(fake_llmwiki),
+                    "--chapter-import-smoke",
+                ],
+                check=True,
+                text=True,
+                capture_output=True,
+            )
+
+            payload = json.loads(completed.stdout)
+            self.assertEqual(payload["status"], "ready")
+            checks = {check["name"]: check for check in payload["checks"]}
+            self.assertEqual(checks["chapter_import_smoke"]["status"], "pass")
+            self.assertEqual(checks["chapter_import_smoke"]["data"]["result_status"], "completed")
+            self.assertTrue(checks["chapter_import_smoke"]["data"]["final_path_exists"])
+            self.assertTrue(checks["chapter_import_smoke"]["data"]["archive_path_exists"])
+            self.assertTrue(checks["chapter_import_smoke"]["data"]["next_command_path_exists"])
+
 
 def install_temp_botmux(botmux_home: Path) -> None:
     BotmuxAssetSyncer().sync(BotmuxAssetSyncRequest(repo_path=REPO_ROOT, botmux_home=botmux_home, write=True))

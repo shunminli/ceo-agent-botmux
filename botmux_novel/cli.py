@@ -14,6 +14,7 @@ from .approval import (
 from .approval_check import NovelApprovalCheckRequest, NovelApprovalPackageChecker
 from .bootstrap import NovelBootstrapper, NovelBootstrapRequest
 from .botmux_assets import BotmuxAssetSyncRequest, BotmuxAssetSyncer
+from .chapter_workflow_import import NovelChapterWorkflowImporter, NovelChapterWorkflowImportRequest
 from .llmwiki_sync import LlmwikiSyncRequest, LlmwikiSyncer
 from .mcp_config import NovelLlmwikiMcpConfigBuilder, NovelLlmwikiMcpConfigRequest
 from .readiness import NovelReadinessChecker, NovelReadinessRequest
@@ -114,6 +115,18 @@ def build_parser() -> argparse.ArgumentParser:
     chapter_parser.add_argument("--mode", choices=["full", "lean", "solo"], help="Optional mode override; defaults to foundation mode.")
     chapter_parser.add_argument("--word-target", type=int, help="Optional target chapter length override.")
 
+    chapter_import_parser = subparsers.add_parser(
+        "chapter-workflow-import",
+        help="Import a completed novel-chapter-production workflow result into local chapter files and archive state.",
+    )
+    chapter_import_parser.add_argument("--workflow-result", required=True, help="JSON result from a completed novel-chapter-production workflow run.")
+    chapter_import_parser.add_argument("--project", required=True, help="Target novel project directory.")
+    chapter_import_parser.add_argument("--chapter-number", type=int, help="Chapter number. Defaults to workflow params.chapterNumber.")
+    chapter_import_parser.add_argument("--title", help="Novel project title. Defaults to workflow params.title.")
+    chapter_import_parser.add_argument("--mode", choices=["full", "lean", "solo"], default="lean", help="Agent execution mode.")
+    chapter_import_parser.add_argument("--word-target", type=int, default=1200, help="Target chapter length.")
+    chapter_import_parser.add_argument("--foundation-json", help="Optional approved foundation.json for generated local next-chapter command.")
+
     wiki_parser = subparsers.add_parser(
         "wiki-bundle",
         help="Export local Markdown pages for review before llmwiki synchronization.",
@@ -180,6 +193,7 @@ def build_parser() -> argparse.ArgumentParser:
     readiness_parser.add_argument("--bootstrap-smoke", action="store_true", help="Run a temporary novel-bootstrap smoke without approved llmwiki writes.")
     readiness_parser.add_argument("--approval-apply-smoke", action="store_true", help="Run a temporary approval-decision plus approval-apply smoke with approved llmwiki writes.")
     readiness_parser.add_argument("--workflow-import-smoke", action="store_true", help="Run a temporary workflow result import smoke through approval-check.")
+    readiness_parser.add_argument("--chapter-import-smoke", action="store_true", help="Run a temporary chapter workflow import smoke into local archive files.")
     readiness_parser.add_argument("--series-smoke", action="store_true", help="Run a temporary multi-chapter series smoke.")
     readiness_parser.add_argument("--smoke-chapter-count", type=int, default=5, help="Chapter count for --series-smoke.")
     readiness_parser.add_argument(
@@ -309,6 +323,20 @@ def main(argv: Optional[list[str]] = None) -> int:
         print(json.dumps(result.to_dict(), ensure_ascii=False, indent=2))
         return 0 if result.status == "completed" else 2
 
+    if args.command == "chapter-workflow-import":
+        request = NovelChapterWorkflowImportRequest(
+            workflow_result_path=Path(args.workflow_result).expanduser().resolve(),
+            project_path=Path(args.project).expanduser().resolve(),
+            chapter_number=args.chapter_number,
+            title=args.title,
+            mode=args.mode,
+            word_target=args.word_target,
+            foundation_path=Path(args.foundation_json).expanduser().resolve() if args.foundation_json else None,
+        )
+        result = NovelChapterWorkflowImporter().import_chapter(request)
+        print(json.dumps(result.to_dict(), ensure_ascii=False, indent=2))
+        return 0 if result.status == "completed" else 2
+
     if args.command == "wiki-bundle":
         request = NovelWikiBundleRequest(
             project_path=Path(args.project).expanduser().resolve(),
@@ -380,6 +408,7 @@ def main(argv: Optional[list[str]] = None) -> int:
             run_bootstrap_smoke=args.bootstrap_smoke,
             run_approval_apply_smoke=args.approval_apply_smoke,
             run_workflow_import_smoke=args.workflow_import_smoke,
+            run_chapter_import_smoke=args.chapter_import_smoke,
             run_series_smoke=args.series_smoke,
             smoke_chapter_count=args.smoke_chapter_count,
             run_llmwiki_smoke=args.llmwiki_smoke,

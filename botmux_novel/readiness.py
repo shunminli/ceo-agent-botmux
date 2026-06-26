@@ -18,6 +18,7 @@ from .approval import (
 from .approval_check import NovelApprovalCheckRequest, NovelApprovalPackageChecker
 from .bootstrap import NovelBootstrapRequest, NovelBootstrapper
 from .botmux_assets import BotmuxAssetSyncRequest, BotmuxAssetSyncer
+from .chapter_workflow_import import NovelChapterWorkflowImporter, NovelChapterWorkflowImportRequest
 from .llmwiki_sync import LlmwikiSyncRequest, LlmwikiSyncer
 from .runtime import NovelFoundationRequest, NovelRuntime, NovelWikiBundleRequest
 from .series import NovelSeriesRequest, NovelSeriesRunner
@@ -50,6 +51,7 @@ class NovelReadinessRequest:
     run_bootstrap_smoke: bool = False
     run_approval_apply_smoke: bool = False
     run_workflow_import_smoke: bool = False
+    run_chapter_import_smoke: bool = False
 
 
 @dataclass(frozen=True)
@@ -102,6 +104,8 @@ class NovelReadinessChecker:
             checks.append(self._check_approval_apply_smoke(llmwiki_bin=request.llmwiki_bin))
         if request.run_workflow_import_smoke:
             checks.append(self._check_workflow_import_smoke(llmwiki_bin=request.llmwiki_bin))
+        if request.run_chapter_import_smoke:
+            checks.append(self._check_chapter_import_smoke())
         if request.run_series_smoke:
             checks.append(self._check_series_smoke(chapter_count=request.smoke_chapter_count))
         if request.run_llmwiki_smoke:
@@ -637,6 +641,61 @@ class NovelReadinessChecker:
                 data={"llmwiki_bin": llmwiki_bin},
             )
 
+    def _check_chapter_import_smoke(self) -> ReadinessCheck:
+        try:
+            with tempfile.TemporaryDirectory() as tmpdir:
+                root = Path(tmpdir)
+                workflow_result_path = root / "chapter-workflow-result.json"
+                project_path = root / "readiness-chapter-import-project"
+                foundation_path = root / "foundation.json"
+                foundation_path.write_text("{}", encoding="utf-8")
+                workflow_result_path.write_text(
+                    json.dumps(synthetic_chapter_production_workflow_result(), ensure_ascii=False, indent=2),
+                    encoding="utf-8",
+                )
+                result = NovelChapterWorkflowImporter().import_chapter(
+                    NovelChapterWorkflowImportRequest(
+                        workflow_result_path=workflow_result_path,
+                        project_path=project_path,
+                        foundation_path=foundation_path,
+                    )
+                )
+                final_path = project_path / "manuscript" / "final" / "ch-001.md"
+                archive_path = project_path / "runs" / "archive-ch-001.json"
+                next_command_path = project_path / "runs" / result.run_id / "next-chapter-command.json"
+                passed = (
+                    result.status == "completed"
+                    and final_path.exists()
+                    and archive_path.exists()
+                    and next_command_path.exists()
+                )
+                return ReadinessCheck(
+                    name="chapter_import_smoke",
+                    status="pass" if passed else "fail",
+                    summary=(
+                        "Chapter workflow import smoke wrote local final manuscript, archive, and next handoff."
+                        if passed
+                        else "Chapter workflow import smoke did not produce the expected local artifacts."
+                    ),
+                    data={
+                        "result_status": result.status,
+                        "project_path": str(project_path),
+                        "workflow_result_path": str(workflow_result_path),
+                        "chapter_id": result.chapter_id,
+                        "final_path_exists": final_path.exists(),
+                        "archive_path_exists": archive_path.exists(),
+                        "next_command_path_exists": next_command_path.exists(),
+                        "warnings": result.warnings,
+                    },
+                )
+        except Exception as exc:
+            return ReadinessCheck(
+                name="chapter_import_smoke",
+                status="fail",
+                summary=f"Chapter workflow import smoke failed: {exc}",
+                data={},
+            )
+
     def _check_llmwiki_smoke(self, *, llmwiki_bin: str) -> ReadinessCheck:
         executable = resolve_executable(llmwiki_bin)
         if executable is None:
@@ -908,6 +967,120 @@ def synthetic_agent_output(*, preview: str, handoff: str, data: Dict[str, Any]) 
         "risks": [],
         "wiki_refs": [],
         "change_declarations": [],
+    }
+
+
+def synthetic_chapter_production_workflow_result() -> Dict[str, Any]:
+    return {
+        "workflowId": "novel-chapter-production",
+        "params": {
+            "projectSlug": "shadow-clock-case",
+            "title": "影钟旧案",
+            "storyBible": "林烬必须用旧案残页和巡夜钟规则找回选择权。",
+            "chapterNumber": 1,
+            "chapterGoal": "用旧书楼残页引出主角秘密能力，并埋下巡夜钟伏笔。",
+            "priorContext": "无",
+            "wordTarget": 1200,
+            "mode": "lean",
+        },
+        "nodes": {
+            "chapter_prepare": {
+                "output": synthetic_agent_output(
+                    preview="上下文已准备",
+                    handoff="本章围绕旧书楼残页、妹妹户籍和巡夜钟异常展开。",
+                    data={"hard_constraints": ["不能提前揭示禁术源头"]},
+                )
+            },
+            "chapter_blueprint": {
+                "output": synthetic_agent_output(
+                    preview="章纲已准备",
+                    handoff="旧书楼的残页：户籍压力开场，巡夜钟结尾反转。",
+                    data={
+                        "chapter_id": "ch-001",
+                        "title": "旧书楼的残页",
+                        "objective": "用旧书楼残页引出主角秘密能力，并埋下巡夜钟伏笔。",
+                        "scenes": [
+                            {
+                                "id": "scene-1",
+                                "purpose": "户籍压力开场",
+                                "location": "城南税籍所外",
+                                "conflict": "巡城司盘问林烬。",
+                                "turn": "林烬在巡使影子里看见旧案残页。",
+                            }
+                        ],
+                        "emotion_curve": ["压迫", "试探", "惊疑"],
+                        "must_include": ["旧书楼", "残页", "巡夜钟"],
+                        "forbidden": ["不能提前揭示禁术源头"],
+                    },
+                )
+            },
+            "chapter_draft": {
+                "output": synthetic_agent_output(
+                    preview="草稿已生成",
+                    handoff="林烬站在税籍所外，听见巡夜钟尚未入夜便轻轻一震。",
+                    data={"draft_text": "林烬站在税籍所外，听见巡夜钟尚未入夜便轻轻一震。"},
+                )
+            },
+            "continuity_review": {
+                "output": synthetic_agent_output(
+                    preview="审查通过",
+                    handoff="P0/P1 无阻断。",
+                    data={"decision": "pass", "issues": [], "required_fixes": []},
+                )
+            },
+            "chapter_revision": {
+                "output": synthetic_agent_output(
+                    preview="修订稿已完成",
+                    handoff="林烬站在税籍所外，袖中的残页被汗意浸软。巡夜钟尚未入夜便轻轻一震。",
+                    data={"revised_text": "林烬站在税籍所外，袖中的残页被汗意浸软。巡夜钟尚未入夜便轻轻一震。"},
+                )
+            },
+            "director_approval_package": {
+                "output": synthetic_agent_output(
+                    preview="章节可归档",
+                    handoff="章节定稿包已通过 humanGate。",
+                    data={
+                        "decision": "pass",
+                        "final_text": "林烬站在税籍所外，袖中的残页被汗意浸软。巡夜钟尚未入夜便轻轻一震，妹妹的影子先替她开了口。",
+                        "approval_notes": "可进入归档。",
+                        "change_summary": ["保留巡夜钟伏笔。"],
+                        "residual_risks": [],
+                    },
+                )
+            },
+            "archive_plan": {
+                "output": synthetic_agent_output(
+                    preview="归档计划已准备",
+                    handoff="提取事实、时间线、伏笔和角色状态。",
+                    data={
+                        "archive_decision": "archive",
+                        "facts": [{"fact": "妹妹的影子会在巡夜钟异常时开口。", "source": "chapter final"}],
+                        "timeline": [{"event": "巡夜钟在未入夜时震响。"}],
+                        "foreshadowing": [
+                            {
+                                "id": "patrol-bell-early-ring",
+                                "item": "巡夜钟提前震响",
+                                "planned_payoff": "后续证明钟声可被篡改。",
+                                "status": "open",
+                                "risk": "P2",
+                            }
+                        ],
+                        "character_state": [
+                            {
+                                "id": "protagonist",
+                                "name": "林烬",
+                                "state": "意识到妹妹影子与旧案有关。",
+                                "known_information": ["巡夜钟异常会触发影子证词。"],
+                            }
+                        ],
+                        "continuity_issues": [],
+                        "style_feedback": ["动作承载情绪有效。"],
+                        "wiki_sync_plan": {"pages": ["chapter-index.md", "foreshadowing.md"]},
+                        "rollback_plan": "回滚本次 chapter workflow import run artifacts。",
+                    },
+                )
+            },
+        },
     }
 
 

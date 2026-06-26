@@ -21,6 +21,11 @@ from .botmux_assets import (
     BotmuxAssetSyncResult,
     BotmuxAssetSyncer,
 )
+from .chapter_workflow_import import (
+    NovelChapterWorkflowImporter,
+    NovelChapterWorkflowImportRequest,
+    NovelChapterWorkflowImportResult,
+)
 from .llmwiki_sync import (
     LlmwikiCommandResult,
     LlmwikiSyncAction,
@@ -53,6 +58,9 @@ __all__ = [
     "BotmuxAssetSyncRequest",
     "BotmuxAssetSyncResult",
     "BotmuxAssetSyncer",
+    "NovelChapterWorkflowImporter",
+    "NovelChapterWorkflowImportRequest",
+    "NovelChapterWorkflowImportResult",
     "ApprovalPackageCheck",
     "NovelApprovalApplier",
     "NovelApprovalApplyRequest",
