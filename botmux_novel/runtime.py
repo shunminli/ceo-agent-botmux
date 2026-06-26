@@ -293,6 +293,8 @@ class NovelRuntime:
             }
         )
         plan["chapter_goal"] = chapter_goal
+        prior_context = self._load_prior_context(workspace, before_chapter_id=chapter)
+        plan["prior_context"] = prior_context
 
         started_at = utc_now()
         run_id = f"chapter-{started_at.replace(':', '').replace('-', '')}-{uuid.uuid4().hex[:8]}"
@@ -305,6 +307,13 @@ class NovelRuntime:
             "读取已批准的开书设定包，准备章节生产。",
             {"source_path": str(source_path), "chapter_id": chapter, "objective": request.chapter_goal.strip()},
         )
+        trace.add_step(
+            "LoadPriorContext",
+            "director",
+            "pass",
+            f"读取 {len(prior_context['source_chapters'])} 个前文章节归档，注入连续性上下文。",
+            prior_context,
+        )
 
         asset_request = NovelFoundationRequest(
             project_path=request.project_path,
@@ -316,6 +325,7 @@ class NovelRuntime:
         )
         artifacts.extend(self._write_project_assets(workspace, plan, asset_request))
         artifacts.append(workspace.write_json(f"runs/{run_id}/source-foundation.json", plan))
+        artifacts.append(workspace.write_json(f"runs/{run_id}/prior-context.json", prior_context))
 
         return self._execute_chapter_pipeline(
             workspace=workspace,
@@ -588,6 +598,60 @@ class NovelRuntime:
             workspace.write_yaml("tracking/continuity-issues.yaml", {"issues": archive["continuity_issues"]}),
             workspace.write_json(f"runs/archive-{chapter}.json", archive),
         ]
+
+    def _load_prior_context(self, workspace: NovelWorkspace, *, before_chapter_id: str) -> Dict[str, Any]:
+        current_sort_key = self._chapter_sort_key(before_chapter_id)
+        context: Dict[str, Any] = {
+            "source_chapters": [],
+            "source_refs": [],
+            "facts": [],
+            "timeline": [],
+            "foreshadowing": [],
+            "character_state": [],
+            "continuity_issues": [],
+        }
+        archives: List[tuple[int, str, Path, Dict[str, Any]]] = []
+        for path in sorted(workspace.root.glob("runs/archive-*.json")):
+            chapter = path.stem.removeprefix("archive-")
+            sort_key = self._chapter_sort_key(chapter)
+            if sort_key is None:
+                continue
+            if current_sort_key is not None and sort_key >= current_sort_key:
+                continue
+            try:
+                archive = json.loads(path.read_text(encoding="utf-8"))
+            except json.JSONDecodeError as exc:
+                raise ValueError(f"invalid prior archive JSON: {path}") from exc
+            archives.append((sort_key, chapter, path, archive))
+
+        for _, chapter, path, archive in sorted(archives, key=lambda item: item[0]):
+            context["source_chapters"].append(chapter)
+            context["source_refs"].append(str(path.relative_to(workspace.root)))
+            for key in ["facts", "timeline", "foreshadowing", "character_state", "continuity_issues"]:
+                items = archive.get(key, [])
+                if not isinstance(items, list):
+                    raise ValueError(f"prior archive {path} field {key} must be an array")
+                for item in items:
+                    if isinstance(item, dict):
+                        normalized = dict(item)
+                        normalized.setdefault("chapter_id", chapter)
+                        normalized.setdefault("source_archive", str(path.relative_to(workspace.root)))
+                        context[key].append(normalized)
+                    else:
+                        context[key].append(
+                            {
+                                "chapter_id": chapter,
+                                "value": item,
+                                "source_archive": str(path.relative_to(workspace.root)),
+                            }
+                        )
+        return context
+
+    def _chapter_sort_key(self, chapter_id: str) -> Optional[int]:
+        match = re.fullmatch(r"ch-(\d+)", chapter_id)
+        if match is None:
+            return None
+        return int(match.group(1))
 
     def _resolve_foundation_path(self, workspace: NovelWorkspace, explicit_path: Optional[Path]) -> Path:
         if explicit_path is not None:

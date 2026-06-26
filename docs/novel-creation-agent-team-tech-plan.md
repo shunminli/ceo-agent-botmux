@@ -502,6 +502,7 @@ python3 -m botmux_novel chapter \
 - 章节生产继续使用同一 3 bot 组织，并在 `director_approval_package` 前 humanGate。
 - workflow 只输出章节定稿候选包和 `archive_plan`，不直接写项目文件或 llmwiki；写入动作后续必须单独 gated。
 - 已新增本地 `python3 -m botmux_novel chapter`，可用已批准/已生成的 `foundation.json` 继续生产章节，用于无 BotMux 依赖的 Phase 2 smoke。
+- `chapter` 会自动读取早于当前章节的 `runs/archive-*.json`，生成 `runs/{chapter_run_id}/prior-context.json` 并注入上下文包，避免第二章以后丢失前文事实、伏笔和角色状态。
 
 ### Phase 3：质量评估后再扩展
 

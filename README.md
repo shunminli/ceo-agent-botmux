@@ -26,7 +26,7 @@ An AI agent team built with BotMux to coordinate coding agents through chat.
 
 ## Local Novel Runtime
 
-P0 已提供一个标准库 Python CLI，用于验证小说创作 Agent Team 的本地闭环：从一句灵感生成首章章纲、上下文包、草稿、审稿、修订、定稿、关系图、场景设定、文风档案、伏笔台账、状态归档、JSON trace 和 SQLite run 记录。
+P0 已提供一个标准库 Python CLI，用于验证小说创作 Agent Team 的本地闭环：从一句灵感生成开书设定、章节章纲、上下文包、草稿、审稿、修订、定稿、关系图、场景设定、文风档案、伏笔台账、状态归档、JSON trace 和 SQLite run 记录。连续章节会读取前章 `runs/archive-*.json` 并生成 `prior-context.json`。
 
 ```bash
 python3 -m botmux_novel foundation \

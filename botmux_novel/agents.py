@@ -219,6 +219,23 @@ class ContextPackBuilder:
     name = "context"
 
     def build(self, plan: Dict[str, Any], blueprint: Dict[str, Any]) -> AgentOutput:
+        prior_context = plan.get("prior_context", {})
+        source_chapters = prior_context.get("source_chapters", [])
+        prior_facts = [
+            item["fact"]
+            for item in prior_context.get("facts", [])
+            if isinstance(item, dict) and item.get("fact")
+        ]
+        prior_character_states = [
+            f"{item.get('name', item.get('id', 'unknown'))}：{item.get('state', '')}"
+            for item in prior_context.get("character_state", [])
+            if isinstance(item, dict) and item.get("state")
+        ]
+        prior_foreshadowing = [
+            f"{item.get('item', item.get('id', 'unknown'))}（{item.get('status', 'unknown')}）"
+            for item in prior_context.get("foreshadowing", [])
+            if isinstance(item, dict)
+        ]
         data = {
             "chapter_id": blueprint["chapter_id"],
             "objective": blueprint["objective"],
@@ -227,16 +244,33 @@ class ContextPackBuilder:
                 "林烬背负父亲旧案污名。",
                 "妹妹户籍可能被巡城司清查。",
                 "旧书楼保存被删改前的案件残页。",
-            ],
+            ]
+            + prior_facts,
             "character_states": [
                 "林烬：克制、警惕，不能主动暴露秘密能力。",
                 "玄衣巡使：强势盘问，掌握夜巡记录。",
                 "旧书楼守灯人：试探主角，不直接给答案。",
-            ],
-            "foreshadowing": ["巡夜钟会让谎言在影子里显形。", "记忆抵押会留下残光。"],
+            ]
+            + prior_character_states,
+            "foreshadowing": ["巡夜钟会让谎言在影子里显形。", "记忆抵押会留下残光。"]
+            + prior_foreshadowing,
+            "prior_context": {
+                "source_chapters": source_chapters,
+                "facts": prior_context.get("facts", []),
+                "timeline": prior_context.get("timeline", []),
+                "foreshadowing": prior_context.get("foreshadowing", []),
+                "character_state": prior_context.get("character_state", []),
+                "continuity_issues": prior_context.get("continuity_issues", []),
+            },
             "style_rules": ["减少解释性总结", "对话带潜台词", "每个场景必须有一次信息反转"],
             "forbidden": blueprint["forbidden"],
-            "source_refs": ["story_bible", "characters/index", "volume_outline", blueprint["chapter_id"]],
+            "source_refs": [
+                "story_bible",
+                "characters/index",
+                "volume_outline",
+                blueprint["chapter_id"],
+            ]
+            + [f"archive:{chapter}" for chapter in source_chapters],
         }
         return AgentOutput(self.name, "构建章节上下文包和引用依据。", data)
 

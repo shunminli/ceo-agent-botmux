@@ -182,6 +182,54 @@ class NovelRuntimeTest(unittest.TestCase):
             self.assertIn("foundation_path", trace["request"])
             self.assertEqual(trace["request"]["chapter_goal"], "让林烬用半张残页验证巡夜钟异常，并把妹妹影子证词转成下一章追查目标。")
 
+    def test_chapter_loads_prior_archive_context_for_next_chapter(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            project = Path(tmpdir) / "chapter-continuity"
+            runtime = NovelRuntime()
+            foundation = runtime.foundation(
+                NovelFoundationRequest(
+                    project_path=project,
+                    title="影钟旧案",
+                    inspiration="一个背负旧案污名的少年，在巡夜钟声中发现妹妹影子会说真话。",
+                )
+            )
+            first_chapter = runtime.chapter(
+                NovelChapterRequest(
+                    project_path=project,
+                    chapter_number=1,
+                    chapter_goal="用旧书楼残页引出主角秘密能力并埋下巡夜钟伏笔。",
+                    foundation_path=foundation.foundation_path,
+                )
+            )
+            self.assertEqual(first_chapter.status, "completed")
+
+            second_chapter = runtime.chapter(
+                NovelChapterRequest(
+                    project_path=project,
+                    chapter_number=2,
+                    chapter_goal="让林烬用半张残页验证巡夜钟异常，并把妹妹影子证词转成下一章追查目标。",
+                    foundation_path=foundation.foundation_path,
+                )
+            )
+
+            prior_context_path = project / f"runs/{second_chapter.run_id}/prior-context.json"
+            context_pack_path = project / f"runs/{second_chapter.run_id}/context-pack.json"
+            self.assertTrue(prior_context_path.exists())
+            self.assertTrue(context_pack_path.exists())
+
+            prior_context = json.loads(prior_context_path.read_text(encoding="utf-8"))
+            self.assertEqual(prior_context["source_chapters"], ["ch-001"])
+            self.assertTrue(any("玄衣巡使影子" in fact["fact"] for fact in prior_context["facts"]))
+            self.assertTrue(all(item["source_archive"] == "runs/archive-ch-001.json" for item in prior_context["facts"]))
+
+            context_pack = json.loads(context_pack_path.read_text(encoding="utf-8"))
+            self.assertIn("archive:ch-001", context_pack["source_refs"])
+            self.assertIn("ch-001", context_pack["prior_context"]["source_chapters"])
+            self.assertTrue(any("妹妹的影子" in fact for fact in context_pack["facts"]))
+
+            trace = json.loads(second_chapter.trace_path.read_text(encoding="utf-8"))
+            self.assertEqual([step["stage"] for step in trace["steps"][:3]], ["LoadFoundation", "LoadPriorContext", "Plan"])
+
     def test_cli_run_uses_real_entrypoint(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             project = Path(tmpdir) / "cli-novel"

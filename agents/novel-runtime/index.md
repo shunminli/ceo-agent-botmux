@@ -1,4 +1,4 @@
-Updated: 2026-06-26
+Updated: 2026-06-27
 
 # Novel Runtime
 
@@ -20,7 +20,7 @@ Updated: 2026-06-26
 ## 边界
 
 - 当前运行时使用确定性本地 Agent，不调用真实 LLM，也不连接外部 BotMux 服务。
-- 当前只覆盖单项目、单章闭环；连续多章、真实模型 provider、Web UI 和向量检索属于后续迭代。
+- 当前覆盖单项目的开书和连续章节 smoke；真实模型 provider、Web UI 和向量检索属于后续迭代。
 - 输出是本地 Markdown/YAML/JSON/SQLite 文件，不涉及生产发布、云同步或多用户权限。
 - `wiki-bundle` 写本地 `wiki/novels/{project_slug}/` Markdown 页面包，用于人工审核或后续 gated llmwiki 写入。
 - BotMux workflow 只生成候选包和计划；项目文件或 llmwiki 写入必须走单独 gated 节点或人工确认。
@@ -53,9 +53,11 @@ Updated: 2026-06-26
 
 1. `NovelRuntime.chapter` 读取显式 `foundation.json`，或使用项目中最新的 `runs/foundation-*/foundation.json`。
 2. 用请求中的 `chapter_number` 和 `chapter_goal` 更新当前章节目标。
-3. 写入当前 Story Bible / characters / settings / outline 资产快照，并在 `runs/{run_id}/source-foundation.json` 记录本次来源。
-4. 复用章节状态机完成蓝图、上下文包、草稿、审稿、修订、定稿、归档、trace 和 SQLite run 记录。
-5. 不重新调用 `DirectorAgent.plan_project`，避免批准后的 Story Bible 被灵感重规划覆盖。
+3. 读取早于当前章节的 `runs/archive-{chapter}.json`，汇总事实、时间线、伏笔、角色状态和连续性问题为 `prior_context`。
+4. 写入当前 Story Bible / characters / settings / outline 资产快照，并在 `runs/{run_id}/source-foundation.json` 记录本次来源。
+5. 写入 `runs/{run_id}/prior-context.json`，并把前章归档注入 `context-pack.json` 的 `prior_context`、`facts`、`character_states`、`foreshadowing` 和 `source_refs`。
+6. 复用章节状态机完成蓝图、上下文包、草稿、审稿、修订、定稿、归档、trace 和 SQLite run 记录。
+7. 不重新调用 `DirectorAgent.plan_project`，避免批准后的 Story Bible 被灵感重规划覆盖。
 
 ### Wiki Bundle
 
