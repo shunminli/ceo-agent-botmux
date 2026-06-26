@@ -342,6 +342,7 @@ novel-project/
 | `foreshadowing-ledger.schema.json` | 伏笔、埋设章节、回收计划、风险等级。 |
 | `style-profile.schema.json` | 文风规则、句式偏好、禁用表达、正反例。 |
 | `approval-package.schema.json` | `novel-bootstrap` 审批包、审核材料、humanGate 命令、llmwiki preview、MCP 策略、本地首章命令和真实 BotMux 首章 workflow 命令的必填字段及基础类型。 |
+| `next-chapter-command.schema.json` | 章节完成后的下一章 handoff、BotMux workflow 命令和知识回写命令。 |
 
 ## 10. llmwiki 集成
 

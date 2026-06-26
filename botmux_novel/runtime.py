@@ -21,7 +21,7 @@ from .agents import (
 from .chapter_goals import chapter_goal_for
 from .foundation_paths import resolve_foundation_path
 from .handoff_commands import build_chapter_knowledge_handoff
-from .schema_validation import validate_required
+from .schema_validation import validate_required, validate_schema
 from .workspace import NovelWorkspace, markdown_list, utc_now
 from .workflow_commands import build_chapter_workflow_command
 
@@ -495,6 +495,7 @@ class NovelRuntime:
                 archive=archive,
             )
             trace.add_step("NextChapterHandoff", "director", "pass", "生成下一章启动命令。", next_handoff)
+            validate_schema("next-chapter-command", next_handoff)
             artifacts.append(workspace.write_json(f"runs/{run_id}/next-chapter-command.json", next_handoff))
             artifacts.append(workspace.write_text(f"runs/{run_id}/next-chapter-command.md", self._next_chapter_markdown(next_handoff)))
 

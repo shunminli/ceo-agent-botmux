@@ -123,7 +123,7 @@ Updated: 2026-06-27
 5. 写入当前 Story Bible / characters / settings / outline 资产快照，并在 `runs/{run_id}/source-foundation.json` 记录本次来源。
 6. 写入 `runs/{run_id}/prior-context.json`，并把前章归档注入 `context-pack.json` 的 `prior_context`、`facts`、`character_states`、`foreshadowing` 和 `source_refs`。
 7. 复用章节状态机完成蓝图、上下文包、草稿、审稿、修订、定稿、归档、trace 和 SQLite run 记录。
-8. 完成归档后写入 `runs/{run_id}/next-chapter-command.json|md`，给出下一章建议目标、source refs、可直接审阅/执行的本地 `python3 -m botmux_novel chapter` 命令、携带本章 archive `priorContext` 的真实 `novel-chapter-production` BotMux workflow 命令，以及章节后 wiki 审核包/dry-run sync/approved sync 的知识回写命令。
+8. 完成归档后按 `next-chapter-command.schema.json` 校验并写入 `runs/{run_id}/next-chapter-command.json|md`，给出下一章建议目标、source refs、可直接审阅/执行的本地 `python3 -m botmux_novel chapter` 命令、携带本章 archive `priorContext` 的真实 `novel-chapter-production` BotMux workflow 命令，以及章节后 wiki 审核包/dry-run sync/approved sync 的知识回写命令。
 9. 不重新调用 `DirectorAgent.plan_project`，避免批准后的 Story Bible 被灵感重规划覆盖。
 
 ### Chapter Workflow Import
@@ -198,6 +198,7 @@ Updated: 2026-06-27
 - `style-profile.schema.json`：约束 `settings/style-profile.json`，包含语气、规则、禁用表达和正反例。
 - `foreshadowing-ledger.schema.json`：约束 `tracking/foreshadowing.yaml` 和 `runs/archive-{chapter}.json` 中的伏笔条目。
 - `approval-package.schema.json`：约束 `novel-bootstrap` 生成的审批包，包含项目、审核材料、humanGate 命令、llmwiki preview、MCP 策略、本地首章命令和真实 BotMux 首章 workflow 命令的必填字段及基础类型。
+- `next-chapter-command.schema.json`：约束章节完成后生成的下一章 handoff、真实 BotMux workflow 命令和知识回写命令。
 
 ## 代码锚点
 

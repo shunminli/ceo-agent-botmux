@@ -20,6 +20,7 @@ from botmux_novel import (
     NovelWikiBundleRequest,
 )
 from botmux_novel.agents import BlueprintAgent, ConsistencyAgent, ContextPackBuilder, DirectorAgent
+from botmux_novel.schema_validation import schema_validation_errors
 
 
 class NovelRuntimeTest(unittest.TestCase):
@@ -376,6 +377,7 @@ class NovelRuntimeTest(unittest.TestCase):
             next_command_path = project / f"runs/{first_chapter.run_id}/next-chapter-command.json"
             self.assertTrue(next_command_path.exists())
             next_command = json.loads(next_command_path.read_text(encoding="utf-8"))
+            self.assertEqual(schema_validation_errors("next-chapter-command", next_command), [])
             self.assertEqual(next_command["next_chapter_id"], "ch-002")
             self.assertIn("--foundation-json", next_command["command"])
             self.assertIn("novel-chapter-production", next_command["workflow_command"])

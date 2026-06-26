@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.local/ceo-agent-botmux/next-chapter-command.schema.json",
+  "title": "NextChapterCommand",
+  "type": "object",
+  "required": [
+    "status",
+    "project_path",
+    "project_slug",
+    "current_chapter_id",
+    "next_chapter_id",
+    "next_chapter_number",
+    "chapter_goal",
+    "workflow_command",
+    "workflow_command_text",
+    "knowledge_handoff",
+    "prior_context",
+    "source_refs"
+  ],
+  "properties": {
+    "status": {"type": "string"},
+    "project_path": {"type": "string"},
+    "project_slug": {"type": "string"},
+    "current_chapter_id": {"type": "string"},
+    "next_chapter_id": {"type": "string"},
+    "next_chapter_number": {"type": "integer"},
+    "chapter_goal": {"type": "string"},
+    "command": {"type": "array"},
+    "command_text": {"type": "string"},
+    "workflow_command": {"type": "array"},
+    "workflow_command_text": {"type": "string"},
+    "local_command": {"type": "array"},
+    "local_command_text": {"type": "string"},
+    "knowledge_handoff": {
+      "type": "object",
+      "required": [
+        "wiki_bundle_command",
+        "wiki_bundle_command_text",
+        "llmwiki_sync_plan_command",
+        "llmwiki_sync_plan_command_text",
+        "approved_llmwiki_sync_command",
+        "approved_llmwiki_sync_command_text",
+        "human_gate"
+      ],
+      "properties": {
+        "wiki_bundle_command": {"type": "array"},
+        "wiki_bundle_command_text": {"type": "string"},
+        "llmwiki_sync_plan_command": {"type": "array"},
+        "llmwiki_sync_plan_command_text": {"type": "string"},
+        "approved_llmwiki_sync_command": {"type": "array"},
+        "approved_llmwiki_sync_command_text": {"type": "string"},
+        "human_gate": {"type": "string"}
+      }
+    },
+    "prior_context": {"type": "string"},
+    "source_foundation": {"type": ["string", "null"]},
+    "source_refs": {"type": "array"},
+    "handoff": {"type": "string"},
+    "archive_snapshot": {"type": "object"},
+    "word_target": {"type": "integer"},
+    "mode": {"type": "string"}
+  }
+}

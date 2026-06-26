@@ -8,6 +8,7 @@ import unittest
 from pathlib import Path
 
 from botmux_novel import NovelChapterWorkflowImporter, NovelChapterWorkflowImportRequest
+from botmux_novel.schema_validation import schema_validation_errors
 
 
 class NovelChapterWorkflowImportTest(unittest.TestCase):
@@ -42,6 +43,7 @@ class NovelChapterWorkflowImportTest(unittest.TestCase):
             self.assertTrue((project / f"runs/{result.run_id}/next-chapter-command.json").exists())
 
             next_command = json.loads((project / f"runs/{result.run_id}/next-chapter-command.json").read_text(encoding="utf-8"))
+            self.assertEqual(schema_validation_errors("next-chapter-command", next_command), [])
             self.assertEqual(next_command["next_chapter_id"], "ch-002")
             self.assertEqual(next_command["chapter_goal"], "让林烬用半张残页验证巡夜钟异常，并把妹妹影子证词转成下一章追查目标。")
             self.assertIn("妹妹的影子会在巡夜钟异常时开口。", next_command["prior_context"])

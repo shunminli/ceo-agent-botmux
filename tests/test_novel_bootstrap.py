@@ -86,6 +86,28 @@ class NovelBootstrapTest(unittest.TestCase):
         self.assertIn("human_gate.approval_apply_command expected array", errors)
         self.assertIn("llmwiki.approved expected boolean", errors)
 
+    def test_next_chapter_command_schema_reports_nested_required_fields(self) -> None:
+        errors = schema_validation_errors(
+            "next-chapter-command",
+            {
+                "status": "suggested",
+                "project_path": "/tmp/project",
+                "project_slug": "shadow-clock-case",
+                "current_chapter_id": "ch-001",
+                "next_chapter_id": "ch-002",
+                "next_chapter_number": 2,
+                "chapter_goal": "继续追查巡夜钟异常。",
+                "workflow_command": ["botmux", "workflow", "run", "novel-chapter-production"],
+                "workflow_command_text": "botmux workflow run novel-chapter-production",
+                "knowledge_handoff": {},
+                "prior_context": "Source chapter: ch-001",
+                "source_refs": [],
+            },
+        )
+
+        self.assertIn("Missing required field: knowledge_handoff.wiki_bundle_command", errors)
+        self.assertIn("Missing required field: knowledge_handoff.approved_llmwiki_sync_command", errors)
+
     def test_bootstrap_creates_approval_package_without_llmwiki_writes(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)
