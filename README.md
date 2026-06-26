@@ -68,12 +68,15 @@ python3 -m botmux_novel botmux-assets
 python3 -m botmux_novel botmux-assets --write
 /Users/xiaochen/.botmux/bin/botmux workflow validate workflows/novel-story-foundation.workflow.json
 /Users/xiaochen/.botmux/bin/botmux workflow validate workflows/novel-chapter-production.workflow.json
+
+python3 -m botmux_novel readiness --series-smoke
 ```
 
 验证入口：
 
 ```bash
 python3 -m unittest discover -s tests -v
+python3 -m botmux_novel readiness --series-smoke
 ```
 
 ## Local Doubao CLI

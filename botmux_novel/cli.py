@@ -7,6 +7,7 @@ from typing import Optional
 
 from .botmux_assets import BotmuxAssetSyncRequest, BotmuxAssetSyncer
 from .llmwiki_sync import LlmwikiSyncRequest, LlmwikiSyncer
+from .readiness import NovelReadinessChecker, NovelReadinessRequest
 from .runtime import NovelChapterRequest, NovelFoundationRequest, NovelRunRequest, NovelRuntime, NovelWikiBundleRequest
 from .series import NovelSeriesRequest, NovelSeriesRunner
 
@@ -81,6 +82,17 @@ def build_parser() -> argparse.ArgumentParser:
     series_parser.add_argument("--llmwiki-workspace", help="llmwiki workspace directory. Defaults to --project.")
     series_parser.add_argument("--llmwiki-bin", default="llmwiki", help="llmwiki executable to use for optional commands.")
     series_parser.add_argument("--reindex", action="store_true", help="Run `llmwiki reindex <workspace>` after approved llmwiki sync.")
+
+    readiness_parser = subparsers.add_parser(
+        "readiness",
+        help="Check local novel production readiness across BotMux, workflows, llmwiki, and optional series smoke.",
+    )
+    readiness_parser.add_argument("--repo", default=str(Path(__file__).resolve().parents[1]), help="Repository root containing agents/ and workflows/.")
+    readiness_parser.add_argument("--botmux-home", default=str(Path.home() / ".botmux"), help="BotMux home directory.")
+    readiness_parser.add_argument("--botmux-bin", default=str(Path.home() / ".botmux" / "bin" / "botmux"), help="BotMux executable.")
+    readiness_parser.add_argument("--llmwiki-bin", default="llmwiki", help="llmwiki executable to check.")
+    readiness_parser.add_argument("--series-smoke", action="store_true", help="Run a temporary multi-chapter series smoke.")
+    readiness_parser.add_argument("--smoke-chapter-count", type=int, default=5, help="Chapter count for --series-smoke.")
 
     assets_parser = subparsers.add_parser(
         "botmux-assets",
@@ -178,6 +190,19 @@ def main(argv: Optional[list[str]] = None) -> int:
         result = NovelSeriesRunner().run(request)
         print(json.dumps(result.to_dict(), ensure_ascii=False, indent=2))
         return 0 if result.status == "completed" else 2
+
+    if args.command == "readiness":
+        request = NovelReadinessRequest(
+            repo_path=Path(args.repo).expanduser().resolve(),
+            botmux_home=Path(args.botmux_home).expanduser().resolve(),
+            botmux_bin=Path(args.botmux_bin).expanduser(),
+            llmwiki_bin=args.llmwiki_bin,
+            run_series_smoke=args.series_smoke,
+            smoke_chapter_count=args.smoke_chapter_count,
+        )
+        result = NovelReadinessChecker().check(request)
+        print(json.dumps(result.to_dict(), ensure_ascii=False, indent=2))
+        return 0 if result.status in {"ready", "ready_with_warnings"} else 2
 
     if args.command == "botmux-assets":
         request = BotmuxAssetSyncRequest(
