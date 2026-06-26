@@ -341,6 +341,7 @@ novel-project/
 | `scene-setting.schema.json` | 地点、组织、世界规则、场景功能、禁用冲突。 |
 | `foreshadowing-ledger.schema.json` | 伏笔、埋设章节、回收计划、风险等级。 |
 | `style-profile.schema.json` | 文风规则、句式偏好、禁用表达、正反例。 |
+| `approval-package.schema.json` | `novel-bootstrap` 审批包、审核材料、humanGate 命令、llmwiki preview、MCP 策略和下一步命令。 |
 
 ## 10. llmwiki 集成
 
@@ -461,7 +462,7 @@ BotMux CLI 的离线 `workflow run --bot-resolver echo` 不能作为小说 workf
 - `NovelRuntime.chapter` 从已有 `foundation.json` 继续生产章节，避免重新规划已批准 Story Bible。
 - `NovelSeriesRunner` 可连续生成默认 5 章样例并输出 Phase 3 质量指标，当前 20 章稳定性基线已通过。
 - `NovelReadinessChecker` 可检查 BotMux 资产、三个小说 bot 配置、workflow validate、workflow 模板绑定、workflow 合成契约 smoke、llmwiki 可用性、可选 bootstrap smoke、approval apply smoke、series smoke 和可选 approved llmwiki sync smoke。
-- `NovelApprovalPackageChecker` 可只读校验 `novel-bootstrap` 审批包，检查审核材料、humanGate 命令、llmwiki 预览、MCP 角色策略和首章启动命令；可选 dry-run 验证 `approval-apply` 不执行 approved writes。
+- `NovelApprovalPackageChecker` 可只读校验 `novel-bootstrap` 审批包，先用 `approval-package.schema.json` 做必填字段路径校验，再检查审核材料、humanGate 命令、llmwiki 预览、MCP 角色策略和首章启动命令；可选 dry-run 验证 `approval-apply` 不执行 approved writes。
 - 本地工作区输出 `project.yaml`、`story.md`、`settings/*`、`characters/*`、`outline/*`、`tracking/*`、`runs/*`。
 - `python3 -m botmux_novel botmux-assets` 同步仓库 workflow 模板和三个小说 bot workspace `AGENTS.md`。
 - 测试覆盖首章闭环、真实 CLI 入口和门禁阻断。

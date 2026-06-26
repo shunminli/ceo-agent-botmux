@@ -70,7 +70,7 @@ Updated: 2026-06-27
 
 ### Approval Check
 
-1. `NovelApprovalPackageChecker` 读取 `approval-package.json`，校验状态、顶层字段和同目录 Markdown 审批包。
+1. `NovelApprovalPackageChecker` 读取 `approval-package.json`，用 `approval-package.schema.json` 递归校验必填字段，校验状态和同目录 Markdown 审批包。
 2. 校验 `review_materials` 指向的 project、foundation JSON、story Markdown、wiki bundle 和 llmwiki sync plan 都存在。
 3. 校验 wiki bundle Markdown 页面与 sync plan preview 的 pages / page_count 一致。
 4. 校验 `human_gate` 中的 `approval-decision`、`approval-apply` 和底层 `llmwiki-sync --approve --reindex --lint` 命令都指向当前审批包和项目参数。
@@ -170,10 +170,12 @@ Updated: 2026-06-27
 - `scene-setting.schema.json`：约束 `settings/scenes.json` 中的单个场景或世界规则节点。
 - `style-profile.schema.json`：约束 `settings/style-profile.json`，包含语气、规则、禁用表达和正反例。
 - `foreshadowing-ledger.schema.json`：约束 `tracking/foreshadowing.yaml` 和 `runs/archive-{chapter}.json` 中的伏笔条目。
+- `approval-package.schema.json`：约束 `novel-bootstrap` 生成的审批包，包含项目、审核材料、humanGate 命令、llmwiki preview、MCP 策略和下一步命令必填字段。
 
 ## 代码锚点
 
 - `botmux_novel/runtime.py`：状态机、trace 和产物写入。
+- `botmux_novel/schema_validation.py`：本地 schema 加载和递归 required 字段路径校验。
 - `botmux_novel/approval.py`：记录 humanGate 审批决策，并在批准后读取审批包执行 gated llmwiki sync。
 - `botmux_novel/approval_check.py`：只读校验审批包、审核材料、humanGate 命令、MCP 策略和可选 dry-run / chapter smoke。
 - `botmux_novel/bootstrap.py`：真实项目启动包、审批包、wiki dry-run sync plan 和 MCP 配置串联。

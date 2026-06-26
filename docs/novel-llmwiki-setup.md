@@ -59,9 +59,13 @@ python3 -m botmux_novel novel-bootstrap \
   --project-slug shadow-clock-case
 ```
 
-产物在 `runs/{bootstrap_run_id}/approval-package.md` 和 `approval-package.json`。审批通过后先执行其中的 `approval-decision --decision approve` 命令，记录 reviewer、notes、timestamp 和历史；再执行 `approval-apply --approve`。`approval-apply` 会读取审批包中的 project、slug、workspace 和 llmwiki 配置；如果目标 workspace 还没有 llmwiki index，会先初始化；底层仍调用 `llmwiki-sync --approve --reindex --lint`，CLI 不支持 lint 时会运行本地 `wiki-lint` fallback，lint 返回非 0 时写入结果为 `failed`。完成知识库写入后，可继续执行审批包里的 `next_actions.chapter_start_command`，直接从批准的 `foundation.json` 生成首章。
+产物在 `runs/{bootstrap_run_id}/approval-package.md` 和 `approval-package.json`。审批通过前先执行 `approval-check --apply-dry-run`，它会按 `approval-package.schema.json` 检查必填字段，并校验审核材料、humanGate 命令、llmwiki preview、MCP 角色策略和 dry-run apply 路径。审批通过后先执行其中的 `approval-decision --decision approve` 命令，记录 reviewer、notes、timestamp 和历史；再执行 `approval-apply --approve`。`approval-apply` 会读取审批包中的 project、slug、workspace 和 llmwiki 配置；如果目标 workspace 还没有 llmwiki index，会先初始化；底层仍调用 `llmwiki-sync --approve --reindex --lint`，CLI 不支持 lint 时会运行本地 `wiki-lint` fallback，lint 返回非 0 时写入结果为 `failed`。完成知识库写入后，可继续执行审批包里的 `next_actions.chapter_start_command`，直接从批准的 `foundation.json` 生成首章。
 
 ```bash
+python3 -m botmux_novel approval-check \
+  --approval-package /path/to/novel-project/runs/<bootstrap-run-id>/approval-package.json \
+  --apply-dry-run
+
 python3 -m botmux_novel approval-decision \
   --approval-package /path/to/novel-project/runs/<bootstrap-run-id>/approval-package.json \
   --decision approve \

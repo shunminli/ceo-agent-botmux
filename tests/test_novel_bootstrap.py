@@ -8,9 +8,30 @@ import unittest
 from pathlib import Path
 
 from botmux_novel import NovelApprovalCheckRequest, NovelApprovalPackageChecker, NovelBootstrapper, NovelBootstrapRequest
+from botmux_novel.schema_validation import missing_required_fields
 
 
 class NovelBootstrapTest(unittest.TestCase):
+    def test_approval_package_schema_reports_nested_required_fields(self) -> None:
+        missing = missing_required_fields(
+            "approval-package",
+            {
+                "run_id": "bootstrap-test",
+                "status": "ready_for_human_review",
+                "project": {},
+                "review_materials": {},
+                "human_gate": {},
+                "llmwiki": {"preview": {}, "mcp_config": {}},
+                "next_actions": {},
+                "next_steps": [],
+            },
+        )
+
+        self.assertIn("project.title", missing)
+        self.assertIn("human_gate.approval_apply_command", missing)
+        self.assertIn("llmwiki.preview.pages", missing)
+        self.assertIn("next_actions.chapter_start_command", missing)
+
     def test_bootstrap_creates_approval_package_without_llmwiki_writes(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)
@@ -185,6 +206,44 @@ class NovelBootstrapTest(unittest.TestCase):
             self.assertEqual(check.status, "blocked")
             checks = {item.name: item for item in check.checks}
             self.assertEqual(checks["review_materials"].status, "fail")
+
+    def test_approval_check_blocks_missing_required_nested_package_field(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            project = root / "novel-project"
+            workspace = root / "llmwiki-workspace"
+            fake_llmwiki = root / "llmwiki"
+            fake_llmwiki.write_text("#!/bin/sh\necho planned \"$@\"\n", encoding="utf-8")
+            fake_llmwiki.chmod(0o755)
+
+            result = NovelBootstrapper().bootstrap(
+                NovelBootstrapRequest(
+                    project_path=project,
+                    title="影钟旧案",
+                    inspiration="少年在旧书楼发现父亲旧案残页。",
+                    project_slug="shadow-clock-case",
+                    workspace_path=workspace,
+                    llmwiki_bin=str(fake_llmwiki),
+                )
+            )
+            package = json.loads(result.approval_package_json_path.read_text(encoding="utf-8"))
+            del package["human_gate"]["approval_apply_command"]
+            result.approval_package_json_path.write_text(
+                json.dumps(package, ensure_ascii=False, indent=2) + "\n",
+                encoding="utf-8",
+            )
+
+            check = NovelApprovalPackageChecker().check(
+                NovelApprovalCheckRequest(approval_package_path=result.approval_package_json_path)
+            )
+
+            self.assertEqual(check.status, "blocked")
+            checks = {item.name: item for item in check.checks}
+            self.assertEqual(checks["package_json"].status, "fail")
+            self.assertIn(
+                "Missing required field: human_gate.approval_apply_command",
+                checks["package_json"].data["errors"],
+            )
 
 
 if __name__ == "__main__":

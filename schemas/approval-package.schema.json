@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.local/ceo-agent-botmux/approval-package.schema.json",
+  "title": "ApprovalPackage",
+  "type": "object",
+  "required": ["run_id", "status", "project", "review_materials", "human_gate", "llmwiki", "next_actions", "next_steps"],
+  "properties": {
+    "run_id": {"type": "string"},
+    "status": {"type": "string"},
+    "project": {
+      "type": "object",
+      "required": ["title", "project_slug", "project_path", "llmwiki_workspace_path"],
+      "properties": {
+        "title": {"type": "string"},
+        "project_slug": {"type": "string"},
+        "project_path": {"type": "string"},
+        "llmwiki_workspace_path": {"type": "string"}
+      }
+    },
+    "review_materials": {
+      "type": "object",
+      "required": ["foundation_json", "story_markdown", "wiki_bundle", "llmwiki_sync_plan", "mcp_server_name"],
+      "properties": {
+        "foundation_json": {"type": "string"},
+        "story_markdown": {"type": "string"},
+        "wiki_bundle": {"type": "string"},
+        "llmwiki_sync_plan": {"type": "string"},
+        "mcp_server_name": {"type": "string"}
+      }
+    },
+    "human_gate": {
+      "type": "object",
+      "required": ["decision", "must_review", "approved_write_command", "approval_decision_command", "approval_apply_command"],
+      "properties": {
+        "decision": {"type": "string"},
+        "must_review": {"type": "array"},
+        "approved_write_command": {"type": "array"},
+        "approval_decision_command": {"type": "array"},
+        "approval_apply_command": {"type": "array"},
+        "decision_history": {"type": "array"},
+        "reviewer": {"type": "string"},
+        "decided_at": {"type": "string"},
+        "notes": {"type": "string"}
+      }
+    },
+    "llmwiki": {
+      "type": "object",
+      "required": ["sync_status", "approved", "preview", "mcp_config", "warnings"],
+      "properties": {
+        "sync_status": {"type": "string"},
+        "approved": {"type": "boolean"},
+        "preview": {
+          "type": "object",
+          "required": ["target_namespace", "page_count", "pages", "action_summary"],
+          "properties": {
+            "target_namespace": {"type": "string"},
+            "page_count": {"type": "number"},
+            "pages": {"type": "array"},
+            "action_summary": {"type": "object"}
+          }
+        },
+        "mcp_config": {
+          "type": "object",
+          "required": ["status", "project_slug", "workspace_path", "server_name", "role_bindings", "human_gate_policy"],
+          "properties": {
+            "status": {"type": "string"},
+            "project_slug": {"type": "string"},
+            "workspace_path": {"type": "string"},
+            "server_name": {"type": "string"},
+            "role_bindings": {"type": "array"},
+            "human_gate_policy": {"type": "object"}
+          }
+        },
+        "warnings": {"type": "array"}
+      }
+    },
+    "next_actions": {
+      "type": "object",
+      "required": ["chapter_start_command"],
+      "properties": {
+        "chapter_start_command": {"type": "array"}
+      }
+    },
+    "next_steps": {"type": "array"}
+  }
+}
