@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, Iterator, List, Optional, Set, Tuple
 
+from .bootstrap import NovelBootstrapRequest, NovelBootstrapper
 from .botmux_assets import BotmuxAssetSyncRequest, BotmuxAssetSyncer
 from .llmwiki_sync import LlmwikiSyncRequest, LlmwikiSyncer
 from .runtime import NovelFoundationRequest, NovelRuntime, NovelWikiBundleRequest
@@ -38,6 +39,7 @@ class NovelReadinessRequest:
     run_series_smoke: bool = False
     smoke_chapter_count: int = 5
     run_llmwiki_smoke: bool = False
+    run_bootstrap_smoke: bool = False
 
 
 @dataclass(frozen=True)
@@ -83,6 +85,8 @@ class NovelReadinessChecker:
             self._check_workflow_bindings(repo_path=repo_path),
             self._check_llmwiki(llmwiki_bin=request.llmwiki_bin),
         ]
+        if request.run_bootstrap_smoke:
+            checks.append(self._check_bootstrap_smoke(llmwiki_bin=request.llmwiki_bin))
         if request.run_series_smoke:
             checks.append(self._check_series_smoke(chapter_count=request.smoke_chapter_count))
         if request.run_llmwiki_smoke:
@@ -305,6 +309,75 @@ class NovelReadinessChecker:
             summary="Series smoke completed with expected metrics." if passed else "Series smoke metrics did not meet readiness thresholds.",
             data={"result_status": result.status, "metrics": metrics},
         )
+
+    def _check_bootstrap_smoke(self, *, llmwiki_bin: str) -> ReadinessCheck:
+        try:
+            with tempfile.TemporaryDirectory() as tmpdir:
+                root = Path(tmpdir)
+                project_path = root / "readiness-bootstrap-project"
+                workspace_path = root / "readiness-bootstrap-workspace"
+                project_slug = "shadow-clock-case"
+                result = NovelBootstrapper().bootstrap(
+                    NovelBootstrapRequest(
+                        project_path=project_path,
+                        title="影钟旧案",
+                        inspiration="退役巡夜人在旧书楼发现父亲旧案残页，必须在巡城司清查前保护妹妹身份并找出篡改真相的人。",
+                        project_slug=project_slug,
+                        workspace_path=workspace_path,
+                        llmwiki_bin=llmwiki_bin,
+                    )
+                )
+
+                wiki_overview = result.wiki_bundle.bundle_path / "overview.md"
+                target_overview = workspace_path / "wiki" / "novels" / project_slug / "overview.md"
+                package_payload = json.loads(result.approval_package_json_path.read_text(encoding="utf-8"))
+                passed = (
+                    result.status in {"ready", "ready_with_warnings"}
+                    and result.foundation.foundation_path.exists()
+                    and wiki_overview.exists()
+                    and result.llmwiki_sync.status == "planned"
+                    and not result.llmwiki_sync.approved
+                    and result.llmwiki_sync.plan_path.exists()
+                    and result.approval_package_path.exists()
+                    and result.approval_package_json_path.exists()
+                    and not target_overview.exists()
+                    and package_payload.get("status") == "ready_for_human_review"
+                )
+                if not passed:
+                    status = "fail"
+                elif result.status == "ready_with_warnings":
+                    status = "warn"
+                else:
+                    status = "pass"
+                return ReadinessCheck(
+                    name="bootstrap_smoke",
+                    status=status,
+                    summary=(
+                        "Novel bootstrap smoke generated foundation, wiki review bundle, dry-run sync plan, MCP config, and approval package."
+                        if passed
+                        else "Novel bootstrap smoke did not meet readiness checks."
+                    ),
+                    data={
+                        "result_status": result.status,
+                        "project_path": str(project_path),
+                        "workspace_path": str(workspace_path),
+                        "foundation_path_exists": result.foundation.foundation_path.exists(),
+                        "wiki_overview_exists": wiki_overview.exists(),
+                        "approval_package_exists": result.approval_package_path.exists(),
+                        "approval_package_json_exists": result.approval_package_json_path.exists(),
+                        "target_overview_exists": target_overview.exists(),
+                        "llmwiki_sync_status": result.llmwiki_sync.status,
+                        "mcp_config_status": result.mcp_config.status,
+                        "warnings": result.mcp_config.warnings + result.llmwiki_sync.warnings,
+                    },
+                )
+        except Exception as exc:
+            return ReadinessCheck(
+                name="bootstrap_smoke",
+                status="fail",
+                summary=f"Novel bootstrap smoke failed: {exc}",
+                data={"llmwiki_bin": llmwiki_bin},
+            )
 
     def _check_llmwiki_smoke(self, *, llmwiki_bin: str) -> ReadinessCheck:
         executable = resolve_executable(llmwiki_bin)

@@ -117,6 +117,7 @@ def build_parser() -> argparse.ArgumentParser:
     readiness_parser.add_argument("--botmux-home", default=str(Path.home() / ".botmux"), help="BotMux home directory.")
     readiness_parser.add_argument("--botmux-bin", default=str(Path.home() / ".botmux" / "bin" / "botmux"), help="BotMux executable.")
     readiness_parser.add_argument("--llmwiki-bin", default="llmwiki", help="llmwiki executable to check.")
+    readiness_parser.add_argument("--bootstrap-smoke", action="store_true", help="Run a temporary novel-bootstrap smoke without approved llmwiki writes.")
     readiness_parser.add_argument("--series-smoke", action="store_true", help="Run a temporary multi-chapter series smoke.")
     readiness_parser.add_argument("--smoke-chapter-count", type=int, default=5, help="Chapter count for --series-smoke.")
     readiness_parser.add_argument(
@@ -256,6 +257,7 @@ def main(argv: Optional[list[str]] = None) -> int:
             botmux_home=Path(args.botmux_home).expanduser().resolve(),
             botmux_bin=Path(args.botmux_bin).expanduser(),
             llmwiki_bin=args.llmwiki_bin,
+            run_bootstrap_smoke=args.bootstrap_smoke,
             run_series_smoke=args.series_smoke,
             smoke_chapter_count=args.smoke_chapter_count,
             run_llmwiki_smoke=args.llmwiki_smoke,

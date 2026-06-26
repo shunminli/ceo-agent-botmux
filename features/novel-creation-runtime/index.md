@@ -59,9 +59,10 @@ python3 -m botmux_novel run \
 
 python3 -m botmux_novel botmux-assets
 python3 -m botmux_novel botmux-assets --write
+python3 -m botmux_novel readiness --bootstrap-smoke
 python3 -m botmux_novel readiness --series-smoke
 python3 -m botmux_novel readiness --series-smoke --smoke-chapter-count 20
-python3 -m botmux_novel readiness --llmwiki-smoke
+python3 -m botmux_novel readiness --bootstrap-smoke --series-smoke --smoke-chapter-count 20 --llmwiki-smoke
 
 /Users/xiaochen/.botmux/bin/botmux workflow run novel-chapter-production \
   --param projectSlug=shadow-clock-case \
@@ -90,7 +91,7 @@ python3 -m botmux_novel readiness --llmwiki-smoke
 - `wiki/novels/{project_slug}/*.md`：`wiki-bundle` 子命令生成的本地 llmwiki 写入前审核包。
 - `workflows/*.workflow.json`：版本化的 BotMux 三 bot 协作模板，测试会校验输出契约、人类门禁和本机安装副本一致性。
 - `~/.botmux/workspace/{Novel-*}/AGENTS.md`：由 `botmux-assets --write` 从仓库身份文档生成的运行态 workspace 指令。
-- `readiness` JSON：本机小说生产环境的 BotMux、workflow validate、workflow 绑定、llmwiki、可选 series smoke 和可选 approved llmwiki sync smoke 检查结果。
+- `readiness` JSON：本机小说生产环境的 BotMux、workflow validate、workflow 绑定、llmwiki、可选 bootstrap smoke、series smoke 和可选 approved llmwiki sync smoke 检查结果。
 
 ## 规则与状态
 

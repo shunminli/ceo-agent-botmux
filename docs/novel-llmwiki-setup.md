@@ -156,8 +156,9 @@ python3 -m unittest discover -s tests -v
 /Users/xiaochen/.botmux/bin/botmux workflow validate workflows/novel-story-foundation.workflow.json
 /Users/xiaochen/.botmux/bin/botmux workflow validate workflows/novel-chapter-production.workflow.json
 llmwiki --help
+python3 -m botmux_novel readiness --bootstrap-smoke
 python3 -m botmux_novel readiness --series-smoke --smoke-chapter-count 20
-python3 -m botmux_novel readiness --llmwiki-smoke
+python3 -m botmux_novel readiness --bootstrap-smoke --series-smoke --smoke-chapter-count 20 --llmwiki-smoke
 python3 -m botmux_novel llmwiki-mcp-config --workspace /path/to/novel-project --project-slug <slug>
 ```
 

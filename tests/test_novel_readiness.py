@@ -175,6 +175,34 @@ class NovelReadinessTest(unittest.TestCase):
             self.assertTrue(checks["llmwiki_smoke"].data["target_overview_exists"])
             self.assertTrue(checks["llmwiki_smoke"].data["index_exists"])
 
+    def test_bootstrap_smoke_generates_approval_package_without_workspace_writes(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            botmux_home = root / ".botmux"
+            fake_botmux = root / "botmux"
+            fake_llmwiki = root / "llmwiki"
+            install_temp_botmux(botmux_home)
+            write_fake_botmux(fake_botmux)
+            write_fake_llmwiki(fake_llmwiki)
+
+            result = NovelReadinessChecker().check(
+                NovelReadinessRequest(
+                    repo_path=REPO_ROOT,
+                    botmux_home=botmux_home,
+                    botmux_bin=fake_botmux,
+                    llmwiki_bin=str(fake_llmwiki),
+                    run_bootstrap_smoke=True,
+                )
+            )
+
+            checks = {check.name: check for check in result.checks}
+            self.assertEqual(result.status, "ready")
+            self.assertEqual(checks["bootstrap_smoke"].status, "pass")
+            self.assertEqual(checks["bootstrap_smoke"].data["llmwiki_sync_status"], "planned")
+            self.assertTrue(checks["bootstrap_smoke"].data["approval_package_exists"])
+            self.assertTrue(checks["bootstrap_smoke"].data["approval_package_json_exists"])
+            self.assertFalse(checks["bootstrap_smoke"].data["target_overview_exists"])
+
     def test_cli_readiness_can_run_llmwiki_smoke(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)
@@ -210,6 +238,43 @@ class NovelReadinessTest(unittest.TestCase):
             self.assertEqual(payload["status"], "ready")
             checks = {check["name"]: check for check in payload["checks"]}
             self.assertEqual(checks["llmwiki_smoke"]["status"], "pass")
+
+    def test_cli_readiness_can_run_bootstrap_smoke(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            botmux_home = root / ".botmux"
+            fake_botmux = root / "botmux"
+            fake_llmwiki = root / "llmwiki"
+            install_temp_botmux(botmux_home)
+            write_fake_botmux(fake_botmux)
+            write_fake_llmwiki(fake_llmwiki)
+
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "botmux_novel",
+                    "readiness",
+                    "--repo",
+                    str(REPO_ROOT),
+                    "--botmux-home",
+                    str(botmux_home),
+                    "--botmux-bin",
+                    str(fake_botmux),
+                    "--llmwiki-bin",
+                    str(fake_llmwiki),
+                    "--bootstrap-smoke",
+                ],
+                check=True,
+                text=True,
+                capture_output=True,
+            )
+
+            payload = json.loads(completed.stdout)
+            self.assertEqual(payload["status"], "ready")
+            checks = {check["name"]: check for check in payload["checks"]}
+            self.assertEqual(checks["bootstrap_smoke"]["status"], "pass")
+            self.assertFalse(checks["bootstrap_smoke"]["data"]["target_overview_exists"])
 
 
 def install_temp_botmux(botmux_home: Path) -> None:
