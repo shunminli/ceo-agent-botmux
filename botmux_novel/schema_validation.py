@@ -80,6 +80,12 @@ def collect_schema_errors(*, schema: Dict[str, Any], value: Any, path: str) -> L
                 if field_name in value and isinstance(field_schema, dict):
                     field_path = f"{path}.{field_name}" if path else field_name
                     errors.extend(collect_schema_errors(schema=field_schema, value=value[field_name], path=field_path))
+    if isinstance(value, list):
+        item_schema = schema.get("items")
+        if isinstance(item_schema, dict):
+            for index, item in enumerate(value):
+                item_path = f"{path}[{index}]" if path else f"$[{index}]"
+                errors.extend(collect_schema_errors(schema=item_schema, value=item, path=item_path))
     return errors
 
 

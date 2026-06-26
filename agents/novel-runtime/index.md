@@ -203,7 +203,7 @@ Updated: 2026-06-27
 ## 代码锚点
 
 - `botmux_novel/runtime.py`：状态机、trace 和产物写入。
-- `botmux_novel/schema_validation.py`：本地 schema 加载、递归 required 字段路径校验和基础 JSON 类型校验。
+- `botmux_novel/schema_validation.py`：本地 schema 加载、递归 required 字段路径校验、基础 JSON 类型校验和数组 `items` 元素类型校验。
 - `botmux_novel/approval.py`：记录 humanGate 审批决策，并在批准后读取审批包执行 gated llmwiki sync。
 - `botmux_novel/approval_check.py`：只读校验审批包、审核材料、humanGate 命令、MCP 策略和可选 dry-run / chapter smoke。
 - `botmux_novel/bootstrap.py`：真实项目启动包、审批包、wiki dry-run sync plan 和 MCP 配置串联。

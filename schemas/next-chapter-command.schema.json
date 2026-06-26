@@ -25,11 +25,11 @@
     "next_chapter_id": {"type": "string"},
     "next_chapter_number": {"type": "integer"},
     "chapter_goal": {"type": "string"},
-    "command": {"type": "array"},
+    "command": {"type": "array", "items": {"type": "string"}},
     "command_text": {"type": "string"},
-    "workflow_command": {"type": "array"},
+    "workflow_command": {"type": "array", "items": {"type": "string"}},
     "workflow_command_text": {"type": "string"},
-    "local_command": {"type": "array"},
+    "local_command": {"type": "array", "items": {"type": "string"}},
     "local_command_text": {"type": "string"},
     "knowledge_handoff": {
       "type": "object",
@@ -43,18 +43,18 @@
         "human_gate"
       ],
       "properties": {
-        "wiki_bundle_command": {"type": "array"},
+        "wiki_bundle_command": {"type": "array", "items": {"type": "string"}},
         "wiki_bundle_command_text": {"type": "string"},
-        "llmwiki_sync_plan_command": {"type": "array"},
+        "llmwiki_sync_plan_command": {"type": "array", "items": {"type": "string"}},
         "llmwiki_sync_plan_command_text": {"type": "string"},
-        "approved_llmwiki_sync_command": {"type": "array"},
+        "approved_llmwiki_sync_command": {"type": "array", "items": {"type": "string"}},
         "approved_llmwiki_sync_command_text": {"type": "string"},
         "human_gate": {"type": "string"}
       }
     },
     "prior_context": {"type": "string"},
     "source_foundation": {"type": ["string", "null"]},
-    "source_refs": {"type": "array"},
+    "source_refs": {"type": "array", "items": {"type": "string"}},
     "handoff": {"type": "string"},
     "archive_snapshot": {"type": "object"},
     "word_target": {"type": "integer"},

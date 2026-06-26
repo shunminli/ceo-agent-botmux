@@ -108,6 +108,36 @@ class NovelBootstrapTest(unittest.TestCase):
         self.assertIn("Missing required field: knowledge_handoff.wiki_bundle_command", errors)
         self.assertIn("Missing required field: knowledge_handoff.approved_llmwiki_sync_command", errors)
 
+    def test_schema_validation_reports_array_item_type_errors(self) -> None:
+        errors = schema_validation_errors(
+            "next-chapter-command",
+            {
+                "status": "suggested",
+                "project_path": "/tmp/project",
+                "project_slug": "shadow-clock-case",
+                "current_chapter_id": "ch-001",
+                "next_chapter_id": "ch-002",
+                "next_chapter_number": 2,
+                "chapter_goal": "继续追查巡夜钟异常。",
+                "workflow_command": ["botmux", 42],
+                "workflow_command_text": "botmux workflow run novel-chapter-production",
+                "knowledge_handoff": {
+                    "wiki_bundle_command": ["python3", "-m", "botmux_novel", "wiki-bundle"],
+                    "wiki_bundle_command_text": "python3 -m botmux_novel wiki-bundle",
+                    "llmwiki_sync_plan_command": ["python3", "-m", "botmux_novel", "llmwiki-sync"],
+                    "llmwiki_sync_plan_command_text": "python3 -m botmux_novel llmwiki-sync",
+                    "approved_llmwiki_sync_command": ["python3", "-m", "botmux_novel", "llmwiki-sync", "--approve"],
+                    "approved_llmwiki_sync_command_text": "python3 -m botmux_novel llmwiki-sync --approve",
+                    "human_gate": "Review before approved sync.",
+                },
+                "prior_context": "Source chapter: ch-001",
+                "source_refs": ["runs/archive-ch-001.json", 7],
+            },
+        )
+
+        self.assertIn("workflow_command[1] expected string", errors)
+        self.assertIn("source_refs[1] expected string", errors)
+
     def test_bootstrap_creates_approval_package_without_llmwiki_writes(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)
