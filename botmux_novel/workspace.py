@@ -52,11 +52,17 @@ class NovelWorkspace:
             "manuscript/draft",
             "manuscript/revised",
             "manuscript/final",
+            "publish/fanqie/chapters",
             "tracking",
             "memory/examples",
+            "comms/handoffs",
+            "comms/decisions",
+            "comms/bot-notes",
             "runs",
             "references/benchmark",
             "references/prompts",
+            "wiki/review-bundle",
+            "wiki/llmwiki-workspace",
         ]
         for directory in directories:
             (self.root / directory).mkdir(parents=True, exist_ok=True)

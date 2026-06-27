@@ -121,10 +121,13 @@ python3 -m botmux_novel readiness --bootstrap-smoke --workflow-import-smoke --ch
 ## 主要产物
 
 - `project.yaml`：项目状态、模式、当前章节和质量阈值。
+- `project-init` JSON：独立小说项目目录初始化结果，包含创建/跳过的 `bible/`、`publish/fanqie/`、`comms/`、`wiki/llmwiki-workspace/` 和 `.gitignore` 等路径。
 - `story.md`、`settings/*`、`characters/*`、`outline/*`：开书资产和章节蓝图。
 - `characters/relationships.json`：人物关系图，包含冲突边、信息边、情感边和秘密压力。
 - `settings/scenes.json`、`settings/style-profile.json`：场景设定、世界规则功能和文风规则档案。
 - `manuscript/draft|revised|final/ch-001.md`：首章草稿、修订稿和定稿。
+- `publish/fanqie/chapters/*.txt`、`publish/fanqie/book.txt`、`publish/fanqie/upload-checklist.md`：`fanqie-export` 从 `manuscript/final/ch-*.md` 生成的番茄后台友好 UTF-8 纯文本章节、合并本和上传清单；不调用番茄后台 API。
+- `comms/handoffs/*.json|md`、`comms/decisions/*.md`：bot 间结构化交接和人类决策记录目录；`comms/bot-notes/` 默认本地临时管理。
 - `tracking/facts.yaml`、`timeline.yaml`、`foreshadowing.yaml`、`character-state.yaml`、`continuity-issues.yaml`：章节归档状态；伏笔台账包含 id、状态、埋设章节、回收计划和风险等级。
 - `runs/{run_id}/trace.json` 和 `runs/runs.sqlite`：可观察 run 记录和可查询索引。
 - `runs/{foundation_run_id}/foundation.json`：`foundation` 子命令生成的开书设定包。
@@ -154,6 +157,7 @@ python3 -m botmux_novel readiness --bootstrap-smoke --workflow-import-smoke --ch
 ## 规则与状态
 
 - 默认执行 `lean` 模式。
+- `project-init` 创建单本小说的独立工作目录和默认 `.gitignore`；建议正文项目独立于本工具仓库管理，必要时在小说目录单独建私有 git，只提交 `bible/`、`manuscript/final/`、`publish/fanqie/`、`tracking/` 和 `comms/decisions/` 等可审阅资产。
 - `foundation` 只生成开书设定资产，不写 `manuscript/draft|revised|final`。
 - `novel-bootstrap` 串联开书设定、项目内 wiki bundle、llmwiki dry-run sync plan、MCP 配置和审批包；审批包会在落盘前通过 `approval-package.schema.json` 必填字段和基础类型校验，并包含 `next_actions.chapter_start_command` 本地 smoke 命令和 `next_actions.chapter_workflow_command` 真实 BotMux 首章 workflow 命令，后者会把批准的 foundation 压缩为 `storyBible` 参数；它不会执行 approved sync、覆盖外部 llmwiki workspace 或修改全局配置。
 - `workflow-foundation-command` 只生成真实开书 workflow 启动命令，不调用 BotMux、不启动 bot、不触发 humanGate。
@@ -164,6 +168,7 @@ python3 -m botmux_novel readiness --bootstrap-smoke --workflow-import-smoke --ch
 - `approval-apply` 默认只重新生成同步计划；它会先按 `approval-package.schema.json` 校验审批包，只有传 `--approve` 才会按审批包写入 llmwiki workspace，并默认运行 `llmwiki reindex` 与写后 lint。若审批包已记录 `request_changes` 或 `reject`，会拒绝写入；若未记录 `approve` 但命令显式 `--approve`，会保留 warning 说明这是命令级 humanGate 信号。
 - `chapter` 从本地或 workflow 导入的 `foundation.json` 继续生产章节，不重新规划 Story Bible；未传 `--foundation-json` 时会自动使用最新的 `runs/foundation-*/foundation.json` 或 `runs/workflow-foundation-*/foundation.json`。未传 `--chapter-goal` 时自动使用 `foundation.json` 的 `chapter_goal.objective`，自动读取早于当前章节的 `runs/archive-*.json` 作为连续性上下文，并在完成后按 `next-chapter-command.schema.json` 生成下一章本地 runtime handoff、真实 BotMux workflow handoff 和章节后知识回写 handoff；BotMux handoff 会携带本章 archive `priorContext`，知识回写 handoff 默认只生成审核包和 dry-run sync 计划，approved sync 命令必须 humanGate 后使用。
 - `chapter-workflow-import` 读取已完成的 `novel-chapter-production` workflow JSON 结果，校验七个节点输出契约，只有 Director 决策和 archive plan 均通过时才写入本地 final、tracking、archive 和下一章 handoff；`project.yaml.archived_chapters` 会从 `runs/archive-*.json` 汇总，保留多章导入历史。下一章 handoff 会把本章事实、时间线、伏笔、人物状态和连续性问题压缩进 BotMux `priorContext` 参数，包含同样的章节后知识回写 handoff，并在写入前通过 `next-chapter-command.schema.json`。被 block 的章节只写 blocked run artifacts，不写 final，不写 llmwiki。
+- `fanqie-export` 只读取 `manuscript/final/ch-*.md`，按章节号排序，清理 Markdown 标记、链接和 fenced code block，输出每章一个 `.txt`、全书 `book.txt` 和待上传清单；它不会改写 final 稿。
 - `wiki-bundle` 读取本地或 workflow 导入的 `foundation.json` 并写项目内 Markdown bundle；若存在 `runs/archive-*.json`，会把章节定稿、事实、时间线、伏笔和人物状态纳入章节归档页与聚合页。该命令不调用 llmwiki。
 - `llmwiki-sync` 默认只生成计划；只有传 `--approve` 才把审核包复制到 llmwiki workspace。传 `--lint` 后优先运行 `llmwiki lint <workspace>`；若当前 llmwiki CLI 不支持 `lint` 子命令，则自动运行本地 `wiki-lint` fallback；若 lint 检查失败则同步结果为 `failed`。它不安装 llmwiki，不调用 MCP 写工具。
 - `llmwiki-mcp-config` 只生成配置片段和角色绑定策略，不写 `~/.codex/config.toml`，默认只建议 Director 和 Validator 接入 llmwiki MCP。

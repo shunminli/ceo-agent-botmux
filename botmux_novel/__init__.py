@@ -26,6 +26,7 @@ from .chapter_workflow_import import (
     NovelChapterWorkflowImportRequest,
     NovelChapterWorkflowImportResult,
 )
+from .fanqie_export import FanqieChapterExport, FanqieExporter, FanqieExportRequest, FanqieExportResult
 from .llmwiki_sync import (
     LlmwikiCommandResult,
     LlmwikiSyncAction,
@@ -34,6 +35,7 @@ from .llmwiki_sync import (
     LlmwikiSyncer,
 )
 from .mcp_config import NovelLlmwikiMcpConfigBuilder, NovelLlmwikiMcpConfigRequest, NovelLlmwikiMcpConfigResult
+from .project_template import NovelProjectInitializer, NovelProjectInitRequest, NovelProjectInitResult
 from .readiness import NovelReadinessChecker, NovelReadinessRequest, NovelReadinessResult, ReadinessCheck
 from .runtime import (
     NovelChapterRequest,
@@ -59,6 +61,10 @@ __all__ = [
     "BotmuxAssetSyncRequest",
     "BotmuxAssetSyncResult",
     "BotmuxAssetSyncer",
+    "FanqieChapterExport",
+    "FanqieExporter",
+    "FanqieExportRequest",
+    "FanqieExportResult",
     "NovelChapterWorkflowImporter",
     "NovelChapterWorkflowImportRequest",
     "NovelChapterWorkflowImportResult",
@@ -83,6 +89,9 @@ __all__ = [
     "NovelLlmwikiMcpConfigBuilder",
     "NovelLlmwikiMcpConfigRequest",
     "NovelLlmwikiMcpConfigResult",
+    "NovelProjectInitializer",
+    "NovelProjectInitRequest",
+    "NovelProjectInitResult",
     "NovelReadinessChecker",
     "NovelReadinessRequest",
     "NovelReadinessResult",

@@ -31,6 +31,14 @@ P0 已提供一个标准库 Python CLI，用于验证小说创作 Agent Team 的
 真实项目优先从 `novel-bootstrap` 生成的 `approval-package.md|json` 继续；审批包会给出审批记录、approved apply、本地首章 smoke 命令和真实 BotMux 首章 workflow 命令，避免手工拼路径。
 
 ```bash
+python3 -m botmux_novel project-init \
+  --project /Users/xiaochen/NovelProjects/qin-last-lamp \
+  --project-slug qin-last-lamp \
+  --title 秦灯未灭 \
+  --inspiration "秦始皇死后，一个负责整理帝国密档的小吏发现竹简中提前写好了秦亡全过程。" \
+  --genre "秦末历史权谋 / 群像史诗 / 轻奇幻悬疑" \
+  --target-length "长篇连载，约30万字"
+
 python3 -m botmux_novel foundation \
   --project /tmp/novel-demo \
   --title 影钟旧案 \
@@ -83,6 +91,10 @@ python3 -m botmux_novel chapter \
   --chapter-number 2 \
   --chapter-goal "让林烬用半张残页验证巡夜钟异常，并把妹妹影子证词转成下一章追查目标。"
 
+python3 -m botmux_novel fanqie-export \
+  --project /Users/xiaochen/NovelProjects/qin-last-lamp \
+  --title 秦灯未灭
+
 python3 -m botmux_novel series \
   --project /tmp/novel-series-demo \
   --title 影钟旧案 \
@@ -121,6 +133,10 @@ python3 -m botmux_novel readiness --series-smoke
 ```
 
 真实 BotMux 开书 run 可先用 `workflow-foundation-command` 生成启动命令；run 完成后，再用 `workflow-export` 从 run 事件和 blobs 导出 JSON，交给 `workflow-foundation-import` 或 `chapter-workflow-import`。`workflow run --bot-resolver echo` 只适合调试 BotMux 调度，不会产出小说节点的 `preview/handoff/data` 合约。
+
+小说正文项目应使用独立目录，例如 `/Users/xiaochen/NovelProjects/qin-last-lamp`。本仓库只管理工具链、workflow、schema 和 bot 身份；单本小说的 `bible/`、`manuscript/final/`、`publish/fanqie/`、`tracking/` 和 `comms/decisions/` 可放在小说目录自己的私有 git 中。`runs/`、bot 原始日志、`wiki/llmwiki-workspace/` 和临时索引默认本地管理，不纳入 git。
+
+`fanqie-export` 从 `manuscript/final/ch-*.md` 生成番茄后台友好的 UTF-8 纯文本产物：`publish/fanqie/chapters/*.txt`、`publish/fanqie/book.txt` 和 `publish/fanqie/upload-checklist.md`。该命令不调用番茄后台 API，不自动发布章节。
 
 验证入口：
 

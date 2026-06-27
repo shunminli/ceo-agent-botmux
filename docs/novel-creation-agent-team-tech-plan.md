@@ -287,6 +287,9 @@ stateDiagram-v2
 ```text
 novel-project/
   project.yaml
+  bible/
+    story-bible.md
+    story-bible.json
   story.md
   settings/
     genre.yaml
@@ -307,12 +310,22 @@ novel-project/
     draft/
     revised/
     final/
+  publish/
+    fanqie/
+      metadata.yaml
+      chapters/
+      book.txt
+      upload-checklist.md
   tracking/
     facts.yaml
     timeline.yaml
     foreshadowing.yaml
     character-state.yaml
     continuity-issues.yaml
+  comms/
+    handoffs/
+    decisions/
+    bot-notes/
   memory/
     session.md
     permanent.md
@@ -323,10 +336,16 @@ novel-project/
   wiki/
     novels/
       {project_slug}/
+    review-bundle/
+    llmwiki-workspace/
   references/
     benchmark/
     prompts/
 ```
+
+`python3 -m botmux_novel project-init` 用于创建单本小说的独立工作区、番茄发布目录、bot handoff 目录、llmwiki workspace 占位目录和默认 `.gitignore`。工具代码继续放在本仓库；正文项目建议位于 `/Users/xiaochen/NovelProjects/{project_slug}`，需要版本控制时在小说目录单独建私有 git。建议提交 `bible/`、`manuscript/final/`、`publish/fanqie/`、`tracking/` 和 `comms/decisions/`；`runs/`、bot 原始日志、临时索引和 `wiki/llmwiki-workspace/` 默认本地管理。
+
+`python3 -m botmux_novel fanqie-export` 从 `manuscript/final/ch-*.md` 生成 `publish/fanqie/chapters/*.txt`、`book.txt` 和 `upload-checklist.md`。该导出只做本地纯文本整理，不调用番茄后台 API，不自动发布章节。
 
 当前已落地 schema：
 

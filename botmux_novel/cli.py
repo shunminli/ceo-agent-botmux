@@ -16,8 +16,10 @@ from .approval_check import NovelApprovalCheckRequest, NovelApprovalPackageCheck
 from .bootstrap import NovelBootstrapper, NovelBootstrapRequest
 from .botmux_assets import BotmuxAssetSyncRequest, BotmuxAssetSyncer
 from .chapter_workflow_import import NovelChapterWorkflowImporter, NovelChapterWorkflowImportRequest
+from .fanqie_export import FanqieExporter, FanqieExportRequest
 from .llmwiki_sync import LlmwikiSyncRequest, LlmwikiSyncer
 from .mcp_config import NovelLlmwikiMcpConfigBuilder, NovelLlmwikiMcpConfigRequest
+from .project_template import NovelProjectInitializer, NovelProjectInitRequest
 from .readiness import NovelReadinessChecker, NovelReadinessRequest
 from .runtime import NovelChapterRequest, NovelFoundationRequest, NovelRunRequest, NovelRuntime, NovelWikiBundleRequest
 from .series import NovelSeriesRequest, NovelSeriesRunner
@@ -30,6 +32,19 @@ from .workflow_import import NovelWorkflowFoundationImporter, NovelWorkflowFound
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Run the local novel creation agent chain.")
     subparsers = parser.add_subparsers(dest="command", required=True)
+
+    project_init_parser = subparsers.add_parser(
+        "project-init",
+        help="Initialize an independent novel project directory with publishing, handoff, and llmwiki folders.",
+    )
+    project_init_parser.add_argument("--project", required=True, help="Target novel project directory.")
+    project_init_parser.add_argument("--project-slug", required=True, help="Stable project identifier, for example qin-last-lamp.")
+    project_init_parser.add_argument("--title", required=True, help="Novel project title.")
+    project_init_parser.add_argument("--inspiration", default="", help="One-sentence story inspiration.")
+    project_init_parser.add_argument("--genre", default="", help="Genre or shelf positioning.")
+    project_init_parser.add_argument("--target-length", default="", help="Expected length or serialization scale.")
+    project_init_parser.add_argument("--mode", choices=["full", "lean", "solo"], default="lean", help="Agent execution mode.")
+    project_init_parser.add_argument("--no-gitignore", action="store_true", help="Do not create a project .gitignore.")
 
     run_parser = subparsers.add_parser("run", help="Create or continue a local novel project through one chapter.")
     run_parser.add_argument("--project", required=True, help="Target novel project directory.")
@@ -150,6 +165,15 @@ def build_parser() -> argparse.ArgumentParser:
     chapter_import_parser.add_argument("--word-target", type=int, default=1200, help="Target chapter length.")
     chapter_import_parser.add_argument("--foundation-json", help="Optional approved foundation.json for generated local next-chapter command.")
 
+    fanqie_parser = subparsers.add_parser(
+        "fanqie-export",
+        help="Export final manuscripts into Fanqie-ready UTF-8 plain text chapters and an upload checklist.",
+    )
+    fanqie_parser.add_argument("--project", required=True, help="Target novel project directory.")
+    fanqie_parser.add_argument("--source-dir", default="manuscript/final", help="Project-relative final manuscript directory.")
+    fanqie_parser.add_argument("--output-dir", default="publish/fanqie", help="Project-relative Fanqie export directory.")
+    fanqie_parser.add_argument("--title", help="Optional project title for the generated checklist.")
+
     wiki_parser = subparsers.add_parser(
         "wiki-bundle",
         help="Export local Markdown pages for review before llmwiki synchronization.",
@@ -239,6 +263,21 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: Optional[list[str]] = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
+
+    if args.command == "project-init":
+        request = NovelProjectInitRequest(
+            project_path=Path(args.project).expanduser().resolve(),
+            project_slug=args.project_slug,
+            title=args.title,
+            inspiration=args.inspiration,
+            genre=args.genre,
+            target_length=args.target_length,
+            mode=args.mode,
+            write_gitignore=not args.no_gitignore,
+        )
+        result = NovelProjectInitializer().initialize(request)
+        print(json.dumps(result.to_dict(), ensure_ascii=False, indent=2))
+        return 0
 
     if args.command == "run":
         request = NovelRunRequest(
@@ -393,6 +432,17 @@ def main(argv: Optional[list[str]] = None) -> int:
             foundation_path=Path(args.foundation_json).expanduser().resolve() if args.foundation_json else None,
         )
         result = NovelChapterWorkflowImporter().import_chapter(request)
+        print(json.dumps(result.to_dict(), ensure_ascii=False, indent=2))
+        return 0 if result.status == "completed" else 2
+
+    if args.command == "fanqie-export":
+        request = FanqieExportRequest(
+            project_path=Path(args.project).expanduser().resolve(),
+            source_dir=args.source_dir,
+            output_dir=args.output_dir,
+            title=args.title,
+        )
+        result = FanqieExporter().export(request)
         print(json.dumps(result.to_dict(), ensure_ascii=False, indent=2))
         return 0 if result.status == "completed" else 2
 

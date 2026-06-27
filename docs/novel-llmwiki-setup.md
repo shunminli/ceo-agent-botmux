@@ -35,17 +35,39 @@ node --version
 
 ```text
 novel-project/
+  bible/
   story.md
   characters/
   settings/
+  manuscript/
+    final/
+  publish/
+    fanqie/
   tracking/
+  comms/
+    handoffs/
+    decisions/
   runs/
   wiki/
     novels/
       {project_slug}/
+    llmwiki-workspace/
 ```
 
 不要把多个无关小说混到同一个 workspace，除非它们共享世界观且用户明确批准。
+
+推荐先初始化独立小说目录：
+
+```bash
+python3 -m botmux_novel project-init \
+  --project /Users/xiaochen/NovelProjects/qin-last-lamp \
+  --project-slug qin-last-lamp \
+  --title 秦灯未灭 \
+  --genre "秦末历史权谋 / 群像史诗 / 轻奇幻悬疑" \
+  --target-length "长篇连载，约30万字"
+```
+
+单本小说可以在自己的目录单独启用私有 git。建议版本化 `bible/`、`manuscript/final/`、`publish/fanqie/`、`tracking/` 和 `comms/decisions/`；`runs/`、bot 临时笔记、SQLite、日志和 `wiki/llmwiki-workspace/` 默认本地管理。
 
 ## 建库流程
 
@@ -114,6 +136,16 @@ python3 -m botmux_novel chapter-workflow-import \
 ```
 
 该命令只写本地 `manuscript/`、`tracking/`、`runs/archive-{chapter}.json`、trace 和下一章 handoff；不写 llmwiki。成功导入会从现有 `runs/archive-*.json` 汇总 `project.yaml.archived_chapters`，保留多章 workflow 导入历史。下一章 handoff 里的 BotMux workflow 命令会携带本章归档摘要作为 `priorContext`，并保留 `wordTarget`、`mode` 和下一章目标；若传入 `--foundation-json`，本地 runtime 命令也会带 `--chapter-goal`。同一 handoff 的 `knowledge_handoff` 会给出重新运行 `wiki-bundle`、生成 dry-run `llmwiki-sync --reindex --lint` 计划，以及 humanGate 后 `--approve` 同步的命令。后续再次运行 `wiki-bundle` 时会自动把已有 `runs/archive-*.json`、定稿正文、事实、时间线、伏笔和人物状态纳入本地审核包；真正写入仍需要 `llmwiki-sync --approve` 或其他 humanGate-approved sync。
+
+章节定稿后，如需准备番茄后台上传素材，使用本地导出命令：
+
+```bash
+python3 -m botmux_novel fanqie-export \
+  --project /path/to/novel-project \
+  --title 影钟旧案
+```
+
+导出产物为 `publish/fanqie/chapters/*.txt`、`publish/fanqie/book.txt` 和 `publish/fanqie/upload-checklist.md`。该命令只整理 UTF-8 纯文本，不调用番茄后台 API。
 
 手动拆步流程如下：
 

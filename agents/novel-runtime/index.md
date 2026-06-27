@@ -6,6 +6,7 @@ Updated: 2026-06-27
 
 ## 职责
 
+- 提供独立项目初始化入口 `python -m botmux_novel project-init`，创建单本小说目录、番茄发布目录、bot handoff 目录、llmwiki workspace 占位目录和默认 `.gitignore`。
 - 提供 CLI 入口 `python -m botmux_novel run`。
 - 提供开书资产入口 `python -m botmux_novel foundation`，不生成正文。
 - 提供真实项目启动包入口 `python -m botmux_novel novel-bootstrap`，串联 foundation、wiki bundle、llmwiki dry-run sync plan、MCP config 和 human approval package。
@@ -17,6 +18,7 @@ Updated: 2026-06-27
 - 提供审批包执行入口 `python -m botmux_novel approval-apply`，读取 `approval-package.json`，默认 dry-run，只有显式 `--approve` 才执行 llmwiki 文件同步、reindex 和 lint。
 - 提供章节生产入口 `python -m botmux_novel chapter`，从已有 `foundation.json` 继续生成章节，不重新规划 Story Bible。
 - 提供 BotMux 章节 workflow 输出导入口 `python -m botmux_novel chapter-workflow-import`，把已完成的 `novel-chapter-production` 节点输出写成本地草稿、修订稿、定稿、tracking 归档、run trace 和下一章 handoff。
+- 提供番茄发布素材导出入口 `python -m botmux_novel fanqie-export`，从 `manuscript/final/ch-*.md` 生成 UTF-8 纯文本章节、全书合并本和上传清单。
 - 提供本地 wiki 审核包入口 `python -m botmux_novel wiki-bundle`，不调用 llmwiki。
 - 提供 gated llmwiki 本地 workspace 同步入口 `python -m botmux_novel llmwiki-sync`，把已审批 Markdown bundle 写入 llmwiki source-of-truth 文件树，并可选运行 `llmwiki reindex` 与写后 lint。
 - 提供本地 wiki Markdown lint 入口 `python -m botmux_novel wiki-lint`，当 llmwiki CLI 没有 `lint` 子命令时作为 approved sync 的 fallback。
@@ -34,7 +36,8 @@ Updated: 2026-06-27
 
 - 当前运行时使用确定性本地 Agent，不调用真实 LLM，也不连接外部 BotMux 服务。
 - 当前覆盖单项目的开书和连续章节 smoke；已用 20 章本地稳定性基线验证归档和 prior context 持续传递。真实模型 provider、Web UI 和向量检索属于后续迭代。
-- 输出是本地 Markdown/YAML/JSON/SQLite 文件，不涉及生产发布、云同步或多用户权限。
+- 输出是本地 Markdown/YAML/JSON/SQLite/TXT 文件；`fanqie-export` 只准备后台复制/上传素材，不调用番茄后台 API，也不自动发布。
+- 正文项目应独立于本工具仓库管理；可在小说目录单独建私有 git，优先版本化 `bible/`、`manuscript/final/`、`publish/fanqie/`、`tracking/` 和 `comms/decisions/`，默认忽略 `runs/`、bot 原始日志、SQLite、临时索引和 `wiki/llmwiki-workspace/`。
 - `novel-bootstrap` 会写项目内 wiki 审核包、审批包和 dry-run 计划，但不会执行 approved sync、不会覆盖外部 llmwiki workspace，也不会修改 Codex/BotMux 全局配置。
 - `workflow-foundation-command` 只输出可审阅 JSON，包含 `command` 和 `command_text`；它不调用 BotMux，不启动真实 bot，也不触发 humanGate。
 - `workflow-foundation-import` 只导入已经完成的 BotMux workflow JSON 输出；它校验 `story_bible_package` 和 `wiki_sync_plan` 节点输出契约，写本地审核材料和审批包，但不执行 approved sync。
@@ -46,6 +49,7 @@ Updated: 2026-06-27
 - `llmwiki-mcp-config` 只生成配置片段；MCP 工具 ACL 不由片段强制执行，角色边界仍由身份文档和 workflow gate 约束。
 - `series` 是本地确定性 smoke 和指标采样，不代表真实模型文学质量，也不能替代人类 Story Bible 审批。
 - `chapter-workflow-import` 只在 `director_approval_package.data.decision` 和 `archive_plan.data.archive_decision` 均通过时写入本地 `manuscript/final` 和 tracking；若章节被 block，只写 blocked run artifacts，不写 final，不写 llmwiki。
+- `fanqie-export` 只读取 `manuscript/final/ch-*.md`，按章节号排序并清理 Markdown 标记、链接和 fenced code block；它不改写 final 稿。
 - `readiness` 不写 BotMux 配置；它只读本机状态并返回 `ready`、`ready_with_warnings` 或 `blocked`。
 - BotMux workflow 只生成候选包和计划；项目文件或 llmwiki 写入必须走单独 gated 节点或人工确认。
 - `botmux-assets` 默认 dry-run；只有传 `--write` 才会写入 `~/.botmux`，覆盖已有 workspace `AGENTS.md` 前会保留 `.bak-<timestamp>` 备份。
@@ -67,6 +71,19 @@ Updated: 2026-06-27
 3. 运行未审批的 `llmwiki-sync`，只生成 sync plan；即使命令中带 planned reindex/lint，也不会执行 post-write 命令或覆盖外部 workspace。
 4. 运行 `llmwiki-mcp-config`，生成项目级 MCP JSON、Codex TOML 和三角色绑定策略。
 5. 用 `approval-package.schema.json` 校验审批包必填字段和基础类型后，写入 `runs/{bootstrap_run_id}/approval-package.json` 和 `approval-package.md`，列出 humanGate 必审项、页面清单、决策记录命令、批准后写入命令、`next_actions.chapter_start_command` 本地 smoke 命令和 `next_actions.chapter_workflow_command` 真实 BotMux 首章 workflow 命令。
+
+### Project Init
+
+1. `NovelProjectInitializer` 调用 `NovelWorkspace.ensure_layout` 创建基础工作区。
+2. 创建 `bible/`、`publish/fanqie/chapters/`、`comms/handoffs/`、`comms/decisions/`、`comms/bot-notes/` 和 `wiki/llmwiki-workspace/`。
+3. 不覆盖已有文件；只在缺失时写 `project.yaml`、番茄 `metadata.yaml`、上传清单、handoff README、decision README 和默认 `.gitignore`。
+
+### Fanqie Export
+
+1. `FanqieExporter` 从项目内 `manuscript/final/ch-*.md` 按章节号排序读取定稿。
+2. 识别 Markdown H1 或 `第一章...` 格式作为章节标题；无标题时按 `第001章` 生成默认标题。
+3. 清理 Markdown heading、链接、图片、引用标记、强调标记和 fenced code block。
+4. 写入 `publish/fanqie/chapters/{序号}_{标题}.txt`、`publish/fanqie/book.txt` 和 `publish/fanqie/upload-checklist.md`。
 
 ### Workflow Foundation Command
 
@@ -225,6 +242,8 @@ Updated: 2026-06-27
 - `botmux_novel/approval.py`：记录 humanGate 审批决策，并在批准后读取审批包执行 gated llmwiki sync。
 - `botmux_novel/approval_check.py`：只读校验审批包、审核材料、humanGate 命令、MCP 策略和可选 dry-run / chapter smoke。
 - `botmux_novel/bootstrap.py`：真实项目启动包、审批包、wiki dry-run sync plan 和 MCP 配置串联。
+- `botmux_novel/project_template.py`：独立小说项目目录初始化、默认 `.gitignore`、番茄 metadata 和 bot handoff README 生成。
+- `botmux_novel/fanqie_export.py`：番茄后台友好的纯文本章节、合并本和上传清单导出。
 - `botmux_novel/foundation_paths.py`：本地 foundation 和 workflow foundation 导入产物的统一发现与解析。
 - `botmux_novel/handoff_commands.py`：章节 handoff 中本地 wiki bundle、llmwiki sync plan 和 approved sync 命令生成。
 - `botmux_novel/workflow_import.py`：真实 BotMux 开书 workflow 输出导入、本地 foundation 规范化和审批包桥接。
@@ -247,6 +266,7 @@ Updated: 2026-06-27
 - `tests/test_novel_runtime.py`：端到端验证和门禁阻断测试。
 - `tests/test_novel_workflow_export.py`：BotMux runDir / runsDir 导出、失败事件保留、CLI 入口和导出后导入链路测试。
 - `tests/test_novel_workflow_commands.py`：真实开书 workflow 命令构造和 CLI 入口测试。
+- `tests/test_novel_publish.py`：项目初始化、番茄导出和 CLI 入口测试。
 - `tests/test_novel_workflows.py`：workflow 模板、bot id、humanGate 和本机安装副本一致性测试。
 - `docs/novel-llmwiki-setup.md`：llmwiki 本地 workspace、MCP 权限和 humanGate 接入 runbook。
 
