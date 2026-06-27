@@ -136,20 +136,20 @@ python3 -m botmux_novel readiness --bootstrap-smoke --approval-apply-smoke --ser
 
 ## Local Doubao CLI
 
-本仓库提供一个轻量豆包包装层，用于把豆包桌面端或网页版自动化 runner 暴露成稳定 CLI。默认推荐 OpenCLI 的桌面端适配器；前置 runner 可用 `npm install -g @jackwener/opencli` 安装（需要 Node.js >= 20）：
+本仓库提供一个轻量豆包包装层，用于把豆包桌面端或网页版自动化 runner 暴露成稳定 CLI。桌面端推荐直接 CDP provider `cdp-app`；它使用本机 Node 连接已登录的 Doubao Desktop，不需要额外 npm 依赖：
 
 ```bash
 python3 -m botmux_doubao launch --dry-run
 /Applications/Doubao.app/Contents/MacOS/Doubao --remote-debugging-port=9225
-export OPENCLI_CDP_ENDPOINT=http://127.0.0.1:9225
+export DOUBAO_CDP_ENDPOINT=http://127.0.0.1:9225
 
 python3 -m botmux_doubao ask \
-  --provider opencli-app \
+  --provider cdp-app \
   --purpose creative \
   "给这个主角生成三个可选内心冲突。"
 ```
 
-如果豆包桌面端已经在运行但没有 CDP 端口，需要先退出豆包再用上面的 remote debugging 参数重启；也可以显式运行 `python3 -m botmux_doubao launch --relaunch` 完成退出并重启。也可以用 `--provider opencli-web` 调用网页版适配器，此模式需要 OpenCLI Browser Bridge extension 已连接；或把 `--provider doubao-cli` 指向基于浏览器会话的第三方 `doubao-cli` runner。所有模式都只使用本机已登录的豆包桌面端或 Web 会话，不保存账号凭证。
+如果豆包桌面端已经在运行但没有 CDP 端口，需要先退出豆包再用上面的 remote debugging 参数重启；也可以显式运行 `python3 -m botmux_doubao launch --relaunch` 完成退出并重启。也可以用 `--provider opencli-app` 调用 OpenCLI `doubao-app` 适配器，用 `--provider opencli-web` 调用网页版适配器，此模式需要 OpenCLI Browser Bridge extension 已连接；或把 `--provider doubao-cli` 指向基于浏览器会话的第三方 `doubao-cli` runner。所有模式都只使用本机已登录的豆包桌面端或 Web 会话，不保存账号凭证。
 
 ## Collaboration Model
 

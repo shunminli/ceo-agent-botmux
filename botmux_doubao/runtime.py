@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 import shlex
 import shutil
@@ -9,14 +10,18 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Sequence
 
+from .cdp_app import CDP_NODE_SCRIPT
+
 
 PROVIDER_AUTO = "auto"
+PROVIDER_CDP_APP = "cdp-app"
 PROVIDER_OPENCLI_APP = "opencli-app"
 PROVIDER_OPENCLI_WEB = "opencli-web"
 PROVIDER_DOUBAO_CLI = "doubao-cli"
 
 SUPPORTED_PROVIDERS = [
     PROVIDER_AUTO,
+    PROVIDER_CDP_APP,
     PROVIDER_OPENCLI_APP,
     PROVIDER_OPENCLI_WEB,
     PROVIDER_DOUBAO_CLI,
@@ -93,6 +98,17 @@ class DoubaoRuntime:
         if not runner:
             return self._missing_runner_result("ask", spec, request, prompt)
 
+        if provider == PROVIDER_CDP_APP:
+            return self._run_cdp_command(
+                "ask",
+                runner,
+                request.timeout_seconds,
+                spec,
+                request,
+                prompt,
+                start_new=request.start_new,
+            )
+
         if request.start_new:
             new_result = self._run_command(
                 [runner] + spec.new_args,
@@ -127,6 +143,9 @@ class DoubaoRuntime:
         if not runner_path:
             empty_request = DoubaoRequest("", provider=provider, runner=runner, opencli_adapter=opencli_adapter)
             return self._missing_runner_result("read", spec, empty_request, "")
+        if resolved == PROVIDER_CDP_APP:
+            empty_request = DoubaoRequest("", provider=provider, runner=runner, opencli_adapter=opencli_adapter)
+            return self._run_cdp_command("read", runner_path, timeout_seconds, spec, empty_request, "")
         return self._run_command([runner_path] + spec.read_args, timeout_seconds, "read", spec, DoubaoRequest(""), "")
 
     def status(
@@ -150,6 +169,19 @@ class DoubaoRuntime:
                 setup_hints=spec.setup_hints,
                 diagnostics=diagnostics,
             )
+
+        if resolved == PROVIDER_CDP_APP:
+            result = self._run_cdp_command(
+                "status",
+                runner_path,
+                timeout_seconds,
+                spec,
+                DoubaoRequest("", provider=provider, runner=runner, opencli_adapter=opencli_adapter),
+                "",
+            )
+            diagnostics.update(result.diagnostics)
+            result.diagnostics = diagnostics
+            return result
 
         result = self._run_command([runner_path] + spec.status_args, timeout_seconds, "status", spec, DoubaoRequest(""))
         result.diagnostics = diagnostics
@@ -176,7 +208,7 @@ class DoubaoRuntime:
                 stdout = f"{shlex.join(quit_command)} && {stdout}"
             return DoubaoResult(
                 status="completed",
-                provider=PROVIDER_OPENCLI_APP,
+                provider=PROVIDER_CDP_APP,
                 command="launch",
                 stdout=stdout,
                 diagnostics=diagnostics,
@@ -185,12 +217,12 @@ class DoubaoRuntime:
         if not app_binary.exists():
             return DoubaoResult(
                 status="missing_app",
-                provider=PROVIDER_OPENCLI_APP,
+                provider=PROVIDER_CDP_APP,
                 command="launch",
                 diagnostics=diagnostics,
                 setup_hints=[
                     "Install Doubao Desktop or pass --app-binary to the Doubao executable.",
-                    "After launch, export OPENCLI_CDP_ENDPOINT=http://127.0.0.1:9225 for OpenCLI.",
+                    "After launch, export DOUBAO_CDP_ENDPOINT=http://127.0.0.1:9225 for cdp-app.",
                 ],
             )
         if relaunch:
@@ -202,11 +234,11 @@ class DoubaoRuntime:
         diagnostics["pid"] = process.pid
         return DoubaoResult(
             status="completed",
-            provider=PROVIDER_OPENCLI_APP,
+            provider=PROVIDER_CDP_APP,
             command="launch",
             stdout=f"launched Doubao Desktop with pid {process.pid}",
             diagnostics=diagnostics,
-            setup_hints=[f"export OPENCLI_CDP_ENDPOINT=http://127.0.0.1:{port}"],
+            setup_hints=[f"export DOUBAO_CDP_ENDPOINT=http://127.0.0.1:{port}"],
         )
 
     def _wait_for_desktop_exit(self, app_binary: Path, timeout_seconds: float = 10.0) -> None:
@@ -267,6 +299,88 @@ class DoubaoRuntime:
             setup_hints=[] if completed.returncode == 0 else spec.setup_hints,
         )
 
+    def _run_cdp_command(
+        self,
+        operation: str,
+        runner: str,
+        timeout_seconds: int,
+        spec: ProviderSpec,
+        request: DoubaoRequest,
+        prompt: str,
+        start_new: bool = False,
+    ) -> DoubaoResult:
+        endpoint = self._cdp_endpoint()
+        payload = {
+            "operation": operation,
+            "endpoint": endpoint,
+            "prompt": prompt,
+            "timeout_seconds": timeout_seconds,
+            "start_new": start_new,
+        }
+        command = [runner, "-e", CDP_NODE_SCRIPT]
+        try:
+            completed = subprocess.run(
+                command,
+                input=json.dumps(payload, ensure_ascii=False),
+                text=True,
+                capture_output=True,
+                timeout=max(timeout_seconds + 15, 20),
+                check=False,
+            )
+        except subprocess.TimeoutExpired as exc:
+            return DoubaoResult(
+                status="timeout",
+                provider=spec.name,
+                command=operation,
+                prompt=prompt or None,
+                raw_prompt=request.prompt or None,
+                stdout=exc.stdout or "",
+                stderr=exc.stderr or "",
+                runner=runner,
+                adapter=spec.adapter,
+                setup_hints=spec.setup_hints,
+                diagnostics={"cdp_endpoint": endpoint},
+            )
+
+        stdout = completed.stdout.strip()
+        stderr = completed.stderr.strip()
+        parsed: Dict[str, object] = {}
+        parse_error = ""
+        if stdout:
+            try:
+                parsed = json.loads(stdout)
+            except json.JSONDecodeError as exc:
+                parse_error = str(exc)
+
+        diagnostics = {"cdp_endpoint": endpoint}
+        parsed_diagnostics = parsed.get("diagnostics")
+        if isinstance(parsed_diagnostics, dict):
+            diagnostics.update(parsed_diagnostics)
+        if parse_error:
+            diagnostics["json_parse_error"] = parse_error
+
+        ok = completed.returncode == 0 and parsed.get("ok") is True
+        response = str(parsed.get("response") or "")
+        parsed_stdout = str(parsed.get("stdout") or "")
+        error = str(parsed.get("error") or "")
+        combined_stderr = "\n".join(part for part in [stderr, error] if part)
+
+        return DoubaoResult(
+            status="completed" if ok else "failed",
+            provider=spec.name,
+            command=operation,
+            returncode=completed.returncode,
+            prompt=prompt or None,
+            raw_prompt=request.prompt or None,
+            response=response if operation in {"ask", "read"} and ok else "",
+            stdout=parsed_stdout or stdout,
+            stderr=combined_stderr,
+            runner=runner,
+            adapter=spec.adapter,
+            setup_hints=[] if ok else spec.setup_hints,
+            diagnostics=diagnostics,
+        )
+
     def _missing_runner_result(
         self,
         operation: str,
@@ -295,8 +409,12 @@ class DoubaoRuntime:
             return env_provider
 
         runner_name = Path(runner).name if runner else ""
+        if runner_name == "node":
+            return PROVIDER_CDP_APP
         if runner_name == "doubao-cli":
             return PROVIDER_DOUBAO_CLI
+        if shutil.which("node") and (os.environ.get("DOUBAO_CDP_ENDPOINT") or os.environ.get("OPENCLI_CDP_ENDPOINT")):
+            return PROVIDER_CDP_APP
         if shutil.which("opencli"):
             return PROVIDER_OPENCLI_APP
         if shutil.which("doubao-cli"):
@@ -311,6 +429,22 @@ class DoubaoRuntime:
         return shutil.which(candidate)
 
     def _provider_spec(self, provider: str, opencli_adapter: Optional[str]) -> ProviderSpec:
+        if provider == PROVIDER_CDP_APP:
+            return ProviderSpec(
+                name=PROVIDER_CDP_APP,
+                executable="node",
+                adapter="direct-cdp",
+                ask_args=lambda prompt: [],
+                status_args=[],
+                read_args=[],
+                new_args=[],
+                setup_hints=[
+                    "Install Node.js with built-in fetch/WebSocket support and ensure `node` is on PATH.",
+                    "Launch Doubao Desktop with `/Applications/Doubao.app/Contents/MacOS/Doubao --remote-debugging-port=9225`.",
+                    "Open a Doubao chat window in the desktop app and stay logged in.",
+                    "Set `DOUBAO_CDP_ENDPOINT=http://127.0.0.1:9225` or `OPENCLI_CDP_ENDPOINT=http://127.0.0.1:9225`.",
+                ],
+            )
         if provider == PROVIDER_OPENCLI_APP:
             adapter = opencli_adapter or os.environ.get("DOUBAO_OPENCLI_ADAPTER") or "doubao-app"
             return ProviderSpec(
@@ -390,12 +524,16 @@ class DoubaoRuntime:
             "runner_found": runner_path is not None,
             "runner_path": runner_path,
         }
-        if spec.name == PROVIDER_OPENCLI_APP:
+        if spec.name in {PROVIDER_CDP_APP, PROVIDER_OPENCLI_APP}:
             diagnostics.update(
                 {
                     "doubao_app_found": DEFAULT_DOUBAO_APP_PATH.exists(),
                     "doubao_app_binary": str(DEFAULT_DOUBAO_APP_BINARY),
+                    "cdp_endpoint": self._cdp_endpoint(),
                     "opencli_cdp_endpoint": os.environ.get("OPENCLI_CDP_ENDPOINT"),
                 }
             )
         return diagnostics
+
+    def _cdp_endpoint(self) -> str:
+        return os.environ.get("DOUBAO_CDP_ENDPOINT") or os.environ.get("OPENCLI_CDP_ENDPOINT") or "http://127.0.0.1:9225"

@@ -532,7 +532,7 @@ python3 -m botmux_novel readiness --bootstrap-smoke --approval-apply-smoke --ser
 - 本机已安装 `lucasastorian/llmwiki` 到 `/Users/xiaochen/.local/opt/llmwiki`，PATH 入口为 `/Users/xiaochen/.local/bin/llmwiki`。
 - 已提供 `python3 -m botmux_novel llmwiki-mcp-config` 和 `novel-bootstrap`，真实小说 workspace 路径确定后给 `Novel-Director-Curator` 配项目级 llmwiki MCP。
 - `Novel-Continuity-Validator` 使用同一项目级 MCP server，但身份文档约束为只读能力。
-- 已提供 `botmux_doubao` 本地包装层，可作为 `Novel-Creative-Architect` 的可选 Creative Assist Tool；真实调用仍依赖用户本机已安装并登录 OpenCLI / doubao-cli runner，Codex 仍需能独立完成创作节点。
+- 已提供 `botmux_doubao` 本地包装层，可作为 `Novel-Creative-Architect` 的可选 Creative Assist Tool；桌面端推荐 `cdp-app` 直接连接已登录 Doubao Desktop 的 CDP 端口，OpenCLI / doubao-cli runner 作为兼容入口，Codex 仍需能独立完成创作节点。
 - 已把输出契约写入每个 bot 的身份提示词，并同步到本仓库 `agents/*.identity.md`；本机 BotMux workspace `AGENTS.md` 可由 `botmux-assets --write` 重新生成，`readiness` 会阻断 workingDir 指向错误 workspace 或缺少身份文件的配置。
 - 小说项目 llmwiki workspace 和 `/wiki/novels/` 页面结构由 `novel-bootstrap` / `wiki-bundle` 在真实项目目录中生成。
 

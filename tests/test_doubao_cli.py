@@ -118,6 +118,34 @@ class DoubaoCliTest(unittest.TestCase):
             self.assertTrue(payload["diagnostics"]["runner_found"])
             self.assertIn("fake-account", payload["stdout"])
 
+    def test_ask_supports_direct_cdp_app_provider(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            runner = self._write_fake_cdp_runner(Path(tmpdir) / "node")
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "botmux_doubao",
+                    "ask",
+                    "只回复固定测试串",
+                    "--provider",
+                    "cdp-app",
+                    "--runner",
+                    str(runner),
+                    "--json",
+                ],
+                check=True,
+                text=True,
+                capture_output=True,
+            )
+
+            payload = json.loads(completed.stdout)
+            self.assertEqual(payload["status"], "completed")
+            self.assertEqual(payload["provider"], "cdp-app")
+            self.assertEqual(payload["adapter"], "direct-cdp")
+            self.assertEqual(payload["response"], "fake-cdp-reply:只回复固定测试串")
+            self.assertEqual(payload["diagnostics"]["operation"], "ask")
+
     def test_launch_dry_run_prints_cdp_command(self) -> None:
         completed = subprocess.run(
             [
@@ -135,6 +163,7 @@ class DoubaoCliTest(unittest.TestCase):
 
         payload = json.loads(completed.stdout)
         self.assertEqual(payload["status"], "completed")
+        self.assertEqual(payload["provider"], "cdp-app")
         self.assertIn("--remote-debugging-port=9225", payload["stdout"])
 
     def test_launch_relaunch_dry_run_prints_quit_then_cdp_command(self) -> None:
@@ -155,6 +184,7 @@ class DoubaoCliTest(unittest.TestCase):
 
         payload = json.loads(completed.stdout)
         self.assertEqual(payload["status"], "completed")
+        self.assertEqual(payload["provider"], "cdp-app")
         self.assertTrue(payload["diagnostics"]["relaunch"])
         self.assertIn("osascript", payload["stdout"])
         self.assertIn("--remote-debugging-port=9225", payload["stdout"])
@@ -186,6 +216,32 @@ class DoubaoCliTest(unittest.TestCase):
                 else:
                     print("unexpected args", file=sys.stderr)
                     sys.exit(2)
+                """
+            ),
+            encoding="utf-8",
+        )
+        path.chmod(path.stat().st_mode | 0o111)
+        return path
+
+    def _write_fake_cdp_runner(self, path: Path) -> Path:
+        path.write_text(
+            textwrap.dedent(
+                """\
+                #!/usr/bin/env python3
+                import json
+                import sys
+
+                payload = json.load(sys.stdin)
+                response = {
+                    "ok": True,
+                    "response": "fake-cdp-reply:" + payload.get("prompt", ""),
+                    "stdout": "fake-cdp-stdout",
+                    "diagnostics": {
+                        "operation": payload.get("operation"),
+                        "cdp_endpoint": payload.get("endpoint"),
+                    },
+                }
+                print(json.dumps(response))
                 """
             ),
             encoding="utf-8",
