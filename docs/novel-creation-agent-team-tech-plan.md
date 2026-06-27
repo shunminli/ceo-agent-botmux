@@ -203,14 +203,15 @@ flowchart LR
 启动示例：
 
 ```bash
-/Users/xiaochen/.botmux/bin/botmux workflow run novel-story-foundation \
-  --param projectSlug=shadow-clock-case \
-  --param title=影钟旧案 \
-  --param inspiration=一个背负旧案污名的少年，在巡夜钟声中发现妹妹影子会说真话 \
-  --param genre=东方悬疑奇幻 \
-  --param targetLength=长篇 \
-  --param mode=lean
+python3 -m botmux_novel workflow-foundation-command \
+  --project-slug shadow-clock-case \
+  --title 影钟旧案 \
+  --inspiration "一个背负旧案污名的少年，在巡夜钟声中发现妹妹影子会说真话。" \
+  --genre 东方悬疑奇幻 \
+  --target-length 长篇
 ```
+
+该命令只输出可审阅 JSON，不执行真实 workflow；确认后运行其中的 `command_text`，再用 `workflow-export --run-id <runId>` 导出结果给 `workflow-foundation-import`。
 
 ## 8. 章节生产 Workflow
 
@@ -543,6 +544,7 @@ python3 -m botmux_novel readiness --bootstrap-smoke --approval-apply-smoke --ser
 - 首次只做预览，不自动写 llmwiki。
 - 已新增本地 `python3 -m botmux_novel foundation`，只生成开书设定资产、foundation trace 和 SQLite run 记录，不进入正文草稿。
 - 已新增本地 `python3 -m botmux_novel novel-bootstrap`，一键生成开书设定、项目内 wiki 审核包、llmwiki dry-run sync plan、MCP 配置和 human approval package；审批包同时包含本地首章 smoke 命令和真实 `novel-chapter-production` BotMux 首章 workflow 命令；该命令不执行 approved sync、不覆盖外部 llmwiki workspace。
+- 已新增本地 `python3 -m botmux_novel workflow-foundation-command`，可根据项目参数生成真实 `novel-story-foundation` 启动命令，避免手工拼 `--param`。
 - 已新增本地 `python3 -m botmux_novel workflow-export`，可把真实 BotMux runId 或 runDir 的事件/blobs 导出为 `workflow-foundation-import` / `chapter-workflow-import` 可消费的 JSON。
 - 已新增本地 `python3 -m botmux_novel workflow-foundation-import`，把真实 `novel-story-foundation` workflow 结果中的 `story_bible_package` 和 `wiki_sync_plan` 节点输出导入为本地 `foundation.json`、wiki 审核包、dry-run sync plan、MCP 配置和 human approval package；导入过程不执行 approved sync。
 - `novel-bootstrap` 写入审批包前会按 `approval-package.schema.json` 校验必填字段和基础类型；`approval-decision` 和 `approval-apply` 消费审批包时也会执行同一校验，避免畸形审批包绕过 `approval-check`；`approval-check` 还会确认首章 BotMux workflow 命令参数来自已审核 foundation。
@@ -597,7 +599,7 @@ python3 -m botmux_novel readiness --bootstrap-smoke --approval-apply-smoke --ser
 ## 18. 下一步
 
 1. 拿到真实项目参数后，可先运行 `python3 -m botmux_novel novel-bootstrap` 产出本地 Story Bible 候选、wiki 审核包、MCP 配置和审批包。
-2. 如需多 bot 协作口径，用相同参数运行 `novel-story-foundation`，在 `story_bible_package` 的 humanGate 审批关键人设、关系、剧情走势和场景设定；workflow 完成后把结果 JSON 交给 `python3 -m botmux_novel workflow-foundation-import --workflow-result ...`，生成同一套本地审核材料和审批包。
+2. 如需多 bot 协作口径，用 `workflow-foundation-command` 生成并审阅 `novel-story-foundation` 启动命令，在 `story_bible_package` 的 humanGate 审批关键人设、关系、剧情走势和场景设定；workflow 完成后用 `workflow-export --run-id <runId>` 导出结果，再交给 `python3 -m botmux_novel workflow-foundation-import --workflow-result ...`，生成同一套本地审核材料和审批包。
 3. 审批通过前可先执行 `approval-check --apply-dry-run` 确认审批包、审核材料、命令和 dry-run apply 路径完整；审批通过后执行审批包里的 `approval-decision --decision approve` 记录 reviewer、notes 和时间，再执行 `approval-apply --approve`，该路径默认运行 reindex/lint；或让 Director 在单独 humanGate workflow 中执行等价写入。
 4. 把批准后的 Story Bible 输入 `novel-chapter-production` 或 `python3 -m botmux_novel chapter` 继续章节生产；审批包会给出 `next_actions.chapter_workflow_command` 作为真实三 bot 首章 workflow 命令，也保留 `next_actions.chapter_start_command` 作为本地 runtime smoke 命令，二者都从批准的 `foundation.json` 继承 `chapter_goal.objective`。
 5. 如果章节由真实 `novel-chapter-production` workflow 产出，完成 humanGate 后把结果 JSON 交给 `python3 -m botmux_novel chapter-workflow-import --workflow-result ... --project ...`，写入本地 final/tracking/archive 和下一章 handoff；优先审阅并运行 `runs/{run_id}/next-chapter-command.md|json` 里的下一章 BotMux 命令，因为它已经包含 `priorContext` 归档摘要。若继续使用本地 runtime，也可运行同一 handoff 中带 `--chapter-goal` 的本地命令，必要时再修改章节目标。

@@ -95,6 +95,13 @@ python3 -m botmux_novel run \
   --title 影钟旧案 \
   --inspiration "一个背负旧案污名的少年，在巡夜钟声中发现妹妹影子会说真话。"
 
+python3 -m botmux_novel workflow-foundation-command \
+  --project-slug shadow-clock-case \
+  --title 影钟旧案 \
+  --inspiration "一个背负旧案污名的少年，在巡夜钟声中发现妹妹影子会说真话。" \
+  --genre 东方悬疑奇幻 \
+  --target-length 长篇
+
 python3 -m botmux_novel workflow-export \
   --run-id <botmux-run-id> \
   > /tmp/novel-story-foundation-result.json
@@ -113,7 +120,7 @@ python3 -m botmux_novel readiness --approval-apply-smoke
 python3 -m botmux_novel readiness --series-smoke
 ```
 
-真实 BotMux run 完成后，先用 `workflow-export` 从 run 事件和 blobs 导出 JSON，再交给 `workflow-foundation-import` 或 `chapter-workflow-import`。`workflow run --bot-resolver echo` 只适合调试 BotMux 调度，不会产出小说节点的 `preview/handoff/data` 合约。
+真实 BotMux 开书 run 可先用 `workflow-foundation-command` 生成启动命令；run 完成后，再用 `workflow-export` 从 run 事件和 blobs 导出 JSON，交给 `workflow-foundation-import` 或 `chapter-workflow-import`。`workflow run --bot-resolver echo` 只适合调试 BotMux 调度，不会产出小说节点的 `preview/handoff/data` 合约。
 
 验证入口：
 

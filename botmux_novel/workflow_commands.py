@@ -3,6 +3,35 @@ from __future__ import annotations
 from typing import Any, Dict, List, Optional
 
 
+def build_story_foundation_workflow_command(
+    *,
+    project_slug: str,
+    title: str,
+    inspiration: str,
+    genre: str = "未指定",
+    target_length: str = "长篇",
+    mode: str = "lean",
+) -> List[str]:
+    return [
+        "botmux",
+        "workflow",
+        "run",
+        "novel-story-foundation",
+        "--param",
+        f"projectSlug={project_slug}",
+        "--param",
+        f"title={title}",
+        "--param",
+        f"inspiration={inspiration}",
+        "--param",
+        f"genre={genre}",
+        "--param",
+        f"targetLength={target_length}",
+        "--param",
+        f"mode={mode}",
+    ]
+
+
 def build_chapter_workflow_command(
     *,
     project_slug: str,

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import shlex
 from pathlib import Path
 from typing import Optional
 
@@ -21,6 +22,7 @@ from .readiness import NovelReadinessChecker, NovelReadinessRequest
 from .runtime import NovelChapterRequest, NovelFoundationRequest, NovelRunRequest, NovelRuntime, NovelWikiBundleRequest
 from .series import NovelSeriesRequest, NovelSeriesRunner
 from .wiki_lint import WikiLinter
+from .workflow_commands import build_story_foundation_workflow_command
 from .workflow_export import NovelWorkflowRunExporter, NovelWorkflowRunExportRequest
 from .workflow_import import NovelWorkflowFoundationImporter, NovelWorkflowFoundationImportRequest
 
@@ -76,6 +78,17 @@ def build_parser() -> argparse.ArgumentParser:
     workflow_import_parser.add_argument("--mode", choices=["full", "lean", "solo"], default="lean", help="Agent execution mode.")
     workflow_import_parser.add_argument("--word-target", type=int, default=1200, help="Target chapter length for planning.")
     workflow_import_parser.add_argument("--llmwiki-bin", default="llmwiki", help="llmwiki executable to place in generated MCP config and planned reindex command.")
+
+    workflow_command_parser = subparsers.add_parser(
+        "workflow-foundation-command",
+        help="Build a botmux workflow run command for novel-story-foundation without executing it.",
+    )
+    workflow_command_parser.add_argument("--project-slug", required=True, help="Stable project identifier, for example shadow-clock-case.")
+    workflow_command_parser.add_argument("--title", required=True, help="Novel working title.")
+    workflow_command_parser.add_argument("--inspiration", required=True, help="Raw premise, reference direction, or seed brief from the user.")
+    workflow_command_parser.add_argument("--genre", default="未指定", help="Genre or shelf positioning.")
+    workflow_command_parser.add_argument("--target-length", default="长篇", help="Expected length or serialization scale.")
+    workflow_command_parser.add_argument("--mode", choices=["full", "lean", "solo"], default="lean", help="Agent execution mode.")
 
     workflow_export_parser = subparsers.add_parser(
         "workflow-export",
@@ -285,6 +298,31 @@ def main(argv: Optional[list[str]] = None) -> int:
         result = NovelWorkflowFoundationImporter().import_foundation(request)
         print(json.dumps(result.to_dict(), ensure_ascii=False, indent=2))
         return 0 if result.status in {"ready", "ready_with_warnings"} else 2
+
+    if args.command == "workflow-foundation-command":
+        command = build_story_foundation_workflow_command(
+            project_slug=args.project_slug,
+            title=args.title,
+            inspiration=args.inspiration,
+            genre=args.genre,
+            target_length=args.target_length,
+            mode=args.mode,
+        )
+        payload = {
+            "workflow_id": "novel-story-foundation",
+            "params": {
+                "projectSlug": args.project_slug,
+                "title": args.title,
+                "inspiration": args.inspiration,
+                "genre": args.genre,
+                "targetLength": args.target_length,
+                "mode": args.mode,
+            },
+            "command": command,
+            "command_text": shlex.join(command),
+        }
+        print(json.dumps(payload, ensure_ascii=False, indent=2))
+        return 0
 
     if args.command == "workflow-export":
         request = NovelWorkflowRunExportRequest(
