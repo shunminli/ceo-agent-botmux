@@ -543,6 +543,7 @@ python3 -m botmux_novel readiness --bootstrap-smoke --approval-apply-smoke --ser
 - 首次只做预览，不自动写 llmwiki。
 - 已新增本地 `python3 -m botmux_novel foundation`，只生成开书设定资产、foundation trace 和 SQLite run 记录，不进入正文草稿。
 - 已新增本地 `python3 -m botmux_novel novel-bootstrap`，一键生成开书设定、项目内 wiki 审核包、llmwiki dry-run sync plan、MCP 配置和 human approval package；审批包同时包含本地首章 smoke 命令和真实 `novel-chapter-production` BotMux 首章 workflow 命令；该命令不执行 approved sync、不覆盖外部 llmwiki workspace。
+- 已新增本地 `python3 -m botmux_novel workflow-export`，可把真实 BotMux runId 或 runDir 的事件/blobs 导出为 `workflow-foundation-import` / `chapter-workflow-import` 可消费的 JSON。
 - 已新增本地 `python3 -m botmux_novel workflow-foundation-import`，把真实 `novel-story-foundation` workflow 结果中的 `story_bible_package` 和 `wiki_sync_plan` 节点输出导入为本地 `foundation.json`、wiki 审核包、dry-run sync plan、MCP 配置和 human approval package；导入过程不执行 approved sync。
 - `novel-bootstrap` 写入审批包前会按 `approval-package.schema.json` 校验必填字段和基础类型；`approval-decision` 和 `approval-apply` 消费审批包时也会执行同一校验，避免畸形审批包绕过 `approval-check`；`approval-check` 还会确认首章 BotMux workflow 命令参数来自已审核 foundation。
 - 本地 P0 runtime 已能写出关系图、场景设定、文风档案和带 id/status 的伏笔台账，作为 Story Bible 后续落库的数据契约基础。

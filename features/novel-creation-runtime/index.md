@@ -32,6 +32,10 @@ python3 -m botmux_novel workflow-foundation-import \
   --project /tmp/novel-demo \
   --project-slug shadow-clock-case
 
+python3 -m botmux_novel workflow-export \
+  --run-id <botmux-run-id> \
+  > /tmp/novel-story-foundation-result.json
+
 python3 -m botmux_novel approval-decision \
   --approval-package /tmp/novel-demo/runs/<bootstrap-run-id>/approval-package.json \
   --decision approve \
@@ -117,6 +121,7 @@ python3 -m botmux_novel readiness --bootstrap-smoke --workflow-import-smoke --ch
 - `tracking/facts.yaml`、`timeline.yaml`、`foreshadowing.yaml`、`character-state.yaml`、`continuity-issues.yaml`：章节归档状态；伏笔台账包含 id、状态、埋设章节、回收计划和风险等级。
 - `runs/{run_id}/trace.json` 和 `runs/runs.sqlite`：可观察 run 记录和可查询索引。
 - `runs/{foundation_run_id}/foundation.json`：`foundation` 子命令生成的开书设定包。
+- `workflow-export` JSON：从 BotMux workflow run 事件和 blobs 导出的统一结果，包含 `runId`、`workflowId`、`status`、`params`、`nodes` 和 `errors`，可直接进入 `workflow-foundation-import` 或 `chapter-workflow-import`。
 - `runs/{workflow_foundation_run_id}/workflow-result-source.json|workflow-node-outputs.json|foundation.json`：`workflow-foundation-import` 保存的 BotMux workflow 原始结果、节点输出和规范化 Story Bible 来源。
 - `runs/{bootstrap_run_id}/approval-package.md|json`：`novel-bootstrap` 子命令生成的 Story Bible/wiki/MCP 人工审批包，包含审批记录、approved apply、本地首章 smoke 命令和真实 BotMux 首章 workflow 命令。
 - `approval-decision` JSON：审批决策记录结果，包含 decision、reviewer、notes、decided_at 和审批包路径。
@@ -143,6 +148,7 @@ python3 -m botmux_novel readiness --bootstrap-smoke --workflow-import-smoke --ch
 - 默认执行 `lean` 模式。
 - `foundation` 只生成开书设定资产，不写 `manuscript/draft|revised|final`。
 - `novel-bootstrap` 串联开书设定、项目内 wiki bundle、llmwiki dry-run sync plan、MCP 配置和审批包；审批包会在落盘前通过 `approval-package.schema.json` 必填字段和基础类型校验，并包含 `next_actions.chapter_start_command` 本地 smoke 命令和 `next_actions.chapter_workflow_command` 真实 BotMux 首章 workflow 命令，后者会把批准的 foundation 压缩为 `storyBible` 参数；它不会执行 approved sync、覆盖外部 llmwiki workspace 或修改全局配置。
+- `workflow-export` 只读导出真实 BotMux run 的 `workflow.json`、事件和 blob 输出，或通过 `botmux workflow tail <runId> --json` 读取事件；它不推进 workflow，也不伪造节点输出契约。
 - `workflow-foundation-import` 读取已完成的 `novel-story-foundation` workflow JSON 结果，校验 `story_bible_package` 和 `wiki_sync_plan` 输出契约，把 Story Bible 规范化成 `foundation.json`，再复用 wiki bundle、dry-run sync、MCP config 和 approval package 链路；它不执行 approved sync。
 - `approval-decision` 只把 humanGate 决策写入审批包 JSON，并在同目录 `approval-package.md` 存在时重渲染 Markdown 审批包；它会先按 `approval-package.schema.json` 校验审批包，不执行 llmwiki 写入，正式批准路径应先记录 `--decision approve`。
 - `approval-check` 默认只读校验审批包；它会先按 `approval-package.schema.json` 递归检查必填字段和基础类型，并确认真实 BotMux 首章 workflow 命令的 `projectSlug/title/storyBible/chapterNumber/chapterGoal/priorContext/wordTarget/mode` 来自审批包和 foundation。`--apply-dry-run` 只验证 `approval-apply` dry-run 消费路径，不执行 approved writes；`--chapter-smoke` 会执行本地首章命令，应用在临时 smoke 项目，不建议在未经审批的真实项目上默认运行。

@@ -9,6 +9,7 @@ Updated: 2026-06-27
 - 提供 CLI 入口 `python -m botmux_novel run`。
 - 提供开书资产入口 `python -m botmux_novel foundation`，不生成正文。
 - 提供真实项目启动包入口 `python -m botmux_novel novel-bootstrap`，串联 foundation、wiki bundle、llmwiki dry-run sync plan、MCP config 和 human approval package。
+- 提供 BotMux run 导出入口 `python -m botmux_novel workflow-export`，把真实 workflow run 的 `events.ndjson` / blobs 或可 tail 的 runId 转成导入器可消费的 JSON。
 - 提供 BotMux 开书 workflow 输出导入口 `python -m botmux_novel workflow-foundation-import`，把已完成的 `novel-story-foundation` 节点输出转成本地 foundation、wiki bundle、dry-run sync plan、MCP config 和 human approval package。
 - 提供审批决策记录入口 `python -m botmux_novel approval-decision`，把 humanGate 的 approve、request_changes 或 reject 写回 `approval-package.json`，记录 reviewer、notes、timestamp 和历史。
 - 提供审批包校验入口 `python -m botmux_novel approval-check`，默认只读验证审核材料、humanGate 命令、llmwiki 预览、MCP 角色策略、本地首章命令和真实 BotMux 首章 workflow 命令，可选 dry-run apply / chapter smoke。
@@ -35,6 +36,7 @@ Updated: 2026-06-27
 - 输出是本地 Markdown/YAML/JSON/SQLite 文件，不涉及生产发布、云同步或多用户权限。
 - `novel-bootstrap` 会写项目内 wiki 审核包、审批包和 dry-run 计划，但不会执行 approved sync、不会覆盖外部 llmwiki workspace，也不会修改 Codex/BotMux 全局配置。
 - `workflow-foundation-import` 只导入已经完成的 BotMux workflow JSON 输出；它校验 `story_bible_package` 和 `wiki_sync_plan` 节点输出契约，写本地审核材料和审批包，但不执行 approved sync。
+- `workflow-export` 只读取 BotMux run 事件和 blob 文件，或通过 `botmux workflow tail <runId> --json` 获取事件；它不恢复、取消、审批或推进 workflow。
 - `approval-decision` 是 humanGate 审计记录入口；它只更新审批包 JSON，不执行 llmwiki 写入。
 - `approval-apply` 是 humanGate 后的执行器；不带 `--approve` 时只生成新同步计划，带 `--approve` 才应用审批包中的项目路径、slug、workspace 和 llmwiki 配置，并默认运行 reindex/lint；若审批包已记录 `request_changes` 或 `reject`，会拒绝 approved sync。
 - `wiki-bundle` 写本地 `wiki/novels/{project_slug}/` Markdown 页面包，用于人工审核或后续 gated llmwiki 写入。
@@ -63,6 +65,14 @@ Updated: 2026-06-27
 3. 运行未审批的 `llmwiki-sync`，只生成 sync plan；即使命令中带 planned reindex/lint，也不会执行 post-write 命令或覆盖外部 workspace。
 4. 运行 `llmwiki-mcp-config`，生成项目级 MCP JSON、Codex TOML 和三角色绑定策略。
 5. 用 `approval-package.schema.json` 校验审批包必填字段和基础类型后，写入 `runs/{bootstrap_run_id}/approval-package.json` 和 `approval-package.md`，列出 humanGate 必审项、页面清单、决策记录命令、批准后写入命令、`next_actions.chapter_start_command` 本地 smoke 命令和 `next_actions.chapter_workflow_command` 真实 BotMux 首章 workflow 命令。
+
+### Workflow Export
+
+1. `NovelWorkflowRunExporter` 接收 `--run-dir`、`--runs-dir + --run-id`，或能被 BotMux CLI tail 到的 `--run-id`。
+2. 读取 `workflow.json`、`events.ndjson` 和事件里的 `inputRef` / `outputRef` blob 文件；如果没有显式 run 目录，会从 tail 事件的 blob 路径推断 runDir。
+3. 从 `runCreated.inputRef` 还原 `params`，从 `attemptCreated` 建立 activity 到 node 的映射，从 `activitySucceeded.outputRef` 还原节点 `output`。
+4. 输出统一 JSON：`runId`、`workflowId`、`status`、`params`、`nodes.{node}.output`、`errors` 和来源信息。
+5. 导出 JSON 可直接传给 `workflow-foundation-import` 或 `chapter-workflow-import`；若节点输出不是 `preview/handoff/data/open_questions/risks/wiki_refs/change_declarations` 合约，后续 import 会明确拒绝。
 
 ### Workflow Foundation Import
 
@@ -210,6 +220,7 @@ Updated: 2026-06-27
 - `botmux_novel/foundation_paths.py`：本地 foundation 和 workflow foundation 导入产物的统一发现与解析。
 - `botmux_novel/handoff_commands.py`：章节 handoff 中本地 wiki bundle、llmwiki sync plan 和 approved sync 命令生成。
 - `botmux_novel/workflow_import.py`：真实 BotMux 开书 workflow 输出导入、本地 foundation 规范化和审批包桥接。
+- `botmux_novel/workflow_export.py`：真实 BotMux run 事件/blobs 到导入器 JSON 的只读导出桥接。
 - `botmux_novel/workflow_commands.py`：Story Bible 压缩和 `novel-chapter-production` BotMux 命令生成。
 - `botmux_novel/chapter_goals.py`：本地 deterministic 章节目标模板，供 series 和下一章 handoff 复用。
 - `botmux_novel/chapter_workflow_import.py`：真实 BotMux 章节 workflow 输出导入、本地 final/tracking 归档和下一章 handoff 桥接。
@@ -226,6 +237,7 @@ Updated: 2026-06-27
 - `tests/test_novel_approval.py`：审批包 dry-run、approved apply 和 CLI 入口测试。
 - `tests/test_novel_bootstrap.py`：`novel-bootstrap` 审批包、dry-run sync 和 CLI 入口测试。
 - `tests/test_novel_runtime.py`：端到端验证和门禁阻断测试。
+- `tests/test_novel_workflow_export.py`：BotMux runDir / runsDir 导出、失败事件保留、CLI 入口和导出后导入链路测试。
 - `tests/test_novel_workflows.py`：workflow 模板、bot id、humanGate 和本机安装副本一致性测试。
 - `docs/novel-llmwiki-setup.md`：llmwiki 本地 workspace、MCP 权限和 humanGate 接入 runbook。
 

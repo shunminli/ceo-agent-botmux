@@ -52,6 +52,7 @@ from .workflow_import import (
     NovelWorkflowFoundationImportRequest,
     NovelWorkflowFoundationImportResult,
 )
+from .workflow_export import NovelWorkflowRunExporter, NovelWorkflowRunExportRequest, NovelWorkflowRunExportResult
 
 __all__ = [
     "BotmuxAssetAction",
@@ -99,6 +100,9 @@ __all__ = [
     "NovelWorkflowFoundationImporter",
     "NovelWorkflowFoundationImportRequest",
     "NovelWorkflowFoundationImportResult",
+    "NovelWorkflowRunExporter",
+    "NovelWorkflowRunExportRequest",
+    "NovelWorkflowRunExportResult",
     "ReadinessCheck",
     "WikiLintIssue",
     "WikiLintResult",

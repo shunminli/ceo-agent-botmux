@@ -21,6 +21,7 @@ from .readiness import NovelReadinessChecker, NovelReadinessRequest
 from .runtime import NovelChapterRequest, NovelFoundationRequest, NovelRunRequest, NovelRuntime, NovelWikiBundleRequest
 from .series import NovelSeriesRequest, NovelSeriesRunner
 from .wiki_lint import WikiLinter
+from .workflow_export import NovelWorkflowRunExporter, NovelWorkflowRunExportRequest
 from .workflow_import import NovelWorkflowFoundationImporter, NovelWorkflowFoundationImportRequest
 
 
@@ -75,6 +76,15 @@ def build_parser() -> argparse.ArgumentParser:
     workflow_import_parser.add_argument("--mode", choices=["full", "lean", "solo"], default="lean", help="Agent execution mode.")
     workflow_import_parser.add_argument("--word-target", type=int, default=1200, help="Target chapter length for planning.")
     workflow_import_parser.add_argument("--llmwiki-bin", default="llmwiki", help="llmwiki executable to place in generated MCP config and planned reindex command.")
+
+    workflow_export_parser = subparsers.add_parser(
+        "workflow-export",
+        help="Export a BotMux workflow run directory or runId into JSON consumable by novel workflow importers.",
+    )
+    workflow_export_parser.add_argument("--run-id", help="BotMux workflow run id. Required unless --run-dir is provided.")
+    workflow_export_parser.add_argument("--run-dir", help="Explicit BotMux workflow run directory containing workflow.json and events.ndjson.")
+    workflow_export_parser.add_argument("--runs-dir", help="Directory containing BotMux workflow run directories; used with --run-id.")
+    workflow_export_parser.add_argument("--botmux-bin", default=str(Path.home() / ".botmux" / "bin" / "botmux"), help="BotMux executable for tail fallback when the run directory is not found.")
 
     approval_parser = subparsers.add_parser(
         "approval-apply",
@@ -275,6 +285,17 @@ def main(argv: Optional[list[str]] = None) -> int:
         result = NovelWorkflowFoundationImporter().import_foundation(request)
         print(json.dumps(result.to_dict(), ensure_ascii=False, indent=2))
         return 0 if result.status in {"ready", "ready_with_warnings"} else 2
+
+    if args.command == "workflow-export":
+        request = NovelWorkflowRunExportRequest(
+            run_id=args.run_id,
+            run_dir=Path(args.run_dir).expanduser().resolve() if args.run_dir else None,
+            runs_dir=Path(args.runs_dir).expanduser().resolve() if args.runs_dir else None,
+            botmux_bin=Path(args.botmux_bin).expanduser(),
+        )
+        result = NovelWorkflowRunExporter().export(request)
+        print(json.dumps(result.to_dict(), ensure_ascii=False, indent=2))
+        return 0
 
     if args.command == "approval-apply":
         request = NovelApprovalApplyRequest(
