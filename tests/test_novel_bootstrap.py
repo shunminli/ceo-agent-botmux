@@ -158,6 +158,22 @@ class NovelBootstrapTest(unittest.TestCase):
         self.assertIn("Missing required field: edges[0].pressure", errors)
         self.assertEqual(errors.count("Missing required field: edges[0].target"), 1)
 
+    def test_schema_validation_reports_enum_and_minimum_errors(self) -> None:
+        errors = schema_validation_errors(
+            "project-state",
+            {
+                "title": "影钟旧案",
+                "mode": "fast",
+                "stage": "Archive",
+                "current_chapter": "ch-001",
+                "word_target": 120,
+                "quality_thresholds": {},
+            },
+        )
+
+        self.assertIn("mode expected one of full|lean|solo", errors)
+        self.assertIn("word_target expected >= 300", errors)
+
     def test_bootstrap_creates_approval_package_without_llmwiki_writes(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)

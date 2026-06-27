@@ -75,6 +75,15 @@ def collect_schema_errors(*, schema: Dict[str, Any], value: Any, path: str) -> L
     if expected_type is not None and not value_matches_type(value, expected_type):
         errors.append(f"{path or '$'} expected {format_expected_type(expected_type)}")
         return errors
+    if "enum" in schema and isinstance(schema["enum"], list) and value not in schema["enum"]:
+        errors.append(f"{path or '$'} expected one of {format_enum_values(schema['enum'])}")
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        minimum = schema.get("minimum")
+        if isinstance(minimum, (int, float)) and value < minimum:
+            errors.append(f"{path or '$'} expected >= {minimum}")
+        maximum = schema.get("maximum")
+        if isinstance(maximum, (int, float)) and value > maximum:
+            errors.append(f"{path or '$'} expected <= {maximum}")
 
     if isinstance(value, dict):
         errors.extend(
@@ -120,6 +129,10 @@ def format_expected_type(expected_type: Any) -> str:
     if isinstance(expected_type, list):
         return "|".join(str(item) for item in expected_type)
     return str(expected_type)
+
+
+def format_enum_values(values: List[Any]) -> str:
+    return "|".join(str(value) for value in values)
 
 
 def unique_errors(errors: List[str]) -> List[str]:

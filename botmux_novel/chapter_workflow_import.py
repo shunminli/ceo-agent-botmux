@@ -11,7 +11,7 @@ from typing import Any, Dict, List, Optional
 from .chapter_goals import chapter_goal_for
 from .foundation_paths import resolve_optional_foundation_path
 from .handoff_commands import build_chapter_knowledge_handoff
-from .schema_validation import validate_required, validate_schema
+from .schema_validation import validate_schema
 from .workspace import NovelWorkspace, markdown_list, utc_now
 from .workflow_import import AGENT_OUTPUT_FIELDS, load_workflow_result, workflow_params
 
@@ -146,7 +146,7 @@ class NovelChapterWorkflowImporter:
         artifacts.extend([source_path, outputs_path])
 
         blueprint = normalize_blueprint(node_outputs["chapter_blueprint"], chapter=chapter)
-        validate_required("chapter-blueprint", blueprint)
+        validate_schema("chapter-blueprint", blueprint)
         blueprint_path = workspace.write_json(f"outline/chapter-blueprints/{chapter}.json", blueprint)
         blueprint_md_path = workspace.write_text(f"outline/chapter-blueprints/{chapter}.md", render_blueprint_markdown(blueprint))
         artifacts.extend([blueprint_path, blueprint_md_path])
@@ -240,7 +240,7 @@ class NovelChapterWorkflowImporter:
         trace_payload["ended_at"] = ended_at
         for artifact in artifacts:
             trace_payload["artifacts"].append(str(artifact.relative_to(workspace.root)))
-        validate_required("run-trace", trace_payload)
+        validate_schema("run-trace", trace_payload)
         trace_path = workspace.write_json(f"runs/{run_id}/trace.json", trace_payload)
         artifacts.append(trace_path)
         sqlite_path = workspace.record_run(
@@ -256,7 +256,7 @@ class NovelChapterWorkflowImporter:
         )
         artifacts.append(sqlite_path)
         trace_payload["artifacts"].append(str(sqlite_path.relative_to(workspace.root)))
-        validate_required("run-trace", trace_payload)
+        validate_schema("run-trace", trace_payload)
         trace_path = workspace.write_json(f"runs/{run_id}/trace.json", trace_payload)
         return NovelChapterWorkflowImportResult(
             run_id=run_id,
@@ -483,11 +483,11 @@ def normalize_continuity_issues(value: Any) -> List[Dict[str, Any]]:
 
 def validate_archive(archive: Dict[str, Any]) -> None:
     for fact in archive["facts"]:
-        validate_required("fact-snapshot", fact)
+        validate_schema("fact-snapshot", fact)
     for item in archive["foreshadowing"]:
-        validate_required("foreshadowing-ledger", item)
+        validate_schema("foreshadowing-ledger", item)
     for state in archive["character_state"]:
-        validate_required("character-state", state)
+        validate_schema("character-state", state)
 
 
 def write_archive_assets(workspace: NovelWorkspace, archive: Dict[str, Any], chapter: str) -> List[Path]:

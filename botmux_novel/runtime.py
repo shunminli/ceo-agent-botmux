@@ -21,7 +21,7 @@ from .agents import (
 from .chapter_goals import chapter_goal_for
 from .foundation_paths import resolve_foundation_path
 from .handoff_commands import build_chapter_knowledge_handoff
-from .schema_validation import validate_required, validate_schema
+from .schema_validation import validate_schema
 from .workspace import NovelWorkspace, markdown_list, utc_now
 from .workflow_commands import build_chapter_workflow_command
 
@@ -232,13 +232,13 @@ class NovelRuntime:
 
         ended_at = utc_now()
         trace_payload = trace.finish(status="completed", ended_at=ended_at)
-        validate_required("run-trace", trace_payload)
+        validate_schema("run-trace", trace_payload)
         trace_path = workspace.write_json(f"runs/{run_id}/trace.json", trace_payload)
         artifacts.append(trace_path)
         for artifact in artifacts:
             trace.add_artifact(artifact, workspace.root)
         trace_payload = trace.finish(status="completed", ended_at=ended_at)
-        validate_required("run-trace", trace_payload)
+        validate_schema("run-trace", trace_payload)
         trace_path = workspace.write_json(f"runs/{run_id}/trace.json", trace_payload)
         expected_sqlite_path = workspace.path("runs/runs.sqlite")
         sqlite_path = workspace.record_run(
@@ -255,7 +255,7 @@ class NovelRuntime:
         artifacts.append(sqlite_path)
         trace.add_artifact(sqlite_path, workspace.root)
         trace_payload = trace.finish(status="completed", ended_at=ended_at)
-        validate_required("run-trace", trace_payload)
+        validate_schema("run-trace", trace_payload)
         trace_path = workspace.write_json(f"runs/{run_id}/trace.json", trace_payload)
         return NovelFoundationResult(
             run_id=run_id,
@@ -396,7 +396,7 @@ class NovelRuntime:
     ) -> NovelRunResult:
         blueprint_output = self.blueprint.generate(plan)
         blueprint = blueprint_output.data
-        validate_required("chapter-blueprint", blueprint)
+        validate_schema("chapter-blueprint", blueprint)
         trace.add_step("Plan", blueprint_output.name, "pass", blueprint_output.summary, blueprint)
         artifacts.append(workspace.write_json(f"outline/chapter-blueprints/{blueprint['chapter_id']}.json", blueprint))
         artifacts.append(workspace.write_text(f"outline/chapter-blueprints/{blueprint['chapter_id']}.md", self._blueprint_markdown(blueprint)))
@@ -466,11 +466,11 @@ class NovelRuntime:
         archive_output = self.archive_agent.archive(final_text=revised_text, plan=plan, blueprint=blueprint, review=review)
         archive = archive_output.data
         for fact in archive["facts"]:
-            validate_required("fact-snapshot", fact)
+            validate_schema("fact-snapshot", fact)
         for foreshadowing in archive["foreshadowing"]:
-            validate_required("foreshadowing-ledger", foreshadowing)
+            validate_schema("foreshadowing-ledger", foreshadowing)
         for character_state in archive["character_state"]:
-            validate_required("character-state", character_state)
+            validate_schema("character-state", character_state)
         trace.add_step("Archive", archive_output.name, archive["archive_decision"], archive_output.summary, archive)
         archived_chapters = list(plan["project"].get("archived_chapters", []))
         if blueprint["chapter_id"] not in archived_chapters:
@@ -501,7 +501,7 @@ class NovelRuntime:
 
         ended_at = utc_now()
         trace_payload = trace.finish(status="completed", ended_at=ended_at)
-        validate_required("run-trace", trace_payload)
+        validate_schema("run-trace", trace_payload)
         trace_path = workspace.write_json(f"runs/{run_id}/trace.json", trace_payload)
         artifacts.append(trace_path)
         summary_path = workspace.write_text(f"runs/{run_id}/summary.md", self._run_summary(run_id, plan, blueprint, review, archive))
@@ -509,7 +509,7 @@ class NovelRuntime:
         for artifact in artifacts:
             trace.add_artifact(artifact, workspace.root)
         trace_payload = trace.finish(status="completed", ended_at=ended_at)
-        validate_required("run-trace", trace_payload)
+        validate_schema("run-trace", trace_payload)
         trace_path = workspace.write_json(f"runs/{run_id}/trace.json", trace_payload)
         expected_sqlite_path = workspace.path("runs/runs.sqlite")
 
@@ -527,7 +527,7 @@ class NovelRuntime:
         artifacts.append(sqlite_path)
         trace.add_artifact(sqlite_path, workspace.root)
         trace_payload = trace.finish(status="completed", ended_at=ended_at)
-        validate_required("run-trace", trace_payload)
+        validate_schema("run-trace", trace_payload)
         trace_path = workspace.write_json(f"runs/{run_id}/trace.json", trace_payload)
         return NovelRunResult(
             run_id=run_id,
@@ -553,7 +553,7 @@ class NovelRuntime:
     ) -> NovelRunResult:
         ended_at = utc_now()
         trace_payload = trace.finish(status="blocked", ended_at=ended_at)
-        validate_required("run-trace", trace_payload)
+        validate_schema("run-trace", trace_payload)
         trace_path = workspace.write_json(f"runs/{run_id}/trace.json", trace_payload)
         artifacts.append(trace_path)
         expected_sqlite_path = workspace.path("runs/runs.sqlite")
@@ -608,12 +608,12 @@ class NovelRuntime:
         return artifacts
 
     def _validate_plan(self, plan: Dict[str, Any]) -> None:
-        validate_required("project-state", plan["project"])
-        validate_required("story-bible", plan["story_bible"])
-        validate_required("relationship-map", plan["relationships"])
-        validate_required("style-profile", plan["style_profile"])
+        validate_schema("project-state", plan["project"])
+        validate_schema("story-bible", plan["story_bible"])
+        validate_schema("relationship-map", plan["relationships"])
+        validate_schema("style-profile", plan["style_profile"])
         for scene_setting in plan["scene_settings"]:
-            validate_required("scene-setting", scene_setting)
+            validate_schema("scene-setting", scene_setting)
 
     def _write_archive_assets(self, workspace: NovelWorkspace, archive: Dict[str, Any], chapter: str) -> List[Path]:
         return [

@@ -11,7 +11,7 @@ from .bootstrap import NovelBootstrapRequest, write_approval_package
 from .llmwiki_sync import LlmwikiSyncRequest, LlmwikiSyncResult, LlmwikiSyncer
 from .mcp_config import NovelLlmwikiMcpConfigBuilder, NovelLlmwikiMcpConfigRequest, NovelLlmwikiMcpConfigResult
 from .runtime import NovelFoundationResult, NovelRuntime, NovelWikiBundleRequest, NovelWikiBundleResult
-from .schema_validation import validate_required
+from .schema_validation import validate_schema
 from .workspace import NovelWorkspace, utc_now
 
 
@@ -281,7 +281,7 @@ class NovelWorkflowFoundationImporter:
         trace_payload["ended_at"] = ended_at
         for artifact in artifacts:
             trace_payload["artifacts"].append(str(artifact.relative_to(workspace.root)))
-        validate_required("run-trace", trace_payload)
+        validate_schema("run-trace", trace_payload)
         trace_path = workspace.write_json(f"runs/{run_id}/trace.json", trace_payload)
         artifacts.append(trace_path)
         sqlite_path = workspace.record_run(
@@ -297,7 +297,7 @@ class NovelWorkflowFoundationImporter:
         )
         artifacts.append(sqlite_path)
         trace_payload["artifacts"].append(str(sqlite_path.relative_to(workspace.root)))
-        validate_required("run-trace", trace_payload)
+        validate_schema("run-trace", trace_payload)
         trace_path = workspace.write_json(f"runs/{run_id}/trace.json", trace_payload)
         return NovelFoundationResult(
             run_id=run_id,
