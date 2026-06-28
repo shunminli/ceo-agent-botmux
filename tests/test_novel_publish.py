@@ -12,15 +12,15 @@ from botmux_novel.project_template import NovelProjectInitializer, NovelProjectI
 class NovelPublishTests(unittest.TestCase):
     def test_project_init_creates_independent_project_layout(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
-            project = Path(tmpdir) / "qin-last-lamp"
+            project = Path(tmpdir) / "sanguo-daily-strategy-resources"
             result = NovelProjectInitializer().initialize(
                 NovelProjectInitRequest(
                     project_path=project,
-                    project_slug="qin-last-lamp",
-                    title="秦灯未灭",
-                    inspiration="秦亡竹简预写了未来。",
-                    genre="秦末历史权谋",
-                    target_length="长篇连载，约30万字",
+                    project_slug="sanguo-daily-strategy-resources",
+                    title="三国：每日战略资源，只能建设辖区",
+                    inspiration="主角穿到三国边地小县，系统每日发放战略资源，但只能建设当前官职辖区。",
+                    genre="三国历史脑洞 / 系统种田 / 领地经营 / 争霸",
+                    target_length="长篇连载，约150万字",
                     mode="lean",
                 )
             )
@@ -31,7 +31,7 @@ class NovelPublishTests(unittest.TestCase):
             self.assertTrue((project / "wiki/llmwiki-workspace").is_dir())
             self.assertTrue((project / ".gitignore").exists())
             self.assertIn("runs/", (project / ".gitignore").read_text(encoding="utf-8"))
-            self.assertIn("qin-last-lamp", (project / "project.yaml").read_text(encoding="utf-8"))
+            self.assertIn("sanguo-daily-strategy-resources", (project / "project.yaml").read_text(encoding="utf-8"))
 
     def test_fanqie_export_writes_plain_text_chapters_and_book(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -39,29 +39,29 @@ class NovelPublishTests(unittest.TestCase):
             final_dir = project / "manuscript/final"
             final_dir.mkdir(parents=True)
             (final_dir / "ch-001.md").write_text(
-                "# 第一章 灯下竹简\n\n他在**密档室**里看见[亡秦竹简](wiki://bamboo)。\n\n> 灯没有灭。\n",
+                "# 第一章 粮仓三日\n\n他在**县仓**里看见[战略粮册](wiki://grain)。\n\n> 粮不能出县。\n",
                 encoding="utf-8",
             )
             (final_dir / "ch-002.md").write_text(
-                "赵高的车辙压过宫门。\n\n```json\n{\"note\":\"remove\"}\n```\n\n他合上竹简。\n",
+                "豪强的车辙压过县衙前街。\n\n```json\n{\"note\":\"remove\"}\n```\n\n他合上账册。\n",
                 encoding="utf-8",
             )
 
-            result = FanqieExporter().export(FanqieExportRequest(project_path=project, title="秦灯未灭"))
+            result = FanqieExporter().export(FanqieExportRequest(project_path=project, title="三国：每日战略资源，只能建设辖区"))
 
             self.assertEqual(result.status, "completed")
             self.assertEqual(len(result.chapters), 2)
             first_text = result.chapters[0].output_path.read_text(encoding="utf-8")
-            self.assertIn("第一章 灯下竹简", first_text)
-            self.assertIn("密档室", first_text)
-            self.assertIn("亡秦竹简", first_text)
+            self.assertIn("第一章 粮仓三日", first_text)
+            self.assertIn("县仓", first_text)
+            self.assertIn("战略粮册", first_text)
             self.assertNotIn("**", first_text)
             self.assertNotIn("wiki://", first_text)
             second_text = result.chapters[1].output_path.read_text(encoding="utf-8")
             self.assertTrue(second_text.startswith("第002章"))
             self.assertNotIn("json", second_text)
             book_text = result.book_path.read_text(encoding="utf-8")
-            self.assertIn("第一章 灯下竹简", book_text)
+            self.assertIn("第一章 粮仓三日", book_text)
             self.assertIn("第002章", book_text)
             checklist = result.checklist_path.read_text(encoding="utf-8")
             self.assertIn("pending", checklist)
@@ -79,9 +79,9 @@ class NovelPublishTests(unittest.TestCase):
                     "--project",
                     str(project),
                     "--project-slug",
-                    "qin-last-lamp",
+                    "sanguo-daily-strategy-resources",
                     "--title",
-                    "秦灯未灭",
+                    "三国：每日战略资源，只能建设辖区",
                     "--mode",
                     "lean",
                 ],
@@ -95,7 +95,7 @@ class NovelPublishTests(unittest.TestCase):
 
             final_dir = project / "manuscript/final"
             final_dir.mkdir(parents=True, exist_ok=True)
-            (final_dir / "ch-001.md").write_text("第一章 灯下竹简\n\n灯火照见竹简。", encoding="utf-8")
+            (final_dir / "ch-001.md").write_text("第一章 粮仓三日\n\n县仓里多出三千石粮。", encoding="utf-8")
             export = subprocess.run(
                 [
                     sys.executable,
@@ -105,7 +105,7 @@ class NovelPublishTests(unittest.TestCase):
                     "--project",
                     str(project),
                     "--title",
-                    "秦灯未灭",
+                    "三国：每日战略资源，只能建设辖区",
                 ],
                 check=False,
                 text=True,

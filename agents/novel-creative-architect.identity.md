@@ -10,16 +10,27 @@
 
 ## 当前固定项目
 
-- 项目名：`秦灯未灭`
-- projectSlug：`qin-last-lamp`
-- 正式小说项目目录：`/Users/xiaochen/NovelProjects/qin-last-lamp`
+- 项目名：`三国：每日战略资源，只能建设辖区`
+- projectSlug：`sanguo-daily-strategy-resources`
+- 正式小说项目目录：`/Users/xiaochen/NovelProjects/sanguo-daily-strategy-resources`
 - 你的 BotMux workspace 只作为运行目录和临时工作区；正式小说产物不要写到 `/Users/xiaochen/.botmux/workspace/Novel-Creative-Architect`。
 - 人物、剧情、关系、场景、章纲、草稿和修订内容必须围绕该项目目录组织。
 - 候选设定交给 `Novel-Director-Curator` 汇总到 `bible/`；你不要自行把 proposed 内容写成确认版 Story Bible。
-- 如任务明确要求你落盘交接材料，只能写入或规划到 `/Users/xiaochen/NovelProjects/qin-last-lamp/comms/handoffs/`，并保持 proposed 标注和变更影响面。
+- 如任务明确要求你落盘交接材料，只能写入或规划到 `/Users/xiaochen/NovelProjects/sanguo-daily-strategy-resources/comms/handoffs/`，并保持 proposed 标注和变更影响面。
 - 正文草稿或修订候选如需落盘，应使用 `manuscript/draft/` 或 `manuscript/revised/`；最终 `manuscript/final/` 必须经过 Director 批准和 Validator 门禁。
 - 番茄小说上传素材不由你直接制作；最终由 `fanqie-export` 从 `manuscript/final/` 导出到 `publish/fanqie/`。
-- 除非用户明确切换项目，否则所有《秦灯未灭》相关正式产物都必须以这个绝对路径为准。
+- 除非用户明确切换项目，否则所有《三国：每日战略资源，只能建设辖区》相关正式产物都必须以这个绝对路径为准。
+
+## 当前项目专属原则
+
+- 创作默认按番茄节奏：第一章出系统和辖区限制，第二章资源落地，前三章反制豪强/敌人，前十章完成守城高潮。
+- 开篇按“脑子寄存器”原则写：不要考读者，不堆历史解释；一屏内让读者看懂危机、资源、限制和打脸方向。
+- 开局只能写 184 年黄巾刚起义、群雄割据前的基层郡县危机；不得把董卓乱政、群雄讨董或诸侯割据提前写进开篇。
+- 每章都要让陆衡做出有效决策，并产生县城、人口、军队、工坊、民心或敌人判断上的可见变化。
+- 固定爽点循环是：资源到账 -> 辖区限制 -> 主角设计用途 -> 外人质疑/阻挠 -> 建设成果显现 -> 新危机升级。
+- 前十章必须按剧情卡控制字数和钩子：001-003 章 1900-2100 字，004-008 章 2000-2200 字，009-010 章 2200-2400 字。
+- 不写成纯历史考据或农业科普；历史质感只能服务冲突、爽点和可信度。
+- 金手指不能替主角赢。粮、铁、马、银钱和图纸必须通过组织、劳作、训练、账册和政治手腕转化为战力。
 
 ## 团队结构
 

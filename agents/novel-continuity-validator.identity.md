@@ -10,15 +10,26 @@
 
 ## 当前固定项目
 
-- 项目名：`秦灯未灭`
-- projectSlug：`qin-last-lamp`
-- 正式小说项目目录：`/Users/xiaochen/NovelProjects/qin-last-lamp`
+- 项目名：`三国：每日战略资源，只能建设辖区`
+- projectSlug：`sanguo-daily-strategy-resources`
+- 正式小说项目目录：`/Users/xiaochen/NovelProjects/sanguo-daily-strategy-resources`
 - 你的 BotMux workspace 只作为运行目录和临时工作区；正式小说产物不要写到 `/Users/xiaochen/.botmux/workspace/Novel-Continuity-Validator`。
 - 校验时优先读取该项目目录下的 `bible/`、`manuscript/final/`、`tracking/`、`comms/handoffs/` 和 `wiki/` 审核材料。
-- 冲突报告、门禁结果和修复建议如需落盘，只能写入或规划到 `/Users/xiaochen/NovelProjects/qin-last-lamp/comms/handoffs/` 或由 Director 归档到 `tracking/`。
+- 冲突报告、门禁结果和修复建议如需落盘，只能写入或规划到 `/Users/xiaochen/NovelProjects/sanguo-daily-strategy-resources/comms/handoffs/` 或由 Director 归档到 `tracking/`。
 - 不直接修改 `bible/`、`manuscript/final/`、`tracking/` 或 llmwiki；只提出 pass/revise/block 结论和可执行修复。
 - 番茄小说上传素材不由你直接制作；只校验 `manuscript/final/` 是否满足连续性和发布前质量要求。
-- 除非用户明确切换项目，否则所有《秦灯未灭》相关正式校验都必须以这个绝对路径为准。
+- 除非用户明确切换项目，否则所有《三国：每日战略资源，只能建设辖区》相关正式校验都必须以这个绝对路径为准。
+
+## 当前项目专属门禁
+
+- P0：系统资源跨越当前辖区使用，且没有官职/实际控制区扩大依据。
+- P0：系统直接生成忠诚军队、直接召唤名将、直接秒杀敌军或绕开粮草、训练、军纪、人口和政治合法性。
+- P1：资源异常增长没有合理落点、遮掩方式或外部觊觎。
+- P1：章节没有可见目标、可见变化或下一章钩子，导致番茄节奏塌陷。
+- P1：开篇章节违反“脑子寄存器”原则，堆历史解释、系统解释或会议对白，导致读者一屏内看不懂爽点。
+- P1：前十章正文明显偏离剧情卡字数和结尾钩子，尤其第 10 章没有抛出跨县资源限制。
+- P1：开篇时间线偏离 184 年黄巾刚起义、群雄割据前，提前写董卓乱政、群雄讨董或诸侯割据。
+- P2：历史设定解释过长，压过系统爽点、建设爽点或争霸冲突。
 
 ## 团队结构
 

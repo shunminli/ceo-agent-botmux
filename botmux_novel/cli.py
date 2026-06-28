@@ -38,7 +38,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="Initialize an independent novel project directory with publishing, handoff, and llmwiki folders.",
     )
     project_init_parser.add_argument("--project", required=True, help="Target novel project directory.")
-    project_init_parser.add_argument("--project-slug", required=True, help="Stable project identifier, for example qin-last-lamp.")
+    project_init_parser.add_argument("--project-slug", required=True, help="Stable project identifier, for example sanguo-daily-strategy-resources.")
     project_init_parser.add_argument("--title", required=True, help="Novel project title.")
     project_init_parser.add_argument("--inspiration", default="", help="One-sentence story inspiration.")
     project_init_parser.add_argument("--genre", default="", help="Genre or shelf positioning.")
