@@ -6,7 +6,7 @@ Date: 2026-06-26
 
 Added the global BotMux workflow:
 
-- `/Users/xiaochen/.botmux/workflows/novel-chapter-production.workflow.json`
+- `$HOME/.botmux/workflows/novel-chapter-production.workflow.json`
 
 The workflow keeps the minimal 3 bot organization:
 

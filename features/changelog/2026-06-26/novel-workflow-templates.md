@@ -9,7 +9,7 @@ Versioned the two BotMux novel workflow definitions in the repository:
 - `workflows/novel-story-foundation.workflow.json`
 - `workflows/novel-chapter-production.workflow.json`
 
-The templates match the installed copies under `/Users/xiaochen/.botmux/workflows/`.
+The templates match the installed copies under `$HOME/.botmux/workflows/`.
 
 ## Validation
 

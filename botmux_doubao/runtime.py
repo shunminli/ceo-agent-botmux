@@ -440,7 +440,7 @@ class DoubaoRuntime:
                 new_args=[],
                 setup_hints=[
                     "Install Node.js with built-in fetch/WebSocket support and ensure `node` is on PATH.",
-                    "Launch Doubao Desktop with `/Applications/Doubao.app/Contents/MacOS/Doubao --remote-debugging-port=9225`.",
+                    "Launch Doubao Desktop with `python3 -m botmux_doubao launch --app-binary <path-to-doubao-binary>`.",
                     "Open a Doubao chat window in the desktop app and stay logged in.",
                     "Set `DOUBAO_CDP_ENDPOINT=http://127.0.0.1:9225` or `OPENCLI_CDP_ENDPOINT=http://127.0.0.1:9225`.",
                 ],
@@ -457,7 +457,7 @@ class DoubaoRuntime:
                 new_args=[adapter, "new"],
                 setup_hints=[
                     "Install OpenCLI (`npm install -g @jackwener/opencli`, Node.js >= 20) or install OpenCLIApp, then ensure `opencli` is on PATH.",
-                    "Launch Doubao Desktop with `/Applications/Doubao.app/Contents/MacOS/Doubao --remote-debugging-port=9225`.",
+                    "Launch Doubao Desktop with `python3 -m botmux_doubao launch --app-binary <path-to-doubao-binary>`.",
                     "If Doubao is already running without CDP, quit it first and relaunch with the remote debugging port.",
                     "Set `OPENCLI_CDP_ENDPOINT=http://127.0.0.1:9225` before running this wrapper.",
                 ],

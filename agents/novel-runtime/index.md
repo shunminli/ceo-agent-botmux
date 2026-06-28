@@ -274,5 +274,5 @@ Updated: 2026-06-27
 
 - `novel-story-foundation`：开书设定、Story Bible 候选和 wiki sync plan。
 - `novel-chapter-production`：章节上下文、蓝图、草稿、验证、修订、定稿候选和 archive plan。
-- 仓库模板保存在 `workflows/`；本机运行副本保存在 `/Users/xiaochen/.botmux/workflows/`。
+- 仓库模板保存在 `workflows/`；本机运行副本保存在 `$HOME/.botmux/workflows/`。
 - BotMux 离线 `workflow run --bot-resolver echo` 只回传 `echo` 字段，不模拟 `preview/handoff/data` 输出契约；不要把它当小说 workflow 端到端 smoke。

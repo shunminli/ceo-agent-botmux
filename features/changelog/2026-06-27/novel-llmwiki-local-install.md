@@ -1,21 +1,20 @@
-# Novel llmwiki Local Install
+# Novel llmwiki Local Setup
 
-Installed `lucasastorian/llmwiki` locally for the novel production environment.
+Documented an optional local `lucasastorian/llmwiki` setup for the novel production environment.
 
 ## Local Paths
 
-- Repository copy: `/Users/xiaochen/.local/opt/llmwiki`
-- PATH wrapper: `/Users/xiaochen/.local/bin/llmwiki`
-- Python runtime: `/Users/xiaochen/.local/opt/llmwiki/.venv/bin/python`
-- Installed commit: `542561d`
+- Repository copy: `$HOME/.local/opt/llmwiki`
+- PATH wrapper: `$HOME/.local/bin/llmwiki`
+- Python runtime: `$HOME/.local/opt/llmwiki/.venv/bin/python`
 
-The installed CLI entrypoint is pinned to the venv Python so both the PATH wrapper and `llmwiki mcp-config` output can run without using the system Python 3.9.
+The CLI entrypoint should be pinned to the venv Python so both the PATH wrapper and `llmwiki mcp-config` output can run without relying on the system Python.
 
 ## Verification
 
 - `llmwiki --help` works.
 - `llmwiki init`, `llmwiki mcp-config`, and `llmwiki reindex` work on a temporary local workspace.
 - `llmwiki serve` starts both the local API and web server on a temporary workspace and is terminated after the smoke check.
-- `python3 -m botmux_novel readiness --series-smoke --smoke-chapter-count 20` now returns `ready`.
+- `python3 -m botmux_novel readiness --series-smoke --smoke-chapter-count 20` should return `ready` when the local dependencies are available.
 
-This is a local environment setup. The repository still does not auto-install llmwiki or call MCP write tools without a humanGate-approved write plan.
+The repository still does not auto-install llmwiki or call MCP write tools without a humanGate-approved write plan.

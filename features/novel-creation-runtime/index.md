@@ -10,8 +10,8 @@ BotMux workflow 已提供 3 bot 协作入口；仓库模板与本机全局安装
 
 - `workflows/novel-story-foundation.workflow.json`
 - `workflows/novel-chapter-production.workflow.json`
-- `/Users/xiaochen/.botmux/workflows/novel-story-foundation.workflow.json`
-- `/Users/xiaochen/.botmux/workflows/novel-chapter-production.workflow.json`
+- `$HOME/.botmux/workflows/novel-story-foundation.workflow.json`
+- `$HOME/.botmux/workflows/novel-chapter-production.workflow.json`
 
 ## 触发方式
 
@@ -110,7 +110,7 @@ python3 -m botmux_novel readiness --series-smoke
 python3 -m botmux_novel readiness --series-smoke --smoke-chapter-count 20
 python3 -m botmux_novel readiness --bootstrap-smoke --workflow-import-smoke --chapter-import-smoke --approval-apply-smoke --series-smoke --smoke-chapter-count 20 --llmwiki-smoke
 
-/Users/xiaochen/.botmux/bin/botmux workflow run novel-chapter-production \
+$HOME/.botmux/bin/botmux workflow run novel-chapter-production \
   --param projectSlug=shadow-clock-case \
   --param title=影钟旧案 \
   --param storyBible="已批准的 Story Bible 或 foundation handoff" \

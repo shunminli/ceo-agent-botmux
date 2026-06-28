@@ -20,12 +20,11 @@ node --version
 
 若 `llmwiki` 不存在，先按官方仓库安装。官方 README 说明 llmwiki 支持本地 workspace、MCP server、Markdown/PDF/DOCX/PPTX/TXT/HTML ingest、搜索、读取、页面创建和编辑等能力；本项目只依赖本地 Markdown workspace 与 MCP 读写能力。
 
-当前本机已安装本地 llmwiki：
+本地 llmwiki 可按以下目录约定安装：
 
-- 仓库副本：`/Users/xiaochen/.local/opt/llmwiki`
-- PATH wrapper：`/Users/xiaochen/.local/bin/llmwiki`
-- Python：`/Users/xiaochen/.local/opt/llmwiki/.venv/bin/python`
-- 当前安装提交：`542561d`
+- 仓库副本：`$HOME/.local/opt/llmwiki`
+- PATH wrapper：`$HOME/.local/bin/llmwiki`
+- Python：`$HOME/.local/opt/llmwiki/.venv/bin/python`
 
 安装副本的 `llmwiki` 入口脚本已固定到 venv Python，确保 `llmwiki mcp-config` 输出的仓库脚本路径也能独立运行。
 
@@ -247,8 +246,8 @@ llmwiki mcp-config /path/to/novel-project
 
 ```bash
 python3 -m unittest discover -s tests -v
-/Users/xiaochen/.botmux/bin/botmux workflow validate workflows/novel-story-foundation.workflow.json
-/Users/xiaochen/.botmux/bin/botmux workflow validate workflows/novel-chapter-production.workflow.json
+$HOME/.botmux/bin/botmux workflow validate workflows/novel-story-foundation.workflow.json
+$HOME/.botmux/bin/botmux workflow validate workflows/novel-chapter-production.workflow.json
 llmwiki --help
 python3 -m botmux_novel readiness --bootstrap-smoke
 python3 -m botmux_novel readiness --approval-apply-smoke
