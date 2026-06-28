@@ -50,6 +50,7 @@ class BotmuxAssetSyncTest(unittest.TestCase):
             self.assertIn("开发闭环原则", director_agents)
             self.assertIn("novel-director-curator.identity.md", director_agents)
             self.assertIn("Project working directory", director_agents)
+            self.assertIn("fanqie_author_note_image_policy", director_agents)
 
             unchanged = BotmuxAssetSyncer().sync(
                 BotmuxAssetSyncRequest(repo_path=REPO_ROOT, botmux_home=botmux_home, write=True)

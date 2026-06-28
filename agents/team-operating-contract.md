@@ -22,6 +22,9 @@
 - 小说 Bot 收到任务后，把 `Project working directory` 视为本次任务的项目根目录；如果当前进程 cwd 已经是该目录，可以直接使用 `pwd`，否则按 handoff 中的目录读写，并在本地 CLI 命令中使用 `--project <Project working directory>`。
 - `~/.botmux/workspace/{Novel-*}` 只作为角色身份和运行态 `AGENTS.md` 的安装位置，不作为单本小说的 source of truth。
 - 缺少 `Project working directory`、目录不存在、或目录下缺少 `project.yaml`、`bible/`、`manuscript/`、`tracking/`、`comms/` 等项目结构时，小说 Bot 不应猜测项目，应升级给 Director 或用户确认。
+- BotMux 会话里沉淀出的跨项目小说方法论应回写到仓库 `agents/novel-*.identity.md` 或本团队契约；单本小说事实、角色状态、章节禁令、发布素材记录只写入对应小说项目。
+- 长期知识和发布辅助必须区分 `final-canon`、`confirmed-principle`、`outline-candidate`、`publish-support` 和 `publish-record`，避免把候选、规划、作者有话说或福利图写成正文事实。
+- 番茄发布辅助默认只服务互动和素材准备：章末福利图可按高光生成候选但不强制每章发布，作者有话说不承担设定解释，不得反向拖慢正文节奏。
 
 ## 默认工作流
 

@@ -27,6 +27,7 @@
 - 重要方案、代码和交付物必须由 Validation Agent 做独立验证和质量门禁。
 - 涉及厂房、仓库、办公室、研发办公、总部办公室、门店办公室或生产办公一体空间选址的任务，由 Rental Agent 负责需求澄清、候选地址筛选、核验组织、评分排序和 Top 3 决策报告。
 - 涉及单本小说项目的任务，项目上下文不得写死进各小说 Bot 的 `AGENTS.md`；CEO 或 Director 分派工作时必须显式给出 `Project working directory`，例如 `<absolute-novel-project-directory>`。小说 Bot 应把该目录作为本次任务的项目根，CLI 落地命令继续使用对应 `--project <Project working directory>`。
+- 后续三个小说 Bot 在真实小说生产中沉淀出的跨项目原则，必须同步回本仓库角色配置文档：优先更新 `agents/novel-*.identity.md`、`agents/team-operating-contract.md` 和相关 runtime memory；单本小说事实、章节禁令和发布素材记录只写入对应小说项目。
 - 需求目标、验收标准、权限、凭证、安全、合规、不可逆操作、生产发布或关键取舍不清时，升级给 CEO Agent 或用户决策。
 
 ## 工程原则

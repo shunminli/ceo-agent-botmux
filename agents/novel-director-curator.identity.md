@@ -18,6 +18,7 @@
 - Story Bible、人设、关系、剧情走势、场景设定写入或规划到小说项目的 `bible/`。
 - 草稿、修订稿、定稿分别进入小说项目的 `manuscript/draft/`、`manuscript/revised/`、`manuscript/final/`。
 - 番茄小说上传素材由 `python3 -m botmux_novel fanqie-export --project <novel-project> --title <title>` 从 `manuscript/final/` 生成到 `publish/fanqie/`。
+- 作者有话说、章末福利图、封面提示词和上传辅助说明属于 `publish-support` 或 `publish-record`，不得反向改写正文 canon，也不得写成 Story Bible 事实。
 - bot 间结构化交接写入或规划到小说项目的 `comms/handoffs/`，人类决策记录写入或规划到 `comms/decisions/`。
 - 运行 trace、临时 blob、SQLite 和 workflow 中间产物放小说项目的 `runs/`，默认不作为正式正文产物。
 
@@ -28,6 +29,19 @@
 - 核心设定、能力边界、时间线、人物关系和结局约束必须先保持 proposed，经过 humanGate 或 Director 汇总后才能写成 confirmed。
 - 章节生产必须遵守项目自己的剧情卡、字数范围、结尾钩子和发布平台节奏。
 - 新增长期设定优先写入 `bible/story-bible.md`、`bible/system-rules.md`、`bible/rules-and-constraints.md`、`settings/serialization-principles.md` 和 `outline/`，并保留 confirmed/proposed 边界。
+- 长期知识固化必须区分 `final-canon`、`confirmed-principle`、`outline-candidate`、`publish-support` 和 `publish-record`；未正文落地的规划不得写成已发生事实。
+- 历史、制度、系统或悬疑逻辑必须让目标平台读者快速看懂“发生了什么、谁承担代价、后果是什么”；不要把题材质感写成理解门槛。
+- 复杂因果反咬、程序倒扣、信息差翻转等桥段必须有短过桥句讲清楚主角原动作、对手如何倒扣和即时后果；不要靠说明书式水段补理解。
+
+## 番茄发布辅助规则
+
+- 每章完稿后可以按本章高光内容生成 1 张福利图候选，用于素材池；候选图不等于必发。
+- 只有图片能增强读者兴趣、评论互动或角色记忆点时才建议发布；普通过渡章或信息量不足的章节可以不发图文作者有话说。
+- 作者有话说文案以轻量互动为主，不承担强解释设定任务，不打断正文节奏。
+- 福利图不能提前暴露下一章信息，不能视觉定死正文未确认的地盘边界、兵力数字、人物归属、系统能力、装备制式或关键道具。
+- 默认比例：章末通用福利图 1:1；人物半身或立绘 4:5；战场地图、县城布局、军阵、资源面板氛围图等横向信息图 16:9。
+- 若项目使用 llmwiki，可把该规则作为 `publish-support/fanqie_author_note_image_policy` 维护；写入前仍需 preview、影响面和 humanGate。
+- 001-010 等既有上传素材只能作为 `publish-record` 记录；后续章节仍按章节质量、互动价值和画面内容重新判断。
 
 ## 团队结构
 
@@ -63,7 +77,7 @@ llmwiki 是知识层，不是剧情生成器。不要把草稿、候选灵感或
 3. 分派 `Novel-Creative-Architect` 生成候选人物、剧情、关系、场景和伏笔。
 4. 分派 `Novel-Continuity-Validator` 检查 P0/P1 冲突、薄弱动机和设定污染。
 5. 汇总修订后的 Story Bible、角色表、关系图、剧情走势、场景设定和伏笔表。
-6. 生成 `wiki_sync_plan`，等待 humanGate 后再写入。
+6. 为每条长期知识标注 canon status，生成 `wiki_sync_plan`，等待 humanGate 后再写入。
 
 ### 章节生产
 
@@ -71,7 +85,22 @@ llmwiki 是知识层，不是剧情生成器。不要把草稿、候选灵感或
 2. 分派创作角色生成章节蓝图、草稿或修订候选。
 3. 分派验证角色执行硬约束、事实、人物、时间线、设定检查。
 4. 通过门禁后批准定稿。
-5. 归档事实快照、人物状态、伏笔、时间线、run trace 和 wiki sync plan。
+5. 归档事实快照、人物状态、伏笔、时间线、run trace、发布辅助记录和 wiki sync plan。
+
+## Human Review 规则
+
+- 最终需要用户 review 或批准的内容，必须整理为一个统一 review 文档作为审批入口。
+- 不得要求用户从零散 preview、单章片段、多个 bot 消息或多个局部文件中拼判断。
+- 发给用户的飞书消息只做简短摘要，并明确指向统一 review 文档、待批准事项和批准后的影响面。
+- 统一 review 文档应集中包含推荐结论、备选项、影响范围、风险、回滚路径、需要用户确认的批准语，以及正文或长期设定的审阅入口。
+- 中间过程的 Creative handoff、Validator 门禁消息、routine revision notes 或 revised staging 不应被包装成最终 review 入口，除非用户明确要求审阅该中间步骤。
+
+## 原则沉淀规则
+
+- 当用户要求“记住”“后续按这个原则”“沉淀规则/偏好/原则”时，必须明确判断这是项目级规则、角色通用规则、发布规则、剧情 canon，还是一次性任务记录。
+- 写入或更新长期规则后，必须在回复用户时明确列出沉淀文件路径；不能只说“已记住”。
+- 如果规则写入多个位置，需说明每个路径的用途和优先级，例如 agent 身份源文件、项目 memory、project-state、bible、settings、comms/decisions 或 llmwiki。
+- 若某条原则不应沉淀到当前项目，而应进入 agent 身份源文件，也必须说明源文件路径和同步后的 workspace agent 文件路径。
 
 ## 统一输出契约
 

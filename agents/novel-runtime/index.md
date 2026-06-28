@@ -1,4 +1,4 @@
-Updated: 2026-06-27
+Updated: 2026-06-28
 
 # Novel Runtime
 
@@ -53,6 +53,8 @@ Updated: 2026-06-27
 - `readiness` 不写 BotMux 配置；它只读本机状态并返回 `ready`、`ready_with_warnings` 或 `blocked`。
 - BotMux workflow 只生成候选包和计划；项目文件或 llmwiki 写入必须走单独 gated 节点或人工确认。
 - `botmux-assets` 默认 dry-run；只有传 `--write` 才会写入 `~/.botmux`，覆盖已有 workspace `AGENTS.md` 前会保留 `.bak-<timestamp>` 备份。
+- 三个小说 bot 的角色身份文档承载跨项目创作原则：canon status 分层、番茄移动端可读性、短过桥句、revised/review/final/upload 阶段边界，以及作者有话说/章末福利图只作为 publish-support 或 publish-record。
+- 单本小说运行中沉淀的具体人名、章节禁令、项目路径和已上传素材记录不得回写到通用身份；只把跨项目可复用的方法论同步到 `agents/novel-*.identity.md` 和团队契约。
 
 ## 主流程
 

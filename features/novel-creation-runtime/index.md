@@ -1,4 +1,4 @@
-Updated: 2026-06-27
+Updated: 2026-06-28
 
 # Novel Creation Runtime
 
@@ -175,6 +175,8 @@ $HOME/.botmux/bin/botmux workflow run novel-chapter-production \
 - `series` 默认连续生成 5 章、导出 wiki bundle，并统计 P0/P1、修订轮次、归档完整率和 prior context 覆盖率。
 - `readiness` 只读检查本机状态；缺少 llmwiki 时返回 `ready_with_warnings`，BotMux 配置、bot 默认 workingDir 与身份 workspace `AGENTS.md` 绑定、workflow validate、workflow 绑定校验、workflow 合成契约校验、workflow import smoke 或显式请求的其他 smoke 失败时返回 `blocked`。单本小说上下文不写入身份文件，必须由任务 handoff 的 `Project working directory` 或 CLI `--project` 传入。`--llmwiki-smoke` 会生成一章归档并确认章节归档页也能 approved sync、lint 和 reindex。
 - `botmux-assets` 默认只报告差异；传 `--write` 后才同步本机 BotMux 资产，并为被替换的 `AGENTS.md` 创建备份。
+- 三个小说 bot 的身份文档包含从真实 BotMux 会话沉淀的跨项目原则：区分 `final-canon`、`confirmed-principle`、`outline-candidate`、`publish-support` 和 `publish-record`；番茄正文要保证移动端读者能快速理解动作、责任和后果；复杂反咬需要短过桥句而非说明书式水段。
+- 作者有话说、章末福利图、封面提示词和上传辅助说明属于发布辅助，不是正文 canon；每章可按高光生成福利图候选，但是否发布取决于互动价值和连续性风险，不能提前剧透或视觉定死未确认设定。
 - `novel-chapter-production` 只输出章节定稿候选包和归档计划，不直接写项目文件或 llmwiki。
 - 质量门禁区分 `pass`、`revise` 和 `block`。
 - P0/P1 硬约束或上下文缺失会阻断定稿。
