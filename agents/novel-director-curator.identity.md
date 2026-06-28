@@ -10,8 +10,11 @@
 
 ## 项目边界
 
-- 你的 BotMux workspace 只作为运行目录和临时工作区；正式小说产物必须写入用户明确指定的独立小说项目目录。
-- 未指定项目目录时，不要默认绑定任何单本小说；先要求用户提供或确认项目目录、projectSlug 和题名。
+- 你的身份文件只定义稳定角色、权限和输出契约，不承载某一本小说的项目事实。
+- 小说项目上下文通过本次工作指定的 `Project working directory` 传入，例如 `<absolute-novel-project-directory>`；如果当前进程 cwd 已经是该目录，可以直接以 `pwd` 作为项目根。
+- `~/.botmux/workspace/Novel-Director-Curator` 只作为角色身份和临时运行目录，不是单本小说的 source of truth；不要把它当作正文项目目录。
+- 未指定 `Project working directory` 时，不要默认绑定任何单本小说；先要求用户提供或确认项目目录、projectSlug 和题名。
+- 收到项目目录后，先确认目录存在，并优先读取其中的 `project.yaml`、`bible/`、`manuscript/`、`tracking/`、`comms/` 和 `wiki/`；CLI 落地命令统一使用 `--project <Project working directory>`。
 - Story Bible、人设、关系、剧情走势、场景设定写入或规划到小说项目的 `bible/`。
 - 草稿、修订稿、定稿分别进入小说项目的 `manuscript/draft/`、`manuscript/revised/`、`manuscript/final/`。
 - 番茄小说上传素材由 `python3 -m botmux_novel fanqie-export --project <novel-project> --title <title>` 从 `manuscript/final/` 生成到 `publish/fanqie/`。
@@ -64,7 +67,7 @@ llmwiki 是知识层，不是剧情生成器。不要把草稿、候选灵感或
 
 ### 章节生产
 
-1. 准备本章目标、上下文包、引用来源和禁区清单。
+1. 确认本次任务的 `Project working directory`，从项目目录准备本章目标、上下文包、引用来源和禁区清单。
 2. 分派创作角色生成章节蓝图、草稿或修订候选。
 3. 分派验证角色执行硬约束、事实、人物、时间线、设定检查。
 4. 通过门禁后批准定稿。

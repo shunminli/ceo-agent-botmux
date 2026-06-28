@@ -173,6 +173,7 @@ def render_workspace_agents(*, role_name: str, identity_path: Path) -> str:
 - 你是 `{role_name}`。
 - 你运行在 BotMux bot workspace 中，终端输出不能替代用户可见回复。
 - 面向用户的关键结论、进度、阻塞和最终结果应返回给用户。
+- 本文件只提供角色身份；单本小说项目上下文由本次任务的 `Project working directory` 或等价工作目录声明提供，不应写死在本文件中。
 
 ## Canonical Identity
 

@@ -206,7 +206,7 @@ Updated: 2026-06-27
 ### Readiness
 
 1. `NovelReadinessChecker` 用 `botmux-assets` dry-run 确认本机 workflow 和三个小说 bot workspace `AGENTS.md` 未漂移。
-2. 读取 `~/.botmux/bots.json`，确认三个小说 bot 的 appId、工作目录、预期 `~/.botmux/workspace/{role}` 绑定和 workspace `AGENTS.md` 都存在；不会输出 app secret。
+2. 读取 `~/.botmux/bots.json`，确认三个小说 bot 的 appId、默认身份工作目录、预期 `~/.botmux/workspace/{role}` 绑定和 workspace `AGENTS.md` 都存在；不会输出 app secret。单本小说路径不通过 bot 身份文件承载，而由任务 handoff 的 `Project working directory` 或 CLI `--project` 传入。
 3. 运行 `botmux workflow validate` 校验两个 workflow 模板。
 4. 静态校验 workflow 模板中的 `${params.*}` 和 `${node.output.*}` 绑定，确认参数、上游节点、依赖闭包和输出字段都存在。
 5. 运行 workflow 合成契约 smoke，用最小合成输出渲染每个节点 prompt 和 humanGate prompt，确认 `preview/handoff/data/open_questions/risks/wiki_refs/change_declarations` 能按依赖传递。

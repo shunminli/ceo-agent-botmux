@@ -136,6 +136,8 @@ python3 -m botmux_novel readiness --series-smoke
 
 小说正文项目应使用仓库外的独立目录。本仓库只管理工具链、workflow、schema 和 bot 身份；单本小说的 `bible/`、`manuscript/final/`、`publish/fanqie/`、`tracking/` 和 `comms/decisions/` 可放在小说目录自己的私有 git 中。`runs/`、bot 原始日志、`wiki/llmwiki-workspace/` 和临时索引默认本地管理，不纳入 git。
 
+小说 Bot 的身份文件不承载单本书的项目事实。分派真实小说工作时，在任务或 handoff 中声明 `Project working directory`，例如 `<absolute-novel-project-directory>`；bot 读写项目文件和运行本地命令时使用同一个目录，并在 CLI 命令中传 `--project <Project working directory>`。
+
 `fanqie-export` 从 `manuscript/final/ch-*.md` 生成番茄后台友好的 UTF-8 纯文本产物：`publish/fanqie/chapters/*.txt`、`publish/fanqie/book.txt` 和 `publish/fanqie/upload-checklist.md`。该命令不调用番茄后台 API，不自动发布章节。
 
 验证入口：

@@ -173,7 +173,7 @@ $HOME/.botmux/bin/botmux workflow run novel-chapter-production \
 - `llmwiki-sync` 默认只生成计划；只有传 `--approve` 才把审核包复制到 llmwiki workspace。传 `--lint` 后优先运行 `llmwiki lint <workspace>`；若当前 llmwiki CLI 不支持 `lint` 子命令，则自动运行本地 `wiki-lint` fallback；若 lint 检查失败则同步结果为 `failed`。它不安装 llmwiki，不调用 MCP 写工具。
 - `llmwiki-mcp-config` 只生成配置片段和角色绑定策略，不写 `~/.codex/config.toml`，默认只建议 Director 和 Validator 接入 llmwiki MCP。
 - `series` 默认连续生成 5 章、导出 wiki bundle，并统计 P0/P1、修订轮次、归档完整率和 prior context 覆盖率。
-- `readiness` 只读检查本机状态；缺少 llmwiki 时返回 `ready_with_warnings`，BotMux 配置、bot workingDir 与 workspace `AGENTS.md` 身份绑定、workflow validate、workflow 绑定校验、workflow 合成契约校验、workflow import smoke 或显式请求的其他 smoke 失败时返回 `blocked`。`--llmwiki-smoke` 会生成一章归档并确认章节归档页也能 approved sync、lint 和 reindex。
+- `readiness` 只读检查本机状态；缺少 llmwiki 时返回 `ready_with_warnings`，BotMux 配置、bot 默认 workingDir 与身份 workspace `AGENTS.md` 绑定、workflow validate、workflow 绑定校验、workflow 合成契约校验、workflow import smoke 或显式请求的其他 smoke 失败时返回 `blocked`。单本小说上下文不写入身份文件，必须由任务 handoff 的 `Project working directory` 或 CLI `--project` 传入。`--llmwiki-smoke` 会生成一章归档并确认章节归档页也能 approved sync、lint 和 reindex。
 - `botmux-assets` 默认只报告差异；传 `--write` 后才同步本机 BotMux 资产，并为被替换的 `AGENTS.md` 创建备份。
 - `novel-chapter-production` 只输出章节定稿候选包和归档计划，不直接写项目文件或 llmwiki。
 - 质量门禁区分 `pass`、`revise` 和 `block`。

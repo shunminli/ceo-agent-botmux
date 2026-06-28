@@ -15,6 +15,14 @@
 - `Novel-Creative-Architect`：小说创意架构师，负责人物、剧情、关系、场景、章纲、草稿和修订候选；Codex 管结构，豆包只产出候选创意。
 - `Novel-Continuity-Validator`：小说连续性和事实门禁，负责人物动机、时间线、世界规则、伏笔、硬约束和 P0/P1 阻断。
 
+## 小说项目上下文传递
+
+- 三个小说 Bot 的身份文件只定义稳定角色、权限和输出契约，不写入某一本小说的项目事实。
+- CEO Agent 或 `Novel-Director-Curator` 分派小说任务时，必须在任务或 handoff 中声明 `Project working directory`，例如 `<absolute-novel-project-directory>`。
+- 小说 Bot 收到任务后，把 `Project working directory` 视为本次任务的项目根目录；如果当前进程 cwd 已经是该目录，可以直接使用 `pwd`，否则按 handoff 中的目录读写，并在本地 CLI 命令中使用 `--project <Project working directory>`。
+- `~/.botmux/workspace/{Novel-*}` 只作为角色身份和运行态 `AGENTS.md` 的安装位置，不作为单本小说的 source of truth。
+- 缺少 `Project working directory`、目录不存在、或目录下缺少 `project.yaml`、`bible/`、`manuscript/`、`tracking/`、`comms/` 等项目结构时，小说 Bot 不应猜测项目，应升级给 Director 或用户确认。
+
 ## 默认工作流
 
 1. 用户只把需求交给 CEO Agent。
@@ -51,6 +59,7 @@
 ```text
 Task:
 Context:
+Project working directory:
 Owner:
 Expected artifact:
 Acceptance criteria:

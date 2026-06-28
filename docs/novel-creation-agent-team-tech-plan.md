@@ -68,7 +68,8 @@ Harness 标准配置：
 
 ```yaml
 harness: codex-cli
-workspace: <repo-root>
+identity_workspace: ~/.botmux/workspace/<Novel-Role>
+project_working_directory: <per-task-novel-project-dir>
 permissions:
   filesystem: project_or_explicit_workspace
   network: allowed_when_needed
@@ -138,7 +139,13 @@ flowchart LR
 | `Novel-Creative-Architect` | `cli_aab42e1c87385bfc` |
 | `Novel-Continuity-Validator` | `cli_aab42e443bf89bde` |
 
-### 5.1 角色边界
+### 5.1 项目上下文传递
+
+三个小说 bot 的 `AGENTS.md` 只承载稳定角色身份、权限和输出契约，不承载单本小说的项目事实。每次小说任务必须由调度方传入 `Project working directory`，例如 `<absolute-novel-project-directory>`。如果 bot 当前进程 cwd 已经是该目录，可直接用 `pwd` 作为项目根；否则按 handoff 中的路径读写，本地命令继续使用 `--project <Project working directory>`。
+
+`~/.botmux/workspace/{Novel-*}` 是身份安装目录，不是正文项目目录。缺少 `Project working directory`、目录不存在、或目录下没有 `project.yaml`、`bible/`、`manuscript/`、`tracking/`、`comms/` 等项目结构时，小说 bot 必须升级给 Director 或用户确认，不从身份文件、BotMux workspace 或其他旧会话推断单本小说。
+
+### 5.2 角色边界
 
 `Novel-Director-Curator` 可以写入项目文件和 llmwiki，但所有外部可见或长期记忆写入都必须先生成 `preview` 并通过 humanGate。
 
@@ -541,7 +548,7 @@ python3 -m botmux_novel readiness --bootstrap-smoke --approval-apply-smoke --ser
 | 开书设定 workflow | 已落地为仓库 workflow 模板和本机 BotMux 全局 workflow，并提供本地 `foundation` 与 `novel-bootstrap` 子命令 | BotMux 用于多 bot 协作和 humanGate，本地 CLI 用于无外部依赖的开书资产 smoke 和真实项目审批包。 |
 | 人物关系 / 场景 / 伏笔 / 文风 schema | 已落地为独立 schema，并由本地 runtime 写出结构化产物 | 后续接入真实模型时保持字段契约稳定。 |
 | llmwiki sync | 已有本地 `wiki-bundle` 导出、[llmwiki 接入 runbook](novel-llmwiki-setup.md)、`approval-decision`、`approval-apply` 和 `llmwiki-sync` gated 本地 workspace 同步 | 先人工审核审批包和 Markdown bundle，再用 `approval-decision --decision approve` 记录人审，最后用 `approval-apply --approve` 写入 llmwiki source-of-truth 文件树并默认执行 reindex/lint；MCP `create/edit/append` 仍只由 Director humanGate 后使用。 |
-| BotMux 资产同步 | 已落地 `python3 -m botmux_novel botmux-assets`，可同步 workflow 模板和三个小说 bot 的 workspace `AGENTS.md`；`readiness` 会校验 bots.json workingDir 是否绑定到预期 workspace 身份目录 | 后续改身份文档或 workflow 后先 dry-run，再 `--write` 更新本机 BotMux 环境。 |
+| BotMux 资产同步 | 已落地 `python3 -m botmux_novel botmux-assets`，可同步 workflow 模板和三个小说 bot 的身份 workspace `AGENTS.md`；`readiness` 会校验 bots.json workingDir 是否绑定到预期身份 workspace，单本小说路径由每次任务的 `Project working directory` 传入 | 后续改身份文档或 workflow 后先 dry-run，再 `--write` 更新本机 BotMux 环境。 |
 
 ## 15. 实施路线图
 
@@ -552,7 +559,7 @@ python3 -m botmux_novel readiness --bootstrap-smoke --approval-apply-smoke --ser
 - 已提供 `python3 -m botmux_novel llmwiki-mcp-config` 和 `novel-bootstrap`，真实小说 workspace 路径确定后给 `Novel-Director-Curator` 配项目级 llmwiki MCP。
 - `Novel-Continuity-Validator` 使用同一项目级 MCP server，但身份文档约束为只读能力。
 - 已提供 `botmux_doubao` 本地包装层，可作为 `Novel-Creative-Architect` 的可选 Creative Assist Tool；桌面端推荐 `cdp-app` 直接连接已登录 Doubao Desktop 的 CDP 端口，OpenCLI / doubao-cli runner 作为兼容入口，Codex 仍需能独立完成创作节点。
-- 已把输出契约写入每个 bot 的身份提示词，并同步到本仓库 `agents/*.identity.md`；本机 BotMux workspace `AGENTS.md` 可由 `botmux-assets --write` 重新生成，`readiness` 会阻断 workingDir 指向错误 workspace 或缺少身份文件的配置。
+- 已把输出契约写入每个 bot 的身份提示词，并同步到本仓库 `agents/*.identity.md`；本机 BotMux workspace `AGENTS.md` 可由 `botmux-assets --write` 重新生成，`readiness` 会阻断默认 workingDir 指向错误身份 workspace 或缺少身份文件的配置。单本小说项目路径不写入身份文件，必须由任务 handoff 的 `Project working directory` 提供。
 - 小说项目 llmwiki workspace 和 `/wiki/novels/` 页面结构由 `novel-bootstrap` / `wiki-bundle` 在真实项目目录中生成。
 
 ### Phase 1：开书设定 workflow
