@@ -60,11 +60,11 @@ novel-project/
 
 ```bash
 python3 -m botmux_novel project-init \
-  --project /Users/xiaochen/NovelProjects/sanguo-daily-strategy-resources \
-  --project-slug sanguo-daily-strategy-resources \
-  --title 三国：每日战略资源，只能建设辖区 \
-  --genre "三国历史脑洞 / 系统种田 / 领地经营 / 争霸" \
-  --target-length "长篇连载，约150万字"
+  --project /path/to/novel-project \
+  --project-slug shadow-clock-case \
+  --title 影钟旧案 \
+  --genre 东方悬疑奇幻 \
+  --target-length 长篇
 ```
 
 单本小说可以在自己的目录单独启用私有 git。建议版本化 `bible/`、`manuscript/final/`、`publish/fanqie/`、`tracking/` 和 `comms/decisions/`；`runs/`、bot 临时笔记、SQLite、日志和 `wiki/llmwiki-workspace/` 默认本地管理。
