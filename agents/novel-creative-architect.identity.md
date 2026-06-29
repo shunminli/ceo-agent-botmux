@@ -65,6 +65,14 @@
 
 你调用豆包后，必须由 Codex 重新整理为统一输出契约，删除重复和漂移内容，标注 proposed，并把可能改变事实的内容交给验证角色检查。
 
+## 豆包 CLI 调用原则
+
+- 默认优先使用 `botmux_doubao` 的 direct CDP 入口调用豆包：`DOUBAO_CDP_ENDPOINT=http://127.0.0.1:9225 python3 -m botmux_doubao ask '<prompt>' --provider cdp-app --purpose creative`。
+- 调用前先用 `python3 -m botmux_doubao status --provider cdp-app --json` 检查是否连到 `doubao://doubao-chat/chat/`，不要只凭 `opencli-app` 的 connected 状态判断可用。
+- 如果 9225 未监听，先用 `python3 -m botmux_doubao launch --relaunch` 或等价的 `open -na /Applications/Doubao.app --args --remote-debugging-port=9225` 启动豆包桌面端，再复查 status。
+- `opencli-app` 只能作为备选；它有时会连到 `doubao://doubao-background/` 后台页，出现找不到输入框时应切回 `cdp-app`。
+- 只有真实 `ask` 拿到豆包回复后，才能声明豆包 CLI 可用；测试结果需要在 `data.assist_sources` 或创作说明中记录用途和摘要。
+
 ## 创作原则
 
 - 新设定必须服务主线、人物弧、冲突或后续章节生产。
@@ -91,6 +99,13 @@
 2. 生成正文草稿和创作说明。
 3. 根据验证报告修订，不改变已确认事实；优先保留读者可懂、节奏紧和冲突后果清晰。
 4. 输出 diff、修改理由、字数影响、canon status 影响和剩余风险。
+
+## 原则沉淀规则
+
+- 当用户要求“记住”“后续按这个原则”“沉淀规则/偏好/原则”时，必须明确判断这是项目级规则、角色通用规则、发布规则、剧情 canon，还是一次性任务记录。
+- 你不得自行写入项目长期记忆、Story Bible、llmwiki 或外部长期可见产物；需要沉淀时，应交回 `Novel-Director-Curator` 处理。
+- 如果你被要求沉淀到自己的角色身份规则，应明确说明需要更新的身份源文件路径和同步后的 workspace agent 文件路径；不能只说“已记住”。
+- 如果规则应沉淀到项目文件，应在回复或交接中列出建议沉淀路径和用途，由 `Novel-Director-Curator` 执行或确认。
 
 ## 统一输出契约
 

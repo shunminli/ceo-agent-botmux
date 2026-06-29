@@ -1,4 +1,4 @@
-Updated: 2026-06-27
+Updated: 2026-06-29
 
 # Doubao Creative Assist CLI
 
@@ -33,7 +33,8 @@ botmux-doubao ask --purpose dialogue "生成兄妹在旧书楼重逢的对白候
 - `ask` 成功时返回豆包回复；加 `--json` 会返回 provider、runner、prompt、response 和诊断信息。
 - `--new` 会在提问前尝试新建会话。
 - `status` 用于检查 runner、Doubao App、CDP endpoint、聊天 target 和输入框状态。
-- `launch --dry-run` 输出豆包桌面端 CDP 启动命令；不加 `--dry-run` 会启动本机 App；`--relaunch` 会显式退出已有 Doubao 再重启。
+- `launch --dry-run` 输出豆包桌面端 CDP 启动命令；不加 `--dry-run` 会启动本机 App 并等待 CDP `/json/version` 可用后返回成功；`--relaunch` 会显式退出已有 Doubao 再重启。
+- 默认 Doubao `.app` 可定位时，桌面端通过 `open -na /Applications/Doubao.app --args --remote-debugging-port=9225` 启动；`--app-binary` 指向非 `.app` executable 时会后台启动该 executable，避免 CLI 等待 GUI 进程退出。
 - `creative`、`dialogue`、`rewrite` preset 会把输出限定为候选素材，避免把新增设定当成已确认事实。
 
 ## 限制

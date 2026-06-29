@@ -1,12 +1,18 @@
 from __future__ import annotations
 
 import json
+import os
+import signal
 import subprocess
 import sys
 import tempfile
 import textwrap
+import time
 import unittest
+from unittest import mock
 from pathlib import Path
+
+from botmux_doubao.runtime import DoubaoRuntime
 
 
 class DoubaoCliTest(unittest.TestCase):
@@ -164,7 +170,10 @@ class DoubaoCliTest(unittest.TestCase):
         payload = json.loads(completed.stdout)
         self.assertEqual(payload["status"], "completed")
         self.assertEqual(payload["provider"], "cdp-app")
+        self.assertIn("open -na", payload["stdout"])
+        self.assertIn("/Applications/Doubao.app", payload["stdout"])
         self.assertIn("--remote-debugging-port=9225", payload["stdout"])
+        self.assertEqual(payload["diagnostics"]["app_bundle"], "/Applications/Doubao.app")
 
     def test_launch_relaunch_dry_run_prints_quit_then_cdp_command(self) -> None:
         completed = subprocess.run(
@@ -187,7 +196,48 @@ class DoubaoCliTest(unittest.TestCase):
         self.assertEqual(payload["provider"], "cdp-app")
         self.assertTrue(payload["diagnostics"]["relaunch"])
         self.assertIn("osascript", payload["stdout"])
+        self.assertIn("open -na", payload["stdout"])
         self.assertIn("--remote-debugging-port=9225", payload["stdout"])
+
+    def test_launch_custom_binary_does_not_wait_for_process_exit(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            app_binary = Path(tmpdir) / "doubao-test-app"
+            app_binary.write_text(
+                textwrap.dedent(
+                    """\
+                    #!/usr/bin/env python3
+                    import time
+                    time.sleep(5)
+                    """
+                ),
+                encoding="utf-8",
+            )
+            app_binary.chmod(app_binary.stat().st_mode | 0o111)
+
+            runtime = DoubaoRuntime()
+            started_at = time.monotonic()
+            with mock.patch.object(runtime, "_wait_for_cdp", return_value=True):
+                result = runtime.launch_desktop(app_binary=app_binary)
+            elapsed = time.monotonic() - started_at
+
+            pid = result.diagnostics.get("pid")
+            try:
+                self.assertEqual(result.status, "completed")
+                self.assertLess(elapsed, 1.0)
+                self.assertEqual(result.diagnostics["launch_command"][0], str(app_binary))
+                self.assertIsInstance(pid, int)
+            finally:
+                if isinstance(pid, int):
+                    try:
+                        os.kill(pid, signal.SIGTERM)
+                    except ProcessLookupError:
+                        pass
+                for process in runtime._desktop_processes:
+                    try:
+                        process.wait(timeout=1)
+                    except subprocess.TimeoutExpired:
+                        process.kill()
+                        process.wait(timeout=1)
 
     def _write_fake_runner(self, path: Path) -> Path:
         path.write_text(

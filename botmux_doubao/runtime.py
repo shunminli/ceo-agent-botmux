@@ -6,6 +6,8 @@ import shlex
 import shutil
 import subprocess
 import time
+import urllib.error
+import urllib.request
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Sequence
@@ -89,6 +91,9 @@ class DoubaoResult:
 
 
 class DoubaoRuntime:
+    def __init__(self) -> None:
+        self._desktop_processes: List[subprocess.Popen] = []
+
     def ask(self, request: DoubaoRequest) -> DoubaoResult:
         provider = self._resolve_provider(request.provider, request.runner)
         spec = self._provider_spec(provider, request.opencli_adapter)
@@ -194,12 +199,16 @@ class DoubaoRuntime:
         dry_run: bool = False,
         relaunch: bool = False,
     ) -> DoubaoResult:
-        command = [str(app_binary), f"--remote-debugging-port={port}"]
+        command, app_bundle = self._desktop_launch_command(app_binary, port)
         quit_command = ["osascript", "-e", 'tell application "Doubao" to quit']
+        cdp_endpoint = f"http://127.0.0.1:{port}"
         diagnostics = {
             "app_binary": str(app_binary),
             "app_binary_exists": app_binary.exists(),
-            "cdp_endpoint": f"http://127.0.0.1:{port}",
+            "app_bundle": str(app_bundle) if app_bundle else None,
+            "app_bundle_exists": app_bundle.exists() if app_bundle else False,
+            "launch_command": command,
+            "cdp_endpoint": cdp_endpoint,
             "relaunch": relaunch,
         }
         if dry_run:
@@ -212,9 +221,9 @@ class DoubaoRuntime:
                 command="launch",
                 stdout=stdout,
                 diagnostics=diagnostics,
-                setup_hints=[] if app_binary.exists() else ["Install Doubao Desktop or pass --app-binary."],
+                setup_hints=[] if self._desktop_launch_target_exists(app_binary, app_bundle) else ["Install Doubao Desktop or pass --app-binary."],
             )
-        if not app_binary.exists():
+        if not self._desktop_launch_target_exists(app_binary, app_bundle):
             return DoubaoResult(
                 status="missing_app",
                 provider=PROVIDER_CDP_APP,
@@ -230,16 +239,81 @@ class DoubaoRuntime:
             diagnostics["quit_returncode"] = quit_result.returncode
             diagnostics["quit_stderr"] = quit_result.stderr.strip()
             self._wait_for_desktop_exit(app_binary)
-        process = subprocess.Popen(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        diagnostics["pid"] = process.pid
+
+        launch_stdout = ""
+        launch_stderr = ""
+        if self._desktop_launch_uses_open(command):
+            completed = subprocess.run(command, text=True, capture_output=True, check=False)
+            launch_returncode: Optional[int] = completed.returncode
+            launch_stdout = completed.stdout.strip()
+            launch_stderr = completed.stderr.strip()
+        else:
+            process = subprocess.Popen(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            self._track_desktop_process(process)
+            diagnostics["pid"] = process.pid
+            time.sleep(0.1)
+            launch_returncode = process.poll()
+
+        diagnostics["launch_returncode"] = launch_returncode
+        diagnostics["launch_stderr"] = launch_stderr
+        diagnostics["cdp_available"] = self._wait_for_cdp(cdp_endpoint)
+        if launch_returncode not in {0, None} or not diagnostics["cdp_available"]:
+            return DoubaoResult(
+                status="failed",
+                provider=PROVIDER_CDP_APP,
+                command="launch",
+                returncode=launch_returncode,
+                stdout=launch_stdout,
+                stderr=launch_stderr or f"CDP endpoint not available at {cdp_endpoint}",
+                diagnostics=diagnostics,
+                setup_hints=[
+                    "Quit Doubao and retry `python3 -m botmux_doubao launch --relaunch`.",
+                    f"Verify `{cdp_endpoint}/json/version` is reachable before using --provider cdp-app.",
+                ],
+            )
+
         return DoubaoResult(
             status="completed",
             provider=PROVIDER_CDP_APP,
             command="launch",
-            stdout=f"launched Doubao Desktop with pid {process.pid}",
+            stdout=f"launched Doubao Desktop; CDP endpoint is available at {cdp_endpoint}",
             diagnostics=diagnostics,
-            setup_hints=[f"export DOUBAO_CDP_ENDPOINT=http://127.0.0.1:{port}"],
+            setup_hints=[f"export DOUBAO_CDP_ENDPOINT={cdp_endpoint}"],
         )
+
+    def _desktop_launch_command(self, app_binary: Path, port: int) -> tuple[List[str], Optional[Path]]:
+        app_bundle = self._desktop_app_bundle(app_binary)
+        if app_bundle and app_bundle.exists():
+            return ["open", "-na", str(app_bundle), "--args", f"--remote-debugging-port={port}"], app_bundle
+        return [str(app_binary), f"--remote-debugging-port={port}"], app_bundle
+
+    def _desktop_app_bundle(self, app_binary: Path) -> Optional[Path]:
+        for path in [app_binary, *app_binary.parents]:
+            if path.suffix == ".app":
+                return path
+        return None
+
+    def _desktop_launch_target_exists(self, app_binary: Path, app_bundle: Optional[Path]) -> bool:
+        return bool((app_bundle and app_bundle.exists()) or app_binary.exists())
+
+    def _desktop_launch_uses_open(self, command: Sequence[str]) -> bool:
+        return bool(command and Path(command[0]).name == "open")
+
+    def _track_desktop_process(self, process: subprocess.Popen) -> None:
+        self._desktop_processes = [candidate for candidate in self._desktop_processes if candidate.poll() is None]
+        self._desktop_processes.append(process)
+
+    def _wait_for_cdp(self, endpoint: str, timeout_seconds: float = 15.0) -> bool:
+        deadline = time.time() + timeout_seconds
+        url = endpoint.rstrip("/") + "/json/version"
+        while time.time() < deadline:
+            try:
+                with urllib.request.urlopen(url, timeout=1.0) as response:
+                    if 200 <= response.status < 300:
+                        return True
+            except (OSError, urllib.error.URLError):
+                time.sleep(0.25)
+        return False
 
     def _wait_for_desktop_exit(self, app_binary: Path, timeout_seconds: float = 10.0) -> None:
         deadline = time.time() + timeout_seconds
