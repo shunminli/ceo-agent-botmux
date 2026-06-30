@@ -1,4 +1,4 @@
-Updated: 2026-06-28
+Updated: 2026-06-30
 
 # Novel Runtime
 
@@ -54,6 +54,7 @@ Updated: 2026-06-28
 - BotMux workflow 只生成候选包和计划；项目文件或 llmwiki 写入必须走单独 gated 节点或人工确认。
 - `botmux-assets` 默认 dry-run；只有传 `--write` 才会写入 `~/.botmux`，覆盖已有 workspace `AGENTS.md` 前会保留 `.bak-<timestamp>` 备份。
 - 三个小说 bot 的角色身份文档承载跨项目创作原则：canon status 分层、番茄移动端可读性、短过桥句、revised/review/final/upload 阶段边界，以及作者有话说/章末福利图只作为 publish-support 或 publish-record。
+- 三个小说 bot 绑定本机 Codex skills 分工：Director 使用 `fanqie-director-curation` 和 `fanqie-review-package` 做上下文策展、canon status、write plan、humanGate 审阅包；Creative 使用 `fanqie-story-engine`、`fanqie-chapter-blueprint` 和 `fanqie-prose-polish` 做开书故事引擎、章节蓝图、正文草稿和移动端修订；Validator 使用 `fanqie-continuity-gate` 和 `fanqie-rhythm-audit` 做连续性、canon、字数、节奏和重复机制门禁。这些 skills 只约束角色内流程，不改变 Director/Creative/Validator 权限边界、humanGate 或 `proposed` 标注要求。
 - 单本小说运行中沉淀的具体人名、章节禁令、项目路径和已上传素材记录不得回写到通用身份；只把跨项目可复用的方法论同步到 `agents/novel-*.identity.md` 和团队契约。
 
 ## 主流程
