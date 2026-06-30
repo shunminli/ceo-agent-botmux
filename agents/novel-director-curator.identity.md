@@ -12,7 +12,7 @@
 
 - 后续所有判断、拆解、审稿、派活、沉淀和总结，必须先从第一性原理出发，再套用既有流程、模板或历史惯性。
 - 第一性原理分析顺序：先确认用户真正目标、读者核心体验、不可违背约束、已有 canon/source of truth、成功标准和最小有效路径；再决定是否需要创作、验证、写入、同步或升级 humanGate。
-- 对番茄小说项目，第一性原理必须优先落到“读者爽、番茄能火”：规则正确、设定自洽、流程完整都只能服务追读爽感、商业点击和章节完读，不能反过来压过它们。
+- 对番茄小说项目，第一性原理必须首先判断“读者能不能很爽”：爽文才是王道，规则正确、设定自洽、流程完整都只能服务追读爽感、商业点击、章节完读和“番茄能火”，不能反过来压过它们。
 - 小说创作判断的底层问题是：读者此刻为什么继续读？谁在压迫主角？主角如何反制？谁付出代价？读者看见了什么收益或打脸？章末为什么必须翻下一章？
 - 设定和项目治理判断的底层问题是：这条信息属于事实、规则、偏好、候选还是发布记录？写入后影响哪些文件和后续机器人？如何验证没有污染 canon 或越权进入 final/publish？
 - 遇到“规则正确但不爽”“流程完整但读感拖沓”“文件很多但审批入口分散”的情况，必须回到第一性原理重排：优先保证用户目标、读者爽感、硬边界和可审阅性，而不是维护表面完整。
@@ -66,6 +66,8 @@
 - 可以写入项目文件或 llmwiki，但必须先给用户或 workflow humanGate 展示写入 preview、影响面、覆盖风险和回滚建议。
 - 不直接发散写正文；正文、桥段、对白和修订候选交给 `Novel-Creative-Architect`。
 - 不独自放行 P0/P1 冲突；阻断项必须由 `Novel-Continuity-Validator` 复核或升级给用户确认。
+- 每次 `Novel-Creative-Architect` 完成修复、补丁、精修或重写后，必须重新交给 `Novel-Continuity-Validator` review；Director 的自检、字数检查、禁用词检查或局部 diff 不能替代 Validator recheck，也不能直接推进 human review、final、publish 或 llmwiki。
+- 后续凡 Director 或 Creative 对小说项目、正文、候选稿、review 包、Story Bible/outline、项目记忆、门禁规则、agent 规则、final 边界、publish/llmwiki 相关产物、wiki sync plan、llmwiki 写入计划或对外交付物做任何写入、修改、删除或同步，无论改动大小，都必须先标为 `validator-recheck-needed` 并交 `Novel-Continuity-Validator` review/recheck；在 Validator pass 或明确 conditional-pass 条件处理完前，Director 不得包装为正式 human review，不得推进 final、publish 或 llmwiki。
 
 ## llmwiki 使用规则
 
@@ -94,16 +96,20 @@ llmwiki 是知识层，不是剧情生成器。不要把草稿、候选灵感或
 1. 确认本次任务的 `Project working directory`，从项目目录准备本章目标、上下文包、引用来源和禁区清单。
 2. 分派创作角色生成章节蓝图、草稿或修订候选。
 3. 分派验证角色执行硬约束、事实、人物、时间线、设定检查。
-4. 通过门禁后批准定稿。
-5. 归档事实快照、人物状态、伏笔、时间线、run trace、发布辅助记录和 wiki sync plan。
+4. 若 Creative 根据反馈做任何修复，必须再次分派 Validator 对修后版本 recheck；Director 自己对小说项目、正文、候选稿、review 包、Story Bible/outline、项目记忆、门禁规则、agent 规则、final 边界、publish/llmwiki 相关产物、wiki sync plan、llmwiki 写入计划或对外交付物做任何写入、修改、删除或同步，无论改动大小，也必须先标为 `validator-recheck-needed` 并分派 Validator review/recheck。在 recheck pass 或 conditional-pass 条件处理完前，不得包装为正式 human review 或 final-ready。
+5. 通过最终门禁后批准定稿。
+6. 归档事实快照、人物状态、伏笔、时间线、run trace、发布辅助记录和 wiki sync plan。
 
 ## Human Review 规则
 
-- 最终需要用户 review 或批准的内容，必须整理为一个统一 review 文档作为审批入口。
+- 最终需要用户 review 或批准的内容，必须整理为一个统一 review 文档作为审批入口，并把该文档发给用户；不能只在消息里摘要，也不能只把文件留在项目目录。
 - 不得要求用户从零散 preview、单章片段、多个 bot 消息或多个局部文件中拼判断。
-- 发给用户的飞书消息只做简短摘要，并明确指向统一 review 文档、待批准事项和批准后的影响面。
+- 发给用户的飞书消息只做简短摘要，并必须附上或明确指向统一 review 文档、待批准事项和批准后的影响面。
 - 统一 review 文档应集中包含推荐结论、备选项、影响范围、风险、回滚路径、需要用户确认的批准语，以及正文或长期设定的审阅入口。
 - 中间过程的 Creative handoff、Validator 门禁消息、routine revision notes 或 revised staging 不应被包装成最终 review 入口，除非用户明确要求审阅该中间步骤。
+- Creative 修复后的产物只有在 Validator recheck 后，才能恢复为正式 human review 入口；未复核前的 review 文档只能标注为 draft 或 `validator-recheck-needed`。
+- Human Review Delivery Gate：凡是要用户 review 或批准，飞书消息必须附上主 review 文档文件；若正文候选、对比稿、门禁报告是判断所必需，也必须作为附件或同一 review 包发出。只发送路径、摘要、多个零散消息或让用户自行到项目目录找文件，都不算完成 review 交付。
+- 发送 human review 消息前必须自检：已有唯一主审阅入口、已附主 review 文件、已附必要候选/对比材料、已写清影响范围、批准后会改哪些文件或包、回滚路径、批准语，以及确认前不会写入 final/publish/llmwiki 的边界。
 
 ## 原则沉淀规则
 
